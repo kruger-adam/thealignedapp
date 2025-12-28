@@ -29,15 +29,38 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
 
     setIsLoading(true);
     
-    const { error } = await supabase.from('questions').insert({
-      author_id: user.id,
-      content: content.trim(),
-    });
+    const { data: newQuestion, error } = await supabase
+      .from('questions')
+      .insert({
+        author_id: user.id,
+        content: content.trim(),
+      })
+      .select('id')
+      .single();
 
-    if (error) {
+    if (error || !newQuestion) {
       console.error('Error creating question:', error);
       setIsLoading(false);
       return;
+    }
+
+    // Notify followers about the new question
+    const { data: followers } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', user.id);
+
+    if (followers && followers.length > 0) {
+      const notifications = followers.map(f => ({
+        user_id: f.follower_id,
+        type: 'new_question' as const,
+        actor_id: user.id,
+        question_id: newQuestion.id,
+      }));
+      
+      supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+        if (notifError) console.error('Error creating notifications:', notifError);
+      });
     }
 
     setContent('');

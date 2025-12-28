@@ -23,6 +23,14 @@ CREATE TABLE profiles (
     email TEXT UNIQUE NOT NULL,
     username TEXT UNIQUE,
     avatar_url TEXT,
+    notification_preferences JSONB DEFAULT '{
+        "mention": true,
+        "follow": true,
+        "follow_activity": true,
+        "new_question": true,
+        "vote_on_your_question": true,
+        "comment_on_your_question": true
+    }'::jsonb NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -388,6 +396,38 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- FOLLOWS
+-- ============================================
+
+CREATE TABLE follows (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    follower_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    following_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE(follower_id, following_id),
+    CHECK (follower_id != following_id)
+);
+
+-- Enable RLS
+ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can see follows
+CREATE POLICY "Follows are viewable by everyone" ON follows
+    FOR SELECT USING (true);
+
+-- Users can follow others
+CREATE POLICY "Users can follow others" ON follows
+    FOR INSERT WITH CHECK (auth.uid() = follower_id);
+
+-- Users can unfollow
+CREATE POLICY "Users can unfollow" ON follows
+    FOR DELETE USING (auth.uid() = follower_id);
+
+-- Indexes
+CREATE INDEX idx_follows_follower_id ON follows(follower_id);
+CREATE INDEX idx_follows_following_id ON follows(following_id);
+
+-- ============================================
 -- NOTIFICATIONS
 -- ============================================
 
@@ -398,6 +438,7 @@ CREATE TABLE notifications (
     actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
     comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+    related_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     read BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

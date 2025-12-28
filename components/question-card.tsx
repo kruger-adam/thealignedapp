@@ -402,6 +402,35 @@ export function QuestionCard({
           });
         }
         
+        // Notify followers about the comment
+        supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+          .then(({ data: followers }) => {
+            if (followers && followers.length > 0) {
+              // Don't notify: question author (already notified), mentioned users (already notified)
+              const alreadyNotified = new Set([
+                question.author_id,
+                ...mentionedUsers.map(u => u.id),
+              ]);
+              
+              const followerNotifications = followers
+                .filter(f => !alreadyNotified.has(f.follower_id))
+                .map(f => ({
+                  user_id: f.follower_id,
+                  type: 'comment' as const,
+                  actor_id: user.id,
+                  question_id: question.id,
+                  comment_id: newComment.id,
+                }));
+              
+              if (followerNotifications.length > 0) {
+                supabase.from('notifications').insert(followerNotifications);
+              }
+            }
+          });
+        
         // Add the new comment to the list
         setComments(prev => [...prev, {
           id: newComment.id,
@@ -580,6 +609,30 @@ export function QuestionCard({
         }).then(({ error: notifError }) => {
           if (notifError) console.error('Error creating vote notification:', notifError);
         });
+      }
+
+      // Notify followers about the vote (only on first vote)
+      if (isFirstVote) {
+        supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+          .then(({ data: followers }) => {
+            if (followers && followers.length > 0) {
+              const notifications = followers
+                .filter(f => f.follower_id !== question.author_id) // Don't double-notify author
+                .map(f => ({
+                  user_id: f.follower_id,
+                  type: 'vote' as const,
+                  actor_id: user.id,
+                  question_id: question.id,
+                }));
+              
+              if (notifications.length > 0) {
+                supabase.from('notifications').insert(notifications);
+              }
+            }
+          });
       }
 
       onVote?.(question.id, vote);

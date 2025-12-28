@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Bell } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Bell, Settings, ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
@@ -10,13 +10,86 @@ import { Notification } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
+interface NotificationPreferences {
+  mention: boolean;
+  follow: boolean;
+  follow_activity: boolean;
+  new_question: boolean;
+  vote_on_your_question: boolean;
+  comment_on_your_question: boolean;
+}
+
+const defaultPreferences: NotificationPreferences = {
+  mention: true,
+  follow: true,
+  follow_activity: true,
+  new_question: true,
+  vote_on_your_question: true,
+  comment_on_your_question: true,
+};
+
+const preferenceLabels: Record<keyof NotificationPreferences, { label: string; description: string }> = {
+  mention: { label: 'Mentions', description: 'When someone @mentions you in a comment' },
+  follow: { label: 'New followers', description: 'When someone starts following you' },
+  follow_activity: { label: 'Following activity', description: 'When people you follow vote, comment, or follow others' },
+  new_question: { label: 'New questions', description: 'When people you follow post new questions' },
+  vote_on_your_question: { label: 'Votes on your questions', description: 'When someone votes on your question' },
+  comment_on_your_question: { label: 'Comments on your questions', description: 'When someone comments on your question' },
+};
+
+// Map a notification to its preference key
+function getPreferenceKey(notification: Notification, userId: string): keyof NotificationPreferences {
+  switch (notification.type) {
+    case 'mention':
+      return 'mention';
+    case 'follow':
+      // If has related_user, it's "X followed Y" (follow activity)
+      // Otherwise it's "X followed you"
+      return notification.related_user_id ? 'follow_activity' : 'follow';
+    case 'new_question':
+      return 'new_question';
+    case 'vote':
+      // If the question's author is you, it's about your question
+      // Otherwise it's follow activity
+      if (notification.question?.author_id === userId) {
+        return 'vote_on_your_question';
+      }
+      return 'follow_activity';
+    case 'comment':
+      // Same logic as vote
+      if (notification.question?.author_id === userId) {
+        return 'comment_on_your_question';
+      }
+      return 'follow_activity';
+    default:
+      return 'mention'; // Fallback
+  }
+}
+
 export function NotificationsDropdown() {
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Filter notifications based on user preferences
+  const filteredNotifications = useMemo(() => {
+    if (!user) return notifications;
+    return notifications.filter(n => {
+      const prefKey = getPreferenceKey(n, user.id);
+      return preferences[prefKey];
+    });
+  }, [notifications, preferences, user]);
+  
+  // Filtered unread count
+  const filteredUnreadCount = useMemo(() => {
+    return filteredNotifications.filter(n => !n.read).length;
+  }, [filteredNotifications]);
   const [loading, setLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
+  const [savingPreferences, setSavingPreferences] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
@@ -40,30 +113,34 @@ export function NotificationsDropdown() {
       }
       
       if (notificationsData && notificationsData.length > 0) {
-        // Get unique actor IDs and question IDs
+        // Get unique IDs
         const actorIds = [...new Set(notificationsData.map((n) => n.actor_id))];
         const questionIds = [...new Set(notificationsData.filter((n) => n.question_id).map((n) => n.question_id))];
+        const relatedUserIds = [...new Set(notificationsData.filter((n) => n.related_user_id).map((n) => n.related_user_id))];
         
-        // Fetch actor profiles
+        // Combine all user IDs to fetch
+        const allUserIds = [...new Set([...actorIds, ...relatedUserIds])];
+        
+        // Fetch all profiles at once
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id,username,avatar_url')
-          .in('id', actorIds);
+          .in('id', allUserIds);
         
         const profileMap = Object.fromEntries(
           (profiles || []).map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
         );
         
-        // Fetch questions if any
-        let questionMap: Record<string, { content: string }> = {};
+        // Fetch questions if any (including author_id for preference filtering)
+        let questionMap: Record<string, { content: string; author_id: string }> = {};
         if (questionIds.length > 0) {
           const { data: questions } = await supabase
             .from('questions')
-            .select('id,content')
+            .select('id,content,author_id')
             .in('id', questionIds);
           
           questionMap = Object.fromEntries(
-            (questions || []).map((q: { id: string; content: string }) => [q.id, { content: q.content }])
+            (questions || []).map((q: { id: string; content: string; author_id: string }) => [q.id, { content: q.content, author_id: q.author_id }])
           );
         }
         
@@ -72,6 +149,7 @@ export function NotificationsDropdown() {
           ...n,
           actor: profileMap[n.actor_id] || { username: 'Someone', avatar_url: null },
           question: n.question_id ? questionMap[n.question_id] : undefined,
+          related_user: n.related_user_id ? profileMap[n.related_user_id] : undefined,
         }));
         
         setNotifications(enrichedNotifications);
@@ -121,10 +199,55 @@ export function NotificationsDropdown() {
     }
   };
 
+  // Fetch notification preferences
+  const fetchPreferences = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('notification_preferences')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.notification_preferences) {
+        setPreferences({ ...defaultPreferences, ...profile.notification_preferences });
+      }
+    } catch (err) {
+      console.error('Error fetching preferences:', err);
+    }
+  }, [user, supabase]);
+
+  // Save notification preferences
+  const savePreferences = async (newPreferences: NotificationPreferences) => {
+    if (!user) return;
+    
+    setSavingPreferences(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({ notification_preferences: newPreferences })
+        .eq('id', user.id);
+      
+      setPreferences(newPreferences);
+    } catch (err) {
+      console.error('Error saving preferences:', err);
+    }
+    setSavingPreferences(false);
+  };
+
+  // Toggle a preference
+  const togglePreference = (key: keyof NotificationPreferences) => {
+    const newPreferences = { ...preferences, [key]: !preferences[key] };
+    setPreferences(newPreferences);
+    savePreferences(newPreferences);
+  };
+
   // Fetch on mount and when user changes
   useEffect(() => {
     fetchNotifications();
-  }, [user]);
+    fetchPreferences();
+  }, [user, fetchPreferences]);
 
   // Subscribe to realtime notifications
   useEffect(() => {
@@ -177,6 +300,17 @@ export function NotificationsDropdown() {
           </>
         );
       case 'follow':
+        if (notification.related_user) {
+          // Someone you follow followed someone else
+          return (
+            <>
+              <span className="font-medium">{actorName}</span>
+              {' started following '}
+              <span className="font-medium">{notification.related_user.username || 'someone'}</span>
+            </>
+          );
+        }
+        // Someone followed you directly
         return (
           <>
             <span className="font-medium">{actorName}</span>
@@ -231,38 +365,109 @@ export function NotificationsDropdown() {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
+        {filteredUnreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {filteredUnreadCount > 9 ? '9+' : filteredUnreadCount}
           </span>
         )}
       </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
-              >
-                Mark all as read
-              </button>
+            {showSettings ? (
+              <>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Settings</h3>
+                <div className="w-12" /> {/* Spacer for centering */}
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  {filteredUnreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="p-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    title="Notification settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                </div>
+              </>
             )}
           </div>
 
+          {/* Settings View */}
+          {showSettings ? (
+            <div className="max-h-96 overflow-y-auto p-4">
+              <p className="mb-4 text-sm text-zinc-500">
+                Choose which notifications you want to receive
+              </p>
+              <div className="space-y-3">
+                {(Object.keys(preferenceLabels) as Array<keyof NotificationPreferences>).map((key) => (
+                  <label
+                    key={key}
+                    className="flex cursor-pointer items-start gap-3"
+                  >
+                    <div className="relative mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={preferences[key]}
+                        onChange={() => togglePreference(key)}
+                        className="sr-only"
+                        disabled={savingPreferences}
+                      />
+                      <div
+                        className={cn(
+                          "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+                          preferences[key]
+                            ? "border-blue-600 bg-blue-600"
+                            : "border-zinc-300 dark:border-zinc-600"
+                        )}
+                      >
+                        {preferences[key] && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                        {preferenceLabels[key].label}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {preferenceLabels[key].description}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : (
+          /* Notifications List */
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
               </div>
-            ) : notifications.length === 0 ? (
+            ) : filteredNotifications.length === 0 ? (
               <div className="py-8 text-center text-sm text-zinc-500">
                 No notifications yet
               </div>
             ) : (
-              notifications.map((notification) => (
+              filteredNotifications.map((notification) => (
                 <Link
                   key={notification.id}
                   href={notification.question_id ? `/question/${notification.question_id}` : '/'}
@@ -300,6 +505,7 @@ export function NotificationsDropdown() {
               ))
             )}
           </div>
+          )}
         </div>
       )}
     </div>

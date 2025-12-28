@@ -100,6 +100,7 @@ export interface Notification {
   actor_id: string;
   question_id: string | null;
   comment_id: string | null;
+  related_user_id: string | null;
   read: boolean;
   created_at: string;
   // Joined fields for display
@@ -109,6 +110,11 @@ export interface Notification {
   };
   question?: {
     content: string;
+    author_id?: string;
+  };
+  related_user?: {
+    username: string | null;
+    avatar_url: string | null;
   };
 }
 

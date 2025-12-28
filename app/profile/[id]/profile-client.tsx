@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Check,
   X,
@@ -12,6 +12,9 @@ import {
   RotateCcw,
   LogOut,
   Vote,
+  UserPlus,
+  UserMinus,
+  Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +23,7 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { Profile, VoteType, Compatibility, CommonGround, Divergence } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
+import { createClient } from '@/lib/supabase/client';
 
 interface ResponseWithQuestion {
   id: string;
@@ -67,6 +71,11 @@ interface ProfileClientProps {
   divergence: Divergence[] | null;
   currentUserId?: string;
   createdQuestions: CreatedQuestion[];
+  followCounts: {
+    followers: number;
+    following: number;
+  };
+  isFollowing: boolean;
 }
 
 type Tab = 'stances' | 'questions' | 'history' | 'comparison';
@@ -89,12 +98,79 @@ export function ProfileClient({
   divergence,
   currentUserId,
   createdQuestions,
+  followCounts,
+  isFollowing: initialIsFollowing,
 }: ProfileClientProps) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
   const [activeTab, setActiveTab] = useState<Tab>(
     isOwnProfile ? 'stances' : compatibility ? 'comparison' : 'stances'
   );
   const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all');
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+  const [localFollowerCount, setLocalFollowerCount] = useState(followCounts.followers);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  const handleFollow = async () => {
+    if (!user || isOwnProfile) return;
+    
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', profile.id);
+        
+        setIsFollowing(false);
+        setLocalFollowerCount(prev => prev - 1);
+      } else {
+        // Follow
+        await supabase
+          .from('follows')
+          .insert({
+            follower_id: user.id,
+            following_id: profile.id,
+          });
+        
+        // Notify the person being followed
+        await supabase.from('notifications').insert({
+          user_id: profile.id,
+          type: 'follow',
+          actor_id: user.id,
+        });
+        
+        // Notify your followers that you followed someone
+        const { data: myFollowers } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id);
+        
+        if (myFollowers && myFollowers.length > 0) {
+          const followerNotifications = myFollowers
+            .filter(f => f.follower_id !== profile.id) // Don't notify the person being followed twice
+            .map(f => ({
+              user_id: f.follower_id,
+              type: 'follow' as const,
+              actor_id: user.id,
+              related_user_id: profile.id, // Who was followed
+            }));
+          
+          if (followerNotifications.length > 0) {
+            supabase.from('notifications').insert(followerNotifications);
+          }
+        }
+        
+        setIsFollowing(true);
+        setLocalFollowerCount(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error('Error following/unfollowing:', err);
+    }
+    setFollowLoading(false);
+  };
 
   const filteredResponses = responses.filter(
     (r) => stanceFilter === 'all' || r.vote === stanceFilter
@@ -119,11 +195,46 @@ export function ProfileClient({
               className="h-20 w-20 border-4 border-white shadow-lg dark:border-zinc-900"
             />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              {profile.username || 'Anonymous'}
-            </h1>
-            <p className="text-sm text-zinc-500">Member since {memberSince}</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                {profile.username || 'Anonymous'}
+              </h1>
+              <p className="text-sm text-zinc-500">Member since {memberSince}</p>
+              {/* Follower/Following counts */}
+              <div className="mt-2 flex items-center gap-4 text-sm">
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{localFollowerCount}</span> followers
+                </span>
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{followCounts.following}</span> following
+                </span>
+              </div>
+            </div>
+            {/* Follow/Unfollow Button */}
+            {!isOwnProfile && user && (
+              <Button
+                variant={isFollowing ? 'outline' : 'default'}
+                size="sm"
+                onClick={handleFollow}
+                disabled={followLoading}
+                className="gap-1.5"
+              >
+                {followLoading ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : isFollowing ? (
+                  <>
+                    <UserMinus className="h-4 w-4" />
+                    Unfollow
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    Follow
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Stats Row */}

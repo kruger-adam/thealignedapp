@@ -121,6 +121,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     divergence = divergeData;
   }
 
+  // Fetch follow counts
+  const { count: followersCount } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('following_id', profile.id);
+
+  const { count: followingCount } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('follower_id', profile.id);
+
+  // Check if current user is following this profile
+  let isFollowing = false;
+  if (user && !isOwnProfile) {
+    const { data: followData } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', user.id)
+      .eq('following_id', profile.id)
+      .single();
+    
+    isFollowing = !!followData;
+  }
+
   return (
     <ProfileClient
       profile={profile}
@@ -139,6 +163,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       divergence={divergence}
       currentUserId={user?.id}
       createdQuestions={createdQuestions || []}
+      followCounts={{
+        followers: followersCount || 0,
+        following: followingCount || 0,
+      }}
+      isFollowing={isFollowing}
     />
   );
 }
