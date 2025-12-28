@@ -51,27 +51,58 @@ export default function FeedPage() {
       return;
     }
 
-    // Transform to match expected format
+    // Fetch all responses to calculate vote stats
     interface RawQuestion {
       id: string;
       author_id: string;
       content: string;
       created_at: string;
     }
-    const questionsData = (rawQuestions as RawQuestion[]).map((q) => ({
-      question_id: q.id,
-      author_id: q.author_id,
-      content: q.content,
-      created_at: q.created_at,
-      total_votes: 0,
-      yes_count: 0,
-      no_count: 0,
-      unsure_count: 0,
-      yes_percentage: 0,
-      no_percentage: 0,
-      unsure_percentage: 0,
-      controversy_score: 0,
-    }));
+    
+    const questionIds = (rawQuestions as RawQuestion[]).map(q => q.id);
+    let allResponses: { question_id: string; vote: string }[] = [];
+    
+    if (questionIds.length > 0) {
+      const responsesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote&question_id=in.(${questionIds.join(',')})`;
+      const responsesRes = await fetch(responsesUrl, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      allResponses = await responsesRes.json();
+    }
+    
+    // Calculate vote stats per question
+    const voteStats: Record<string, { yes: number; no: number; unsure: number }> = {};
+    for (const r of allResponses) {
+      if (!voteStats[r.question_id]) {
+        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0 };
+      }
+      if (r.vote === 'YES') voteStats[r.question_id].yes++;
+      else if (r.vote === 'NO') voteStats[r.question_id].no++;
+      else if (r.vote === 'UNSURE') voteStats[r.question_id].unsure++;
+    }
+    
+    // Transform to match expected format
+    const questionsData = (rawQuestions as RawQuestion[]).map((q) => {
+      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0 };
+      const total = stats.yes + stats.no + stats.unsure;
+      return {
+        question_id: q.id,
+        author_id: q.author_id,
+        content: q.content,
+        created_at: q.created_at,
+        total_votes: total,
+        yes_count: stats.yes,
+        no_count: stats.no,
+        unsure_count: stats.unsure,
+        yes_percentage: total > 0 ? Math.round((stats.yes / total) * 100) : 0,
+        no_percentage: total > 0 ? Math.round((stats.no / total) * 100) : 0,
+        unsure_percentage: total > 0 ? Math.round((stats.unsure / total) * 100) : 0,
+        controversy_score: 0, // Could calculate later if needed
+      };
+    });
 
     // Fetch user's votes if logged in (using direct fetch)
     let userVotes: Record<string, VoteType> = {};
