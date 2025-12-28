@@ -17,20 +17,24 @@ export default function FeedPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const fetchQuestions = useCallback(async () => {
+    console.log('[Feed] Starting fetchQuestions');
     setLoading(true);
 
     try {
+      console.log('[Feed] Making Supabase query...');
       // Fetch questions
       const { data: rawQuestions, error: questionsError } = await supabase
         .from('questions')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      console.log('[Feed] Query result:', { count: rawQuestions?.length, error: questionsError });
 
-    if (questionsError) {
-      console.error('Error fetching questions:', questionsError);
-      setLoading(false);
-      return;
-    }
+      if (questionsError) {
+        console.error('Error fetching questions:', questionsError);
+        setLoading(false);
+        return;
+      }
 
     // If no questions, show empty state
     if (!rawQuestions || rawQuestions.length === 0) {
