@@ -68,6 +68,7 @@ export function QuestionCard({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionedUsers, setMentionedUsers] = useState<MentionSuggestion[]>([]); // Track mentioned users for submission
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchVoters = async () => {
@@ -209,16 +210,22 @@ export function QuestionCard({
   };
 
   // Insert selected mention into comment
-  // Format: @[username](userId) for storage, displayed as @username
+  // Shows @username in input, but tracks user info for submission
   const insertMention = (selectedUser: MentionSuggestion) => {
     if (mentionStartIndex === -1) return;
     
     const beforeMention = commentText.substring(0, mentionStartIndex);
     const afterMention = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
-    // Store as @[username](id) format for proper linking
-    const newText = `${beforeMention}@[${selectedUser.username}](${selectedUser.id}) ${afterMention}`;
+    // Show clean @username in the input
+    const newText = `${beforeMention}@${selectedUser.username} ${afterMention}`;
     
     setCommentText(newText);
+    // Track this user for when we submit (to convert to @[username](id) format)
+    setMentionedUsers(prev => {
+      // Avoid duplicates
+      if (prev.some(u => u.id === selectedUser.id)) return prev;
+      return [...prev, selectedUser];
+    });
     setShowMentions(false);
     setMentionQuery('');
     setMentionStartIndex(-1);
@@ -326,13 +333,21 @@ export function QuestionCard({
     
     setSubmittingComment(true);
     try {
+      // Convert @username to @[username](id) format for storage
+      let contentToSave = commentText.trim();
+      for (const mentionedUser of mentionedUsers) {
+        // Replace @username with @[username](id) - use word boundary to avoid partial matches
+        const regex = new RegExp(`@${mentionedUser.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$|[.,!?;:])`, 'g');
+        contentToSave = contentToSave.replace(regex, `@[${mentionedUser.username}](${mentionedUser.id})`);
+      }
+      
       // Use Supabase client for authenticated insert
       const { data: newComment, error } = await supabase
         .from('comments')
         .insert({
           question_id: question.id,
           user_id: user.id,
-          content: commentText.trim(),
+          content: contentToSave,
         })
         .select()
         .single();
@@ -344,6 +359,26 @@ export function QuestionCard({
       }
       
       if (newComment) {
+        // Create notifications for mentioned users
+        if (mentionedUsers.length > 0) {
+          const notifications = mentionedUsers
+            .filter(u => u.id !== user.id) // Don't notify yourself
+            .map(mentionedUser => ({
+              user_id: mentionedUser.id,
+              type: 'mention' as const,
+              actor_id: user.id,
+              question_id: question.id,
+              comment_id: newComment.id,
+            }));
+          
+          if (notifications.length > 0) {
+            // Insert notifications (fire and forget - don't block on this)
+            supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+              if (notifError) console.error('Error creating notifications:', notifError);
+            });
+          }
+        }
+        
         // Add the new comment to the list
         setComments(prev => [...prev, {
           id: newComment.id,
@@ -355,6 +390,7 @@ export function QuestionCard({
         }]);
         setCommentCount(prev => prev + 1);
         setCommentText('');
+        setMentionedUsers([]); // Clear tracked mentions
         setShowComments(true);
       }
     } catch (err) {

@@ -6,6 +6,7 @@ import { LogIn, Home } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
+import { NotificationsDropdown } from '@/components/notifications-dropdown';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -49,14 +50,17 @@ export function Header() {
           {loading ? (
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
-            <Link href={`/profile/${user.id}`} className="ml-2">
-              <Avatar
-                src={profile?.avatar_url}
-                fallback={profile?.username || user.email || ''}
-                size="sm"
-                className="cursor-pointer transition-opacity hover:opacity-80"
-              />
-            </Link>
+            <>
+              <NotificationsDropdown />
+              <Link href={`/profile/${user.id}`} className="ml-1">
+                <Avatar
+                  src={profile?.avatar_url}
+                  fallback={profile?.username || user.email || ''}
+                  size="sm"
+                  className="cursor-pointer transition-opacity hover:opacity-80"
+                />
+              </Link>
+            </>
           ) : (
             <Button
               onClick={signInWithGoogle}

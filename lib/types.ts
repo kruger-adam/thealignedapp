@@ -91,4 +91,24 @@ export interface Divergence {
 
 export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus';
 
+export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  actor_id: string;
+  question_id: string | null;
+  comment_id: string | null;
+  read: boolean;
+  created_at: string;
+  // Joined fields for display
+  actor?: {
+    username: string | null;
+    avatar_url: string | null;
+  };
+  question?: {
+    content: string;
+  };
+}
 

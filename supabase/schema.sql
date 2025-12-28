@@ -388,11 +388,51 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- NOTIFICATIONS
+-- ============================================
+
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('mention', 'follow', 'new_question', 'vote', 'comment')),
+    actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
+    comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+    read BOOLEAN DEFAULT FALSE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Users can only view their own notifications
+CREATE POLICY "Users can view their own notifications" ON notifications
+    FOR SELECT USING (auth.uid() = user_id);
+
+-- System can create notifications (we'll do this from the client with service role or via trigger)
+-- For now, allow authenticated users to create notifications for others (needed for mentions)
+CREATE POLICY "Authenticated users can create notifications" ON notifications
+    FOR INSERT WITH CHECK (auth.uid() = actor_id);
+
+-- Users can update their own notifications (mark as read)
+CREATE POLICY "Users can update their own notifications" ON notifications
+    FOR UPDATE USING (auth.uid() = user_id);
+
+-- Users can delete their own notifications
+CREATE POLICY "Users can delete their own notifications" ON notifications
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- Indexes for performance
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_user_id_read ON notifications(user_id, read);
+CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
+
+-- ============================================
 -- REALTIME SUBSCRIPTIONS
 -- ============================================
 
 -- Enable realtime for responses (for live vote updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE responses;
 ALTER PUBLICATION supabase_realtime ADD TABLE questions;
-
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
