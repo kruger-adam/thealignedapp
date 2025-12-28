@@ -25,47 +25,45 @@ export function NotificationsDropdown() {
     
     setLoading(true);
     try {
-      // Fetch notifications with actor profile info
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/notifications?select=*&user_id=eq.${user.id}&order=created_at.desc&limit=20`;
-      const res = await fetch(url, {
-        headers: {
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-        },
-      });
-      const notificationsData = await res.json();
+      // Fetch notifications using Supabase client (handles auth properly)
+      const { data: notificationsData, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        setLoading(false);
+        return;
+      }
       
       if (notificationsData && notificationsData.length > 0) {
         // Get unique actor IDs and question IDs
-        const actorIds = [...new Set(notificationsData.map((n: Notification) => n.actor_id))];
-        const questionIds = [...new Set(notificationsData.filter((n: Notification) => n.question_id).map((n: Notification) => n.question_id))];
+        const actorIds = [...new Set(notificationsData.map((n) => n.actor_id))];
+        const questionIds = [...new Set(notificationsData.filter((n) => n.question_id).map((n) => n.question_id))];
         
         // Fetch actor profiles
-        const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${actorIds.join(',')})`;
-        const profilesRes = await fetch(profilesUrl, {
-          headers: {
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-          },
-        });
-        const profiles = await profilesRes.json();
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id,username,avatar_url')
+          .in('id', actorIds);
+        
         const profileMap = Object.fromEntries(
-          profiles.map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
+          (profiles || []).map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
         );
         
         // Fetch questions if any
         let questionMap: Record<string, { content: string }> = {};
         if (questionIds.length > 0) {
-          const questionsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=id,content&id=in.(${questionIds.join(',')})`;
-          const questionsRes = await fetch(questionsUrl, {
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-            },
-          });
-          const questions = await questionsRes.json();
+          const { data: questions } = await supabase
+            .from('questions')
+            .select('id,content')
+            .in('id', questionIds);
+          
           questionMap = Object.fromEntries(
-            questions.map((q: { id: string; content: string }) => [q.id, { content: q.content }])
+            (questions || []).map((q: { id: string; content: string }) => [q.id, { content: q.content }])
           );
         }
         
