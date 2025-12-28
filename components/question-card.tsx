@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -368,7 +368,7 @@ export function QuestionCard({
   const renderCommentContent = (content: string) => {
     // Match @[username](id) format first, then fall back to simple @username
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
     let match;
     
