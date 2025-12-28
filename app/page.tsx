@@ -52,7 +52,13 @@ export default function FeedPage() {
     }
 
     // Transform to match expected format
-    const questionsData = rawQuestions.map(q => ({
+    interface RawQuestion {
+      id: string;
+      author_id: string;
+      content: string;
+      created_at: string;
+    }
+    const questionsData = (rawQuestions as RawQuestion[]).map((q) => ({
       question_id: q.id,
       author_id: q.author_id,
       content: q.content,
@@ -146,7 +152,7 @@ export default function FeedPage() {
       console.error('Fetch error:', err);
       setLoading(false);
     }
-  }, [user, sortBy, supabase]);
+  }, [user, sortBy]);
 
   useEffect(() => {
     fetchQuestions();
