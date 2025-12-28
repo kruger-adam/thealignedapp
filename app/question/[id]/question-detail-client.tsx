@@ -94,7 +94,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
   // Vote handling
-  const updateVoteState = (newVote: VoteType) => {
+  const updateVoteState = (newVote: VoteType | null) => {
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
@@ -129,35 +129,59 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
 
+    // Check if user is clicking the same vote to unvote
+    const isUnvoting = localUserVote === vote;
     const isFirstVote = !localUserVote;
-    updateVoteState(vote);
+    
+    // Update local state immediately
+    if (isUnvoting) {
+      updateVoteState(null);
+    } else {
+      updateVoteState(vote);
+    }
 
     startTransition(async () => {
-      const { error } = await supabase
-        .from('responses')
-        .upsert(
-          {
-            user_id: user.id,
+      if (isUnvoting) {
+        // Delete the vote
+        const { error } = await supabase
+          .from('responses')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('question_id', question.id);
+
+        if (error) {
+          console.error('Error removing vote:', error);
+          // Revert on error
+          updateVoteState(vote);
+          return;
+        }
+      } else {
+        const { error } = await supabase
+          .from('responses')
+          .upsert(
+            {
+              user_id: user.id,
+              question_id: question.id,
+              vote,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,question_id' }
+          );
+
+        if (error) {
+          console.error('Error voting:', error);
+          return;
+        }
+
+        // Notify question author on first vote
+        if (isFirstVote && question.author_id !== user.id) {
+          supabase.from('notifications').insert({
+            user_id: question.author_id,
+            type: 'vote',
+            actor_id: user.id,
             question_id: question.id,
-            vote,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,question_id' }
-        );
-
-      if (error) {
-        console.error('Error voting:', error);
-        return;
-      }
-
-      // Notify question author on first vote
-      if (isFirstVote && question.author_id !== user.id) {
-        supabase.from('notifications').insert({
-          user_id: question.author_id,
-          type: 'vote',
-          actor_id: user.id,
-          question_id: question.id,
-        });
+          });
+        }
       }
     });
   };

@@ -606,7 +606,7 @@ export function QuestionCard({
     }
   }, [question.stats, hasVotedLocally]);
 
-  const updateVoteState = (newVote: VoteType) => {
+  const updateVoteState = (newVote: VoteType | null) => {
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
@@ -650,74 +650,96 @@ export function QuestionCard({
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
 
+    // Check if user is clicking the same vote to unvote
+    const isUnvoting = localUserVote === vote;
+    
     // Check if this is the user's first vote on this question
     const isFirstVote = !localUserVote;
 
     // Update local state immediately
-    setHasVotedLocally(true);
-    updateVoteState(vote);
+    if (isUnvoting) {
+      updateVoteState(null);
+    } else {
+      setHasVotedLocally(true);
+      updateVoteState(vote);
+    }
 
     startTransition(async () => {
+      if (isUnvoting) {
+        // Delete the vote
+        const { error } = await supabase
+          .from('responses')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('question_id', question.id);
 
-      // Perform the actual update
-      const { error } = await supabase
-        .from('responses')
-        .upsert(
-          {
-            user_id: user.id,
-            question_id: question.id,
-            vote,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: 'user_id,question_id',
-          }
-        );
-
-      if (error) {
-        console.error('Error voting:', error);
-        // Revert on error - would need proper error handling in production
-        return;
-      }
-
-      // Notify question author (only on first vote, not vote changes)
-      // Don't notify yourself
-      if (isFirstVote && question.author_id !== user.id) {
-        supabase.from('notifications').insert({
-          user_id: question.author_id,
-          type: 'vote',
-          actor_id: user.id,
-          question_id: question.id,
-        }).then(({ error: notifError }) => {
-          if (notifError) console.error('Error creating vote notification:', notifError);
-        });
-      }
-
-      // Notify followers about the vote (only on first vote)
-      if (isFirstVote) {
-        supabase
-          .from('follows')
-          .select('follower_id')
-          .eq('following_id', user.id)
-          .then(({ data: followers }) => {
-            if (followers && followers.length > 0) {
-              const notifications = followers
-                .filter(f => f.follower_id !== question.author_id) // Don't double-notify author
-                .map(f => ({
-                  user_id: f.follower_id,
-                  type: 'vote' as const,
-                  actor_id: user.id,
-                  question_id: question.id,
-                }));
-              
-              if (notifications.length > 0) {
-                supabase.from('notifications').insert(notifications);
-              }
+        if (error) {
+          console.error('Error removing vote:', error);
+          // Revert on error
+          updateVoteState(vote);
+          return;
+        }
+      } else {
+        // Perform the actual update/insert
+        const { error } = await supabase
+          .from('responses')
+          .upsert(
+            {
+              user_id: user.id,
+              question_id: question.id,
+              vote,
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: 'user_id,question_id',
             }
-          });
-      }
+          );
 
-      onVote?.(question.id, vote);
+        if (error) {
+          console.error('Error voting:', error);
+          // Revert on error - would need proper error handling in production
+          return;
+        }
+
+        // Notify question author (only on first vote, not vote changes)
+        // Don't notify yourself
+        if (isFirstVote && question.author_id !== user.id) {
+          supabase.from('notifications').insert({
+            user_id: question.author_id,
+            type: 'vote',
+            actor_id: user.id,
+            question_id: question.id,
+          }).then(({ error: notifError }) => {
+            if (notifError) console.error('Error creating vote notification:', notifError);
+          });
+        }
+
+        // Notify followers about the vote (only on first vote)
+        if (isFirstVote) {
+          supabase
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', user.id)
+            .then(({ data: followers }) => {
+              if (followers && followers.length > 0) {
+                const notifications = followers
+                  .filter(f => f.follower_id !== question.author_id) // Don't double-notify author
+                  .map(f => ({
+                    user_id: f.follower_id,
+                    type: 'vote' as const,
+                    actor_id: user.id,
+                    question_id: question.id,
+                  }));
+                
+                if (notifications.length > 0) {
+                  supabase.from('notifications').insert(notifications);
+                }
+              }
+            });
+        }
+
+        onVote?.(question.id, vote);
+      }
     });
   };
 
