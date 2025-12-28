@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useMemo, useEffect } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -26,6 +26,15 @@ interface Voter {
   vote: VoteType;
 }
 
+interface Comment {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  username: string | null;
+  avatar_url: string | null;
+}
+
 export function QuestionCard({
   question,
   authorName,
@@ -38,6 +47,14 @@ export function QuestionCard({
   const [showVoters, setShowVoters] = useState(false);
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loadingVoters, setLoadingVoters] = useState(false);
+  
+  // Comments state
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
   const fetchVoters = async () => {
     if (voters.length > 0) {
@@ -86,6 +103,131 @@ export function QuestionCard({
       console.error('Error fetching voters:', err);
     }
     setLoadingVoters(false);
+  };
+
+  // Fetch comment count on mount
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      try {
+        const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/comments?select=id&question_id=eq.${question.id}`;
+        const res = await fetch(url, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+            'Prefer': 'count=exact',
+          },
+        });
+        const countHeader = res.headers.get('content-range');
+        if (countHeader) {
+          const count = parseInt(countHeader.split('/')[1] || '0');
+          setCommentCount(count);
+        } else {
+          const data = await res.json();
+          setCommentCount(data?.length || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching comment count:', err);
+      }
+    };
+    fetchCommentCount();
+  }, [question.id]);
+
+  const fetchComments = async () => {
+    if (comments.length > 0 && showComments) {
+      // Already fetched, just toggle
+      setShowComments(false);
+      return;
+    }
+    
+    if (comments.length > 0) {
+      setShowComments(true);
+      return;
+    }
+    
+    setLoadingComments(true);
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/comments?select=id,user_id,content,created_at&question_id=eq.${question.id}&order=created_at.asc`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const commentsData = await res.json();
+      
+      if (commentsData.length > 0) {
+        const userIds = [...new Set(commentsData.map((c: { user_id: string }) => c.user_id))];
+        const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${userIds.join(',')})`;
+        const profilesRes = await fetch(profilesUrl, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          },
+        });
+        const profiles = await profilesRes.json();
+        
+        const profileMap = Object.fromEntries(
+          profiles.map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
+        );
+        
+        const commentsList: Comment[] = commentsData.map((c: { id: string; user_id: string; content: string; created_at: string }) => ({
+          id: c.id,
+          user_id: c.user_id,
+          content: c.content,
+          created_at: c.created_at,
+          username: profileMap[c.user_id]?.username || 'Anonymous',
+          avatar_url: profileMap[c.user_id]?.avatar_url || null,
+        }));
+        
+        setComments(commentsList);
+      }
+      setShowComments(true);
+    } catch (err) {
+      console.error('Error fetching comments:', err);
+    }
+    setLoadingComments(false);
+  };
+
+  const submitComment = async () => {
+    if (!user || !commentText.trim()) return;
+    
+    setSubmittingComment(true);
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/comments`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({
+          question_id: question.id,
+          user_id: user.id,
+          content: commentText.trim(),
+        }),
+      });
+      
+      if (res.ok) {
+        const [newComment] = await res.json();
+        // Add the new comment to the list
+        setComments(prev => [...prev, {
+          id: newComment.id,
+          user_id: user.id,
+          content: newComment.content,
+          created_at: newComment.created_at,
+          username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
+          avatar_url: user.user_metadata?.avatar_url || null,
+        }]);
+        setCommentCount(prev => prev + 1);
+        setCommentText('');
+        setShowComments(true);
+      }
+    } catch (err) {
+      console.error('Error submitting comment:', err);
+    }
+    setSubmittingComment(false);
   };
   
   // Local state for vote (persists after voting without refetch)
@@ -207,26 +349,42 @@ export function QuestionCard({
               </span>
             </div>
           </Link>
-          <button
-            onClick={fetchVoters}
-            disabled={optimisticData.stats.total_votes === 0}
-            className={cn(
-              "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
-              optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
-            )}
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            <span>{optimisticData.stats.total_votes} votes</span>
-            {optimisticData.stats.total_votes > 0 && (
-              loadingVoters ? (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchVoters}
+              disabled={optimisticData.stats.total_votes === 0}
+              className={cn(
+                "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
+                optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+              )}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span>{optimisticData.stats.total_votes} votes</span>
+              {optimisticData.stats.total_votes > 0 && (
+                loadingVoters ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                ) : showVoters ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )
+              )}
+            </button>
+            <button
+              onClick={fetchComments}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span>{commentCount} comments</span>
+              {loadingComments ? (
                 <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-              ) : showVoters ? (
+              ) : showComments ? (
                 <ChevronUp className="h-3 w-3" />
               ) : (
                 <ChevronDown className="h-3 w-3" />
-              )
-            )}
-          </button>
+              )}
+            </button>
+          </div>
         </div>
       </CardHeader>
 
@@ -281,6 +439,73 @@ export function QuestionCard({
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Expandable Comments Section */}
+      {showComments && (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+          <div className="space-y-3">
+            {comments.length === 0 ? (
+              <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
+            ) : (
+              comments.map(comment => (
+                <div key={comment.id} className="flex gap-3">
+                  <Link href={`/profile/${comment.user_id}`}>
+                    <Avatar src={comment.avatar_url} fallback={comment.username || ''} size="sm" className="h-8 w-8 flex-shrink-0" />
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/profile/${comment.user_id}`} className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                        {comment.username}
+                      </Link>
+                      <span className="text-xs text-zinc-500">
+                        {getTimeAgo(new Date(comment.created_at))}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">
+                      {comment.content}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            
+            {/* Comment Form */}
+            {user ? (
+              <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      submitComment();
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={submitComment}
+                  disabled={!commentText.trim() || submittingComment}
+                  className="px-3"
+                >
+                  {submittingComment ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                Sign in to comment
+              </p>
             )}
           </div>
         </div>
