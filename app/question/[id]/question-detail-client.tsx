@@ -289,9 +289,12 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   };
 
   // Start editing a comment
+  // Start editing a comment - convert @[username](id) format to @username for display
   const startEditingComment = (comment: Comment) => {
     setEditingCommentId(comment.id);
-    setEditedCommentContent(comment.content);
+    // Convert @[username](id) to @username for readable editing
+    const readableContent = comment.content.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+    setEditedCommentContent(readableContent);
   };
 
   // Mention search

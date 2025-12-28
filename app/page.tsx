@@ -51,6 +51,7 @@ export default function FeedPage() {
       author_id: string;
       content: string;
       created_at: string;
+      updated_at: string;
     }
     
     const questionIds = (rawQuestions as RawQuestion[]).map(q => q.id);
@@ -142,7 +143,7 @@ export default function FeedPage() {
       author_id: q.author_id,
       content: q.content,
       created_at: q.created_at,
-      updated_at: q.created_at,
+      updated_at: q.updated_at,
       author: profilesMap[q.author_id],
       stats: {
         total_votes: q.total_votes,
