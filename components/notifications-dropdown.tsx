@@ -152,10 +152,8 @@ export function NotificationsDropdown() {
         }));
         
         setNotifications(enrichedNotifications);
-        setUnreadCount(enrichedNotifications.filter((n: Notification) => !n.read).length);
       } else {
         setNotifications([]);
-        setUnreadCount(0);
       }
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -174,7 +172,6 @@ export function NotificationsDropdown() {
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error('Error marking notification as read:', err);
     }
@@ -192,7 +189,6 @@ export function NotificationsDropdown() {
         .eq('read', false);
       
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
     } catch (err) {
       console.error('Error marking all as read:', err);
     }
