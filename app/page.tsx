@@ -19,16 +19,41 @@ export default function FeedPage() {
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
 
-    // Fetch questions with their stats
-    const { data: questionsData, error: questionsError } = await supabase
-      .from('question_stats')
-      .select('*');
+    try {
+      // Fetch questions
+      const { data: rawQuestions, error: questionsError } = await supabase
+        .from('questions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (questionsError || !questionsData) {
+    if (questionsError) {
       console.error('Error fetching questions:', questionsError);
       setLoading(false);
       return;
     }
+
+    // If no questions, show empty state
+    if (!rawQuestions || rawQuestions.length === 0) {
+      setQuestions([]);
+      setLoading(false);
+      return;
+    }
+
+    // Transform to match expected format
+    const questionsData = rawQuestions.map(q => ({
+      question_id: q.id,
+      author_id: q.author_id,
+      content: q.content,
+      created_at: q.created_at,
+      total_votes: 0,
+      yes_count: 0,
+      no_count: 0,
+      unsure_count: 0,
+      yes_percentage: 0,
+      no_percentage: 0,
+      unsure_percentage: 0,
+      controversy_score: 0,
+    }));
 
     // Fetch user's votes if logged in
     let userVotes: Record<string, VoteType> = {};
@@ -97,6 +122,10 @@ export default function FeedPage() {
 
     setQuestions(sorted);
     setLoading(false);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setLoading(false);
+    }
   }, [user, sortBy, supabase]);
 
   useEffect(() => {

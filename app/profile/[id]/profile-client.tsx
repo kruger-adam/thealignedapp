@@ -100,19 +100,19 @@ export function ProfileClient({
       <Card className="mb-6 overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
         <CardContent className="relative pb-6 pt-0">
-          <div className="-mt-12 flex items-end gap-4">
+          <div className="-mt-12 mb-3">
             <Avatar
               src={profile.avatar_url}
               fallback={profile.username || profile.email}
               size="lg"
               className="h-20 w-20 border-4 border-white shadow-lg dark:border-zinc-900"
             />
-            <div className="flex-1 pb-1">
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                {profile.username || 'Anonymous'}
-              </h1>
-              <p className="text-sm text-zinc-500">Member since {memberSince}</p>
-            </div>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              {profile.username || 'Anonymous'}
+            </h1>
+            <p className="text-sm text-zinc-500">Member since {memberSince}</p>
           </div>
 
           {/* Stats Row */}
