@@ -415,16 +415,13 @@ export function ProfileClient({
                     Agreement Rate
                   </p>
                   <p className="text-2xl font-bold text-violet-900 dark:text-violet-100">
-                    {compatibility.compatibility_score}%
+                    {Math.round(compatibility.compatibility_score)}%
                   </p>
                 </div>
               </div>
               <div className="text-right text-sm text-violet-600 dark:text-violet-400">
-                <p>{compatibility.agreements} agreements</p>
-                <p>{compatibility.disagreements} disagreements</p>
-                <p className="text-xs opacity-75">
-                  {compatibility.common_questions} shared questions
-                </p>
+                <p>{compatibility.agreements} {compatibility.agreements === 1 ? 'agreement' : 'agreements'}</p>
+                <p>{compatibility.disagreements} {compatibility.disagreements === 1 ? 'disagreement' : 'disagreements'}</p>
               </div>
             </div>
           </CardContent>
