@@ -70,8 +70,12 @@ export function NotificationsDropdown() {
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Filter notifications based on user preferences
   const filteredNotifications = useMemo(() => {
@@ -86,11 +90,6 @@ export function NotificationsDropdown() {
   const filteredUnreadCount = useMemo(() => {
     return filteredNotifications.filter(n => !n.read).length;
   }, [filteredNotifications]);
-  const [loading, setLoading] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
-  const [savingPreferences, setSavingPreferences] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
   const fetchNotifications = async () => {

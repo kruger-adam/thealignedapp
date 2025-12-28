@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,13 @@ interface MentionSuggestion {
   avatar_url: string | null;
 }
 
+interface Voter {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  vote: VoteType;
+}
+
 interface QuestionDetailClientProps {
   question: QuestionWithStats;
   initialComments: Comment[];
@@ -50,6 +57,11 @@ export function QuestionDetailClient({ question, initialComments, currentUserId 
   // Vote state
   const [localUserVote, setLocalUserVote] = useState<VoteType | null>(question.user_vote ?? null);
   const [localStats, setLocalStats] = useState(question.stats);
+  
+  // Voters state
+  const [showVoters, setShowVoters] = useState(false);
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [loadingVoters, setLoadingVoters] = useState(false);
   
   // Comments state
   const [comments, setComments] = useState<Comment[]>(initialComments);
