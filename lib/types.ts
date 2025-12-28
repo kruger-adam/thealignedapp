@@ -1,0 +1,94 @@
+// Database types for Consensus app
+
+export type VoteType = 'YES' | 'NO' | 'UNSURE';
+
+export interface Profile {
+  id: string;
+  email: string;
+  username: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Question {
+  id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author?: Profile;
+}
+
+export interface Response {
+  id: string;
+  user_id: string;
+  question_id: string;
+  vote: VoteType;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResponseHistory {
+  id: string;
+  user_id: string;
+  question_id: string;
+  previous_vote: VoteType | null;
+  new_vote: VoteType;
+  changed_at: string;
+}
+
+export interface QuestionStats {
+  question_id: string;
+  content: string;
+  author_id: string;
+  created_at: string;
+  total_votes: number;
+  yes_count: number;
+  no_count: number;
+  unsure_count: number;
+  yes_percentage: number;
+  no_percentage: number;
+  unsure_percentage: number;
+  controversy_score: number;
+}
+
+export interface QuestionWithStats extends Question {
+  stats: {
+    total_votes: number;
+    yes_count: number;
+    no_count: number;
+    unsure_count: number;
+    yes_percentage: number;
+    no_percentage: number;
+    unsure_percentage: number;
+    controversy_score: number;
+  };
+  user_vote?: VoteType | null;
+}
+
+export interface Compatibility {
+  compatibility_score: number;
+  common_questions: number;
+  agreements: number;
+  disagreements: number;
+}
+
+export interface CommonGround {
+  question_id: string;
+  content: string;
+  shared_vote: VoteType;
+  controversy_score: number;
+}
+
+export interface Divergence {
+  question_id: string;
+  content: string;
+  vote_a: VoteType;
+  vote_b: VoteType;
+  controversy_score: number;
+}
+
+export type SortOption = 'newest' | 'controversial' | 'consensus';
+
+

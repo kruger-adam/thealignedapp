@@ -1,0 +1,359 @@
+-- ============================================
+-- CONSENSUS APP - SUPABASE DATABASE SCHEMA
+-- ============================================
+-- Run this SQL in your Supabase SQL Editor
+-- ============================================
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- CUSTOM TYPES
+-- ============================================
+
+CREATE TYPE vote_type AS ENUM ('YES', 'NO', 'UNSURE');
+
+-- ============================================
+-- PROFILES TABLE
+-- ============================================
+-- Stores user profile information (linked to Supabase Auth)
+
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE,
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Enable Row Level Security
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies for profiles
+CREATE POLICY "Public profiles are viewable by everyone"
+    ON profiles FOR SELECT
+    USING (true);
+
+CREATE POLICY "Users can insert their own profile"
+    ON profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile"
+    ON profiles FOR UPDATE
+    USING (auth.uid() = id);
+
+-- ============================================
+-- QUESTIONS TABLE
+-- ============================================
+-- Stores the binary poll questions
+
+CREATE TABLE questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    content TEXT NOT NULL CHECK (char_length(content) <= 280),
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_questions_author_id ON questions(author_id);
+CREATE INDEX idx_questions_created_at ON questions(created_at DESC);
+
+-- Enable Row Level Security
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+
+-- Policies for questions
+CREATE POLICY "Questions are viewable by everyone"
+    ON questions FOR SELECT
+    USING (true);
+
+CREATE POLICY "Authenticated users can create questions"
+    ON questions FOR INSERT
+    WITH CHECK (auth.uid() = author_id);
+
+CREATE POLICY "Users can update their own questions"
+    ON questions FOR UPDATE
+    USING (auth.uid() = author_id);
+
+CREATE POLICY "Users can delete their own questions"
+    ON questions FOR DELETE
+    USING (auth.uid() = author_id);
+
+-- ============================================
+-- RESPONSES TABLE
+-- ============================================
+-- Stores user votes on questions (current state)
+
+CREATE TABLE responses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
+    vote vote_type NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE(user_id, question_id)
+);
+
+-- Create indexes for faster queries
+CREATE INDEX idx_responses_user_id ON responses(user_id);
+CREATE INDEX idx_responses_question_id ON responses(question_id);
+CREATE INDEX idx_responses_vote ON responses(vote);
+
+-- Enable Row Level Security
+ALTER TABLE responses ENABLE ROW LEVEL SECURITY;
+
+-- Policies for responses
+CREATE POLICY "Responses are viewable by everyone"
+    ON responses FOR SELECT
+    USING (true);
+
+CREATE POLICY "Authenticated users can create responses"
+    ON responses FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own responses"
+    ON responses FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own responses"
+    ON responses FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- ============================================
+-- RESPONSE HISTORY TABLE
+-- ============================================
+-- Tracks vote changes over time for stance evolution
+
+CREATE TABLE response_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
+    previous_vote vote_type,
+    new_vote vote_type NOT NULL,
+    changed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Create indexes for faster queries
+CREATE INDEX idx_response_history_user_id ON response_history(user_id);
+CREATE INDEX idx_response_history_question_id ON response_history(question_id);
+CREATE INDEX idx_response_history_changed_at ON response_history(changed_at DESC);
+
+-- Enable Row Level Security
+ALTER TABLE response_history ENABLE ROW LEVEL SECURITY;
+
+-- Policies for response_history
+CREATE POLICY "Users can view their own response history"
+    ON response_history FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "System can insert response history"
+    ON response_history FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- ============================================
+-- FUNCTIONS & TRIGGERS
+-- ============================================
+
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO profiles (id, email, username, avatar_url)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+        NEW.raw_user_meta_data->>'avatar_url'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create profile on signup
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for updated_at
+CREATE TRIGGER update_profiles_updated_at
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_questions_updated_at
+    BEFORE UPDATE ON questions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_responses_updated_at
+    BEFORE UPDATE ON responses
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to log vote changes to history
+CREATE OR REPLACE FUNCTION log_vote_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only log if the vote actually changed
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO response_history (user_id, question_id, previous_vote, new_vote)
+        VALUES (NEW.user_id, NEW.question_id, NULL, NEW.vote);
+    ELSIF TG_OP = 'UPDATE' AND OLD.vote IS DISTINCT FROM NEW.vote THEN
+        INSERT INTO response_history (user_id, question_id, previous_vote, new_vote)
+        VALUES (NEW.user_id, NEW.question_id, OLD.vote, NEW.vote);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to log vote changes
+CREATE TRIGGER on_response_change
+    AFTER INSERT OR UPDATE ON responses
+    FOR EACH ROW EXECUTE FUNCTION log_vote_change();
+
+-- ============================================
+-- VIEWS & ANALYTICS FUNCTIONS
+-- ============================================
+
+-- View to get question statistics
+CREATE OR REPLACE VIEW question_stats AS
+SELECT 
+    q.id AS question_id,
+    q.content,
+    q.author_id,
+    q.created_at,
+    COUNT(r.id) AS total_votes,
+    COUNT(CASE WHEN r.vote = 'YES' THEN 1 END) AS yes_count,
+    COUNT(CASE WHEN r.vote = 'NO' THEN 1 END) AS no_count,
+    COUNT(CASE WHEN r.vote = 'UNSURE' THEN 1 END) AS unsure_count,
+    CASE 
+        WHEN COUNT(r.id) > 0 THEN 
+            ROUND((COUNT(CASE WHEN r.vote = 'YES' THEN 1 END)::NUMERIC / COUNT(r.id)) * 100, 1)
+        ELSE 0 
+    END AS yes_percentage,
+    CASE 
+        WHEN COUNT(r.id) > 0 THEN 
+            ROUND((COUNT(CASE WHEN r.vote = 'NO' THEN 1 END)::NUMERIC / COUNT(r.id)) * 100, 1)
+        ELSE 0 
+    END AS no_percentage,
+    CASE 
+        WHEN COUNT(r.id) > 0 THEN 
+            ROUND((COUNT(CASE WHEN r.vote = 'UNSURE' THEN 1 END)::NUMERIC / COUNT(r.id)) * 100, 1)
+        ELSE 0 
+    END AS unsure_percentage,
+    -- Controversy score: closer to 50/50 = more controversial (0-100 scale)
+    CASE 
+        WHEN COUNT(r.id) > 0 THEN 
+            100 - ABS(
+                (COUNT(CASE WHEN r.vote = 'YES' THEN 1 END)::NUMERIC / COUNT(r.id)) * 100 - 50
+            ) * 2
+        ELSE 0 
+    END AS controversy_score
+FROM questions q
+LEFT JOIN responses r ON q.id = r.question_id
+GROUP BY q.id, q.content, q.author_id, q.created_at;
+
+-- Function to calculate compatibility between two users
+CREATE OR REPLACE FUNCTION calculate_compatibility(user_a UUID, user_b UUID)
+RETURNS TABLE (
+    compatibility_score NUMERIC,
+    common_questions INTEGER,
+    agreements INTEGER,
+    disagreements INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH user_responses AS (
+        SELECT 
+            r1.question_id,
+            r1.vote AS vote_a,
+            r2.vote AS vote_b
+        FROM responses r1
+        INNER JOIN responses r2 ON r1.question_id = r2.question_id
+        WHERE r1.user_id = user_a AND r2.user_id = user_b
+    )
+    SELECT 
+        CASE 
+            WHEN COUNT(*) > 0 THEN 
+                ROUND((COUNT(CASE WHEN vote_a = vote_b THEN 1 END)::NUMERIC / COUNT(*)) * 100, 1)
+            ELSE 0 
+        END,
+        COUNT(*)::INTEGER,
+        COUNT(CASE WHEN vote_a = vote_b THEN 1 END)::INTEGER,
+        COUNT(CASE WHEN vote_a != vote_b THEN 1 END)::INTEGER
+    FROM user_responses;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get common ground (agreements on controversial topics)
+CREATE OR REPLACE FUNCTION get_common_ground(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)
+RETURNS TABLE (
+    question_id UUID,
+    content TEXT,
+    shared_vote vote_type,
+    controversy_score NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        q.id,
+        q.content,
+        r1.vote,
+        qs.controversy_score
+    FROM responses r1
+    INNER JOIN responses r2 ON r1.question_id = r2.question_id
+    INNER JOIN questions q ON q.id = r1.question_id
+    INNER JOIN question_stats qs ON qs.question_id = q.id
+    WHERE r1.user_id = user_a 
+      AND r2.user_id = user_b 
+      AND r1.vote = r2.vote
+    ORDER BY qs.controversy_score DESC
+    LIMIT limit_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get divergence (disagreements)
+CREATE OR REPLACE FUNCTION get_divergence(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)
+RETURNS TABLE (
+    question_id UUID,
+    content TEXT,
+    vote_a vote_type,
+    vote_b vote_type,
+    controversy_score NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        q.id,
+        q.content,
+        r1.vote,
+        r2.vote,
+        qs.controversy_score
+    FROM responses r1
+    INNER JOIN responses r2 ON r1.question_id = r2.question_id
+    INNER JOIN questions q ON q.id = r1.question_id
+    INNER JOIN question_stats qs ON qs.question_id = q.id
+    WHERE r1.user_id = user_a 
+      AND r2.user_id = user_b 
+      AND r1.vote != r2.vote
+    ORDER BY qs.controversy_score DESC
+    LIMIT limit_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- REALTIME SUBSCRIPTIONS
+-- ============================================
+
+-- Enable realtime for responses (for live vote updates)
+ALTER PUBLICATION supabase_realtime ADD TABLE responses;
+ALTER PUBLICATION supabase_realtime ADD TABLE questions;
+
+
