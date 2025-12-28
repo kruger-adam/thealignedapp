@@ -554,9 +554,10 @@ export function ProfileClient({
               {commonGround && commonGround.filter(item => item.shared_vote !== 'SKIP').length > 0 ? (
                 <div className="space-y-2">
                   {commonGround.filter(item => item.shared_vote !== 'SKIP').map((item) => (
-                    <div
+                    <Link
                       key={item.question_id}
-                      className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30"
+                      href={`/question/${item.question_id}`}
+                      className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
                     >
                       <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
                         {(() => {
@@ -568,7 +569,7 @@ export function ProfileClient({
                       <span className="text-xs text-zinc-500">
                         {Math.round(item.controversy_score)}% split
                       </span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -589,26 +590,27 @@ export function ProfileClient({
               {divergence && divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').length > 0 ? (
                 <div className="space-y-2">
                   {divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').map((item) => (
-                    <div
+                    <Link
                       key={item.question_id}
-                      className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 dark:bg-rose-950/30"
+                      href={`/question/${item.question_id}`}
+                      className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
                     >
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
                         <span className="flex items-center gap-1 text-xs">
-                          <span className="font-medium">You:</span>
+                          <span className="w-8 font-medium">You:</span>
                           <span className={voteConfig[item.vote_a].color}>
                             {voteConfig[item.vote_a].label}
                           </span>
                         </span>
                         <span className="flex items-center gap-1 text-xs">
-                          <span className="font-medium">They:</span>
+                          <span className="w-8 font-medium">They:</span>
                           <span className={voteConfig[item.vote_b].color}>
                             {voteConfig[item.vote_b].label}
                           </span>
                         </span>
                       </div>
                       <p className="flex-1 text-sm">{item.content}</p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
