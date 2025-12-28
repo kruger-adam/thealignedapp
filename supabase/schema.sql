@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- CUSTOM TYPES
 -- ============================================
 
-CREATE TYPE vote_type AS ENUM ('YES', 'NO', 'UNSURE');
+CREATE TYPE vote_type AS ENUM ('YES', 'NO', 'UNSURE', 'SKIP');
 
 -- ============================================
 -- PROFILES TABLE

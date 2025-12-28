@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -612,23 +612,23 @@ export function QuestionCard({
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
-    // Remove old vote count
+    // Remove old vote count (SKIP doesn't affect total_votes for percentage calculation)
     if (oldVote) {
-      if (oldVote === 'YES') newStats.yes_count--;
-      else if (oldVote === 'NO') newStats.no_count--;
-      else newStats.unsure_count--;
-      newStats.total_votes--;
+      if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
+      else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
+      else if (oldVote === 'UNSURE') { newStats.unsure_count--; newStats.total_votes--; }
+      else if (oldVote === 'SKIP') { newStats.skip_count--; }
     }
 
     // Add new vote count
     if (newVote) {
-      if (newVote === 'YES') newStats.yes_count++;
-      else if (newVote === 'NO') newStats.no_count++;
-      else newStats.unsure_count++;
-      newStats.total_votes++;
+      if (newVote === 'YES') { newStats.yes_count++; newStats.total_votes++; }
+      else if (newVote === 'NO') { newStats.no_count++; newStats.total_votes++; }
+      else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
+      else if (newVote === 'SKIP') { newStats.skip_count++; }
     }
 
-    // Recalculate percentages
+    // Recalculate percentages (based on non-SKIP votes)
     if (newStats.total_votes > 0) {
       newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
       newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
@@ -860,6 +860,15 @@ export function QuestionCard({
                     </Link>
                   ))}
                 </div>
+              </div>
+            )}
+            {/* Skip voters - anonymous count only */}
+            {voters.filter(v => v.vote === 'SKIP').length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-zinc-500">Prefer Not to Answer</p>
+                <p className="text-xs text-zinc-400 italic">
+                  {voters.filter(v => v.vote === 'SKIP').length} {voters.filter(v => v.vote === 'SKIP').length === 1 ? 'person' : 'people'} (anonymous)
+                </p>
               </div>
             )}
           </div>
@@ -1098,7 +1107,7 @@ export function QuestionCard({
 
       <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
         {/* Vote Buttons */}
-        <div className="grid w-full grid-cols-3 gap-2">
+        <div className="grid w-full grid-cols-4 gap-2">
           <Button
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
@@ -1138,10 +1147,23 @@ export function QuestionCard({
             <HelpCircle className="h-4 w-4" />
             Not Sure
           </Button>
+          <Button
+            variant={optimisticData.userVote === 'SKIP' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleVote('SKIP')}
+            disabled={isPending || !user}
+            className={cn(
+              'flex-1 gap-1.5',
+              optimisticData.userVote === 'SKIP' && 'bg-zinc-600 hover:bg-zinc-700 ring-2 ring-zinc-500/50'
+            )}
+          >
+            <EyeOff className="h-4 w-4" />
+            Skip
+          </Button>
         </div>
 
         {/* Results - Show after voting or if has votes */}
-        {(hasVoted || optimisticData.stats.total_votes > 0) && (
+        {(hasVoted || optimisticData.stats.total_votes > 0 || optimisticData.stats.skip_count > 0) && (
           <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
             <ProgressBar
               yes={optimisticData.stats.yes_count}
@@ -1149,6 +1171,11 @@ export function QuestionCard({
               unsure={optimisticData.stats.unsure_count}
               size="md"
             />
+            {optimisticData.stats.skip_count > 0 && (
+              <p className="mt-1.5 text-xs text-zinc-400 italic">
+                {optimisticData.stats.skip_count} {optimisticData.stats.skip_count === 1 ? 'person prefers' : 'people prefer'} not to answer
+              </p>
+            )}
           </div>
         )}
       </CardFooter>

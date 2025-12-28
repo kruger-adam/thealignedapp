@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,20 +98,23 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
+    // Remove old vote count (SKIP doesn't affect total_votes for percentage calculation)
     if (oldVote) {
-      if (oldVote === 'YES') newStats.yes_count--;
-      else if (oldVote === 'NO') newStats.no_count--;
-      else newStats.unsure_count--;
-      newStats.total_votes--;
+      if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
+      else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
+      else if (oldVote === 'UNSURE') { newStats.unsure_count--; newStats.total_votes--; }
+      else if (oldVote === 'SKIP') { newStats.skip_count--; }
     }
 
+    // Add new vote count
     if (newVote) {
-      if (newVote === 'YES') newStats.yes_count++;
-      else if (newVote === 'NO') newStats.no_count++;
-      else newStats.unsure_count++;
-      newStats.total_votes++;
+      if (newVote === 'YES') { newStats.yes_count++; newStats.total_votes++; }
+      else if (newVote === 'NO') { newStats.no_count++; newStats.total_votes++; }
+      else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
+      else if (newVote === 'SKIP') { newStats.skip_count++; }
     }
 
+    // Recalculate percentages (based on non-SKIP votes)
     if (newStats.total_votes > 0) {
       newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
       newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
@@ -728,6 +731,16 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                       </div>
                     </div>
                   )}
+                  
+                  {/* Skip voters - anonymous count only */}
+                  {voters.filter(v => v.vote === 'SKIP').length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-zinc-500">Prefer Not to Answer</p>
+                      <p className="text-xs text-zinc-400 italic">
+                        {voters.filter(v => v.vote === 'SKIP').length} {voters.filter(v => v.vote === 'SKIP').length === 1 ? 'person' : 'people'} (anonymous)
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -735,7 +748,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
 
           {/* Vote buttons */}
           {user && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <Button
                 variant={localUserVote === 'YES' ? 'default' : 'outline'}
                 onClick={() => handleVote('YES')}
@@ -772,7 +785,26 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 <HelpCircle className="h-4 w-4" />
                 Not Sure
               </Button>
+              <Button
+                variant={localUserVote === 'SKIP' ? 'default' : 'outline'}
+                onClick={() => handleVote('SKIP')}
+                disabled={isPending}
+                className={cn(
+                  'gap-2',
+                  localUserVote === 'SKIP' && 'bg-zinc-600 hover:bg-zinc-700'
+                )}
+              >
+                <EyeOff className="h-4 w-4" />
+                Skip
+              </Button>
             </div>
+          )}
+          
+          {/* Anonymous skip count */}
+          {localStats.skip_count > 0 && (
+            <p className="mt-2 text-xs text-zinc-400 italic text-center">
+              {localStats.skip_count} {localStats.skip_count === 1 ? 'person prefers' : 'people prefer'} not to answer
+            </p>
           )}
 
           {!user && (

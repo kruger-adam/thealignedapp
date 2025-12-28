@@ -69,19 +69,21 @@ export default function FeedPage() {
     }
     
     // Calculate vote stats per question
-    const voteStats: Record<string, { yes: number; no: number; unsure: number }> = {};
+    const voteStats: Record<string, { yes: number; no: number; unsure: number; skip: number }> = {};
     for (const r of allResponses) {
       if (!voteStats[r.question_id]) {
-        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0 };
+        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0, skip: 0 };
       }
       if (r.vote === 'YES') voteStats[r.question_id].yes++;
       else if (r.vote === 'NO') voteStats[r.question_id].no++;
       else if (r.vote === 'UNSURE') voteStats[r.question_id].unsure++;
+      else if (r.vote === 'SKIP') voteStats[r.question_id].skip++;
     }
     
     // Transform to match expected format
     const questionsData = (rawQuestions as RawQuestion[]).map((q) => {
-      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0 };
+      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0, skip: 0 };
+      // Total for percentages excludes SKIP votes
       const total = stats.yes + stats.no + stats.unsure;
       return {
         question_id: q.id,
@@ -93,6 +95,7 @@ export default function FeedPage() {
         yes_count: stats.yes,
         no_count: stats.no,
         unsure_count: stats.unsure,
+        skip_count: stats.skip,
         yes_percentage: total > 0 ? Math.round((stats.yes / total) * 100) : 0,
         no_percentage: total > 0 ? Math.round((stats.no / total) * 100) : 0,
         unsure_percentage: total > 0 ? Math.round((stats.unsure / total) * 100) : 0,
@@ -151,6 +154,7 @@ export default function FeedPage() {
         yes_count: q.yes_count,
         no_count: q.no_count,
         unsure_count: q.unsure_count,
+        skip_count: q.skip_count,
         yes_percentage: q.yes_percentage,
         no_percentage: q.no_percentage,
         unsure_percentage: q.unsure_percentage,

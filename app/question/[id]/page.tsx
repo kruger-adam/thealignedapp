@@ -37,11 +37,19 @@ export default async function QuestionPage({ params }: PageProps) {
     .select('vote')
     .eq('question_id', id);
 
+  const yes_count = votes?.filter(v => v.vote === 'YES').length || 0;
+  const no_count = votes?.filter(v => v.vote === 'NO').length || 0;
+  const unsure_count = votes?.filter(v => v.vote === 'UNSURE').length || 0;
+  const skip_count = votes?.filter(v => v.vote === 'SKIP').length || 0;
+  // total_votes excludes SKIP for percentage calculation
+  const total_votes = yes_count + no_count + unsure_count;
+
   const stats = {
-    total_votes: votes?.length || 0,
-    yes_count: votes?.filter(v => v.vote === 'YES').length || 0,
-    no_count: votes?.filter(v => v.vote === 'NO').length || 0,
-    unsure_count: votes?.filter(v => v.vote === 'UNSURE').length || 0,
+    total_votes,
+    yes_count,
+    no_count,
+    unsure_count,
+    skip_count,
     yes_percentage: 0,
     no_percentage: 0,
     unsure_percentage: 0,

@@ -1,6 +1,6 @@
 // Database types for Consensus app
 
-export type VoteType = 'YES' | 'NO' | 'UNSURE';
+export type VoteType = 'YES' | 'NO' | 'UNSURE' | 'SKIP';
 
 export interface Profile {
   id: string;
@@ -47,6 +47,7 @@ export interface QuestionStats {
   yes_count: number;
   no_count: number;
   unsure_count: number;
+  skip_count: number;
   yes_percentage: number;
   no_percentage: number;
   unsure_percentage: number;
@@ -59,6 +60,7 @@ export interface QuestionWithStats extends Question {
     yes_count: number;
     no_count: number;
     unsure_count: number;
+    skip_count: number;
     yes_percentage: number;
     no_percentage: number;
     unsure_percentage: number;
