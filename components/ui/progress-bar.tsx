@@ -7,6 +7,7 @@ interface ProgressBarProps {
   yes: number;
   no: number;
   unsure: number;
+  skip?: number;
   showLabels?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -21,10 +22,11 @@ export function ProgressBar({
   yes,
   no,
   unsure,
+  skip = 0,
   showLabels = true,
   size = 'md',
 }: ProgressBarProps) {
-  const total = yes + no + unsure;
+  const total = yes + no + unsure + skip;
   
   if (total === 0) {
     return (
@@ -46,7 +48,8 @@ export function ProgressBar({
 
   const yesPercent = Math.round((yes / total) * 100);
   const noPercent = Math.round((no / total) * 100);
-  const unsurePercent = 100 - yesPercent - noPercent;
+  const unsurePercent = Math.round((unsure / total) * 100);
+  const skipPercent = 100 - yesPercent - noPercent - unsurePercent;
 
   return (
     <div className="space-y-2">
@@ -62,16 +65,22 @@ export function ProgressBar({
             style={{ width: `${yesPercent}%` }}
           />
         )}
+        {noPercent > 0 && (
+          <div
+            className="bg-rose-500 transition-all duration-500 ease-out"
+            style={{ width: `${noPercent}%` }}
+          />
+        )}
         {unsurePercent > 0 && (
           <div
             className="bg-amber-500 transition-all duration-500 ease-out"
             style={{ width: `${unsurePercent}%` }}
           />
         )}
-        {noPercent > 0 && (
+        {skipPercent > 0 && (
           <div
-            className="bg-rose-500 transition-all duration-500 ease-out"
-            style={{ width: `${noPercent}%` }}
+            className="bg-zinc-400 transition-all duration-500 ease-out"
+            style={{ width: `${skipPercent}%` }}
           />
         )}
       </div>
@@ -80,12 +89,17 @@ export function ProgressBar({
           <span className="text-emerald-600 dark:text-emerald-400">
             {yesPercent}% Yes
           </span>
-          <span className="text-amber-600 dark:text-amber-400">
-            {unsurePercent}% Not Sure
-          </span>
           <span className="text-rose-600 dark:text-rose-400">
             {noPercent}% No
           </span>
+          <span className="text-amber-600 dark:text-amber-400">
+            {unsurePercent}% Not Sure
+          </span>
+          {skip > 0 && (
+            <span className="text-zinc-500 dark:text-zinc-400">
+              {skipPercent}% Skip
+            </span>
+          )}
         </div>
       )}
     </div>

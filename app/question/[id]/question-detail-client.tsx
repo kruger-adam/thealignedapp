@@ -651,12 +651,13 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           )}
 
           {/* Vote stats */}
-          {localStats.total_votes > 0 && (
+          {(localStats.total_votes > 0 || localStats.skip_count > 0) && (
             <div className="mb-4">
               <ProgressBar
-                yes={localStats.yes_percentage}
-                no={localStats.no_percentage}
-                unsure={localStats.unsure_percentage}
+                yes={localStats.yes_count}
+                no={localStats.no_count}
+                unsure={localStats.unsure_count}
+                skip={localStats.skip_count}
               />
               <button
                 onClick={fetchVoters}
@@ -800,12 +801,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             </div>
           )}
           
-          {/* Anonymous skip count */}
-          {localStats.skip_count > 0 && (
-            <p className="mt-2 text-xs text-zinc-400 italic text-center">
-              {localStats.skip_count} {localStats.skip_count === 1 ? 'person prefers' : 'people prefer'} not to answer
-            </p>
-          )}
 
           {!user && (
             <p className="text-center text-sm text-zinc-500">

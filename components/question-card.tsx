@@ -1169,13 +1169,9 @@ export function QuestionCard({
               yes={optimisticData.stats.yes_count}
               no={optimisticData.stats.no_count}
               unsure={optimisticData.stats.unsure_count}
+              skip={optimisticData.stats.skip_count}
               size="md"
             />
-            {optimisticData.stats.skip_count > 0 && (
-              <p className="mt-1.5 text-xs text-zinc-400 italic">
-                {optimisticData.stats.skip_count} {optimisticData.stats.skip_count === 1 ? 'person prefers' : 'people prefer'} not to answer
-              </p>
-            )}
           </div>
         )}
       </CardFooter>
