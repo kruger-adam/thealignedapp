@@ -476,13 +476,13 @@ export function QuestionCard({
             
             {/* Comment Form */}
             {user ? (
-              <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                 <input
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Add a comment..."
-                  className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
+                  className="h-[38px] flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -491,10 +491,9 @@ export function QuestionCard({
                   }}
                 />
                 <Button
-                  size="sm"
                   onClick={submitComment}
                   disabled={!commentText.trim() || submittingComment}
-                  className="px-3"
+                  className="h-[38px] px-3"
                 >
                   {submittingComment ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -8,7 +8,7 @@ A modern web application that functions as a cross between Twitter and Quora, fo
 - **Optimistic UI**: Instant visual feedback when voting
 - **Real-time Updates**: See votes as they happen via Supabase Realtime
 - **Opinion Tracking**: Track how your opinions evolve over time
-- **Compatibility Scores**: Compare your views with other users
+- **Agreement Rate**: Compare your views with other users
 - **Common Ground & Divergence**: Find what you agree and disagree on
 - **Smart Sorting**: Filter by Most Controversial, Most Agreed, or Newest
 

@@ -176,7 +176,7 @@ export function ProfileClient({
                 </div>
                 <div>
                   <p className="text-sm text-violet-700 dark:text-violet-300">
-                    Compatibility Score
+                    Agreement Rate
                   </p>
                   <p className="text-2xl font-bold text-violet-900 dark:text-violet-100">
                     {compatibility.compatibility_score}%
