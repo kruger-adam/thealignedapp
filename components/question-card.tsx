@@ -133,12 +133,13 @@ export function QuestionCard({
   }, [question.id]);
 
   const fetchComments = async () => {
-    if (comments.length > 0 && showComments) {
-      // Already fetched, just toggle
+    // If already showing, just collapse
+    if (showComments) {
       setShowComments(false);
       return;
     }
     
+    // If already fetched, just show
     if (comments.length > 0) {
       setShowComments(true);
       return;
@@ -193,24 +194,24 @@ export function QuestionCard({
     
     setSubmittingComment(true);
     try {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/comments`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify({
+      // Use Supabase client for authenticated insert
+      const { data: newComment, error } = await supabase
+        .from('comments')
+        .insert({
           question_id: question.id,
           user_id: user.id,
           content: commentText.trim(),
-        }),
-      });
+        })
+        .select()
+        .single();
       
-      if (res.ok) {
-        const [newComment] = await res.json();
+      if (error) {
+        console.error('Error inserting comment:', error);
+        setSubmittingComment(false);
+        return;
+      }
+      
+      if (newComment) {
         // Add the new comment to the list
         setComments(prev => [...prev, {
           id: newComment.id,
