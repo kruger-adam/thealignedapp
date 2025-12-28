@@ -81,7 +81,7 @@ export function ProgressBar({
             {yesPercent}% Yes
           </span>
           <span className="text-amber-600 dark:text-amber-400">
-            {unsurePercent}% Unsure
+            {unsurePercent}% Not Sure
           </span>
           <span className="text-rose-600 dark:text-rose-400">
             {noPercent}% No

@@ -170,7 +170,7 @@ export function QuestionCard({
             )}
           >
             <HelpCircle className="h-4 w-4" />
-            Unsure
+            Not Sure
           </Button>
           <Button
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
