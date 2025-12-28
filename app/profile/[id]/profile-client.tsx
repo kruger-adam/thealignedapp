@@ -119,10 +119,11 @@ export function ProfileClient({
           </div>
 
           {/* Stats Row */}
-          <div className="mt-6 grid grid-cols-4 gap-4">
+          <div className="mt-6 grid grid-cols-5 gap-3">
             <StatBox label="Votes" value={stats.totalVotes} icon={Users} />
             <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
             <StatBox label="No" value={stats.noCount} icon={X} className="text-rose-600" />
+            <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
             <StatBox label="Changed" value={stats.changedVotes} icon={RotateCcw} className="text-violet-600" />
           </div>
 
