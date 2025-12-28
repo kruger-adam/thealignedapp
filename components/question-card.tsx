@@ -160,19 +160,6 @@ export function QuestionCard({
             Yes
           </Button>
           <Button
-            variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
-            size="sm"
-            onClick={() => handleVote('UNSURE')}
-            disabled={isPending || !user}
-            className={cn(
-              'flex-1 gap-1.5',
-              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50'
-            )}
-          >
-            <HelpCircle className="h-4 w-4" />
-            Not Sure
-          </Button>
-          <Button
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
             size="sm"
             onClick={() => handleVote('NO')}
@@ -184,6 +171,19 @@ export function QuestionCard({
           >
             <X className="h-4 w-4" />
             No
+          </Button>
+          <Button
+            variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
+            size="sm"
+            onClick={() => handleVote('UNSURE')}
+            disabled={isPending || !user}
+            className={cn(
+              'flex-1 gap-1.5',
+              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50'
+            )}
+          >
+            <HelpCircle className="h-4 w-4" />
+            Not Sure
           </Button>
         </div>
 

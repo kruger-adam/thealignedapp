@@ -77,6 +77,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     question: Array.isArray(h.question) ? h.question[0] : h.question,
   }));
 
+  // Fetch questions created by this user
+  const { data: createdQuestions } = await supabase
+    .from('questions')
+    .select('id, content, created_at')
+    .eq('author_id', profile.id)
+    .order('created_at', { ascending: false });
+
   // Calculate stats
   const totalVotes = responses.length;
   const yesCount = responses.filter(r => r.vote === 'YES').length;
@@ -131,6 +138,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       commonGround={commonGround}
       divergence={divergence}
       currentUserId={user?.id}
+      createdQuestions={createdQuestions || []}
     />
   );
 }

@@ -44,6 +44,12 @@ interface HistoryItem {
   } | null;
 }
 
+interface CreatedQuestion {
+  id: string;
+  content: string;
+  created_at: string;
+}
+
 interface ProfileClientProps {
   profile: Profile;
   isOwnProfile: boolean;
@@ -60,9 +66,10 @@ interface ProfileClientProps {
   commonGround: CommonGround[] | null;
   divergence: Divergence[] | null;
   currentUserId?: string;
+  createdQuestions: CreatedQuestion[];
 }
 
-type Tab = 'stances' | 'history' | 'comparison';
+type Tab = 'stances' | 'questions' | 'history' | 'comparison';
 type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 const voteConfig = {
@@ -81,6 +88,7 @@ export function ProfileClient({
   commonGround,
   divergence,
   currentUserId,
+  createdQuestions,
 }: ProfileClientProps) {
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>(
@@ -195,6 +203,12 @@ export function ProfileClient({
           icon={Users}
           label={isOwnProfile ? 'My Stances' : 'Stances'}
         />
+        <TabButton
+          active={activeTab === 'questions'}
+          onClick={() => setActiveTab('questions')}
+          icon={HelpCircle}
+          label={`Questions (${createdQuestions.length})`}
+        />
         {isOwnProfile && (
           <TabButton
             active={activeTab === 'history'}
@@ -245,6 +259,37 @@ export function ProfileClient({
                 <StanceItem key={response.id} response={response} />
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'questions' && (
+        <div className="space-y-2">
+          {createdQuestions.length === 0 ? (
+            <p className="py-8 text-center text-zinc-500">No questions created yet.</p>
+          ) : (
+            createdQuestions.map((question) => (
+              <div
+                key={question.id}
+                className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="rounded-full bg-zinc-100 p-2 dark:bg-zinc-800">
+                  <HelpCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                    {question.content}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {new Date(question.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
