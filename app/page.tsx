@@ -17,14 +17,11 @@ export default function FeedPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const fetchQuestions = useCallback(async () => {
-    console.log('[Feed] Starting fetchQuestions');
     setLoading(true);
 
     try {
-      // Direct fetch test to bypass Supabase client
+      // Fetch questions using direct fetch (Supabase client has issues)
       const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc`;
-      console.log('[Feed] Direct fetch to:', url);
-      
       const response = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -32,10 +29,7 @@ export default function FeedPage() {
         },
       });
       
-      console.log('[Feed] Fetch status:', response.status);
       const rawQuestions = await response.json();
-      console.log('[Feed] Fetch result:', rawQuestions);
-      
       const questionsError = response.ok ? null : { message: 'Fetch failed' };
 
       if (questionsError) {
