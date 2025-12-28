@@ -241,8 +241,13 @@ export function ProfileClient({
     setFollowLoading(false);
   };
 
+  // Filter out SKIP votes when viewing someone else's profile (SKIP is anonymous)
   const filteredResponses = responses.filter(
-    (r) => stanceFilter === 'all' || r.vote === stanceFilter
+    (r) => {
+      // Hide SKIP votes on other people's profiles
+      if (!isOwnProfile && r.vote === 'SKIP') return false;
+      return stanceFilter === 'all' || r.vote === stanceFilter;
+    }
   );
 
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
@@ -546,9 +551,9 @@ export function ProfileClient({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {commonGround && commonGround.length > 0 ? (
+              {commonGround && commonGround.filter(item => item.shared_vote !== 'SKIP').length > 0 ? (
                 <div className="space-y-2">
-                  {commonGround.map((item) => (
+                  {commonGround.filter(item => item.shared_vote !== 'SKIP').map((item) => (
                     <div
                       key={item.question_id}
                       className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30"
@@ -581,9 +586,9 @@ export function ProfileClient({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {divergence && divergence.length > 0 ? (
+              {divergence && divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').length > 0 ? (
                 <div className="space-y-2">
-                  {divergence.map((item) => (
+                  {divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').map((item) => (
                     <div
                       key={item.question_id}
                       className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 dark:bg-rose-950/30"
