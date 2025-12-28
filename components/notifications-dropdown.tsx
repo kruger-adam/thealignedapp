@@ -265,7 +265,7 @@ export function NotificationsDropdown() {
               notifications.map((notification) => (
                 <Link
                   key={notification.id}
-                  href={notification.question_id ? `/?highlight=${notification.question_id}` : '/'}
+                  href={notification.question_id ? `/question/${notification.question_id}` : '/'}
                   onClick={() => {
                     if (!notification.read) markAsRead(notification.id);
                     setIsOpen(false);

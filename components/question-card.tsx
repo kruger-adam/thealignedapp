@@ -829,9 +829,11 @@ export function QuestionCard({
       )}
       
       <CardContent className="pb-4">
-        <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
-          {question.content}
-        </p>
+        <Link href={`/question/${question.id}`} className="block hover:opacity-80 transition-opacity">
+          <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
+            {question.content}
+          </p>
+        </Link>
       </CardContent>
 
       <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
