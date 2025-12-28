@@ -88,6 +88,7 @@ export default function FeedPage() {
         author_id: q.author_id,
         content: q.content,
         created_at: q.created_at,
+        updated_at: q.updated_at,
         total_votes: total,
         yes_count: stats.yes,
         no_count: stats.no,
