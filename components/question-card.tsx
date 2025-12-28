@@ -210,17 +210,17 @@ export function QuestionCard({
   };
 
   // Insert selected mention into comment
-  // Shows @username in input, but tracks user info for submission
+  // Removes @query from input, shows chip instead
   const insertMention = (selectedUser: MentionSuggestion) => {
     if (mentionStartIndex === -1) return;
     
     const beforeMention = commentText.substring(0, mentionStartIndex);
     const afterMention = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
-    // Show clean @username in the input
-    const newText = `${beforeMention}@${selectedUser.username} ${afterMention}`;
+    // Remove the @query from input - the chip will show the mention
+    const newText = `${beforeMention}${afterMention}`.trim();
     
     setCommentText(newText);
-    // Track this user for when we submit (to convert to @[username](id) format)
+    // Track this user - chip displays the mention, submit adds @[username](id)
     setMentionedUsers(prev => {
       // Avoid duplicates
       if (prev.some(u => u.id === selectedUser.id)) return prev;
@@ -329,17 +329,18 @@ export function QuestionCard({
   };
 
   const submitComment = async () => {
-    if (!user || !commentText.trim()) return;
+    if (!user || (!commentText.trim() && mentionedUsers.length === 0)) return;
     
     setSubmittingComment(true);
     try {
-      // Convert @username to @[username](id) format for storage
-      let contentToSave = commentText.trim();
-      for (const mentionedUser of mentionedUsers) {
-        // Replace @username with @[username](id) - use word boundary to avoid partial matches
-        const regex = new RegExp(`@${mentionedUser.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$|[.,!?;:])`, 'g');
-        contentToSave = contentToSave.replace(regex, `@[${mentionedUser.username}](${mentionedUser.id})`);
-      }
+      // Build content: prepend mentions as @[username](id), then add the message
+      const mentionStrings = mentionedUsers.map(u => `@[${u.username}](${u.id})`);
+      const messageText = commentText.trim();
+      const contentToSave = mentionStrings.length > 0 
+        ? messageText 
+          ? `${mentionStrings.join(' ')} ${messageText}`
+          : mentionStrings.join(' ')
+        : messageText;
       
       // Use Supabase client for authenticated insert
       const { data: newComment, error } = await supabase
@@ -764,9 +765,13 @@ export function QuestionCard({
                   </div>
                 )}
                 
-                {/* Tagged Users Chips */}
-                {mentionedUsers.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="flex items-center gap-2">
+                  {/* Input container with inline chips */}
+                  <div 
+                    className="flex flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
+                    onClick={() => inputRef.current?.focus()}
+                  >
+                    {/* Tagged Users Chips - inline */}
                     {mentionedUsers.map((taggedUser) => (
                       <span
                         key={taggedUser.id}
@@ -780,13 +785,9 @@ export function QuestionCard({
                         <span>@{taggedUser.username}</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            // Remove from tracked users
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setMentionedUsers(prev => prev.filter(u => u.id !== taggedUser.id));
-                            // Remove from comment text
-                            setCommentText(prev => 
-                              prev.replace(new RegExp(`@${taggedUser.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?`, 'g'), '')
-                            );
                           }}
                           className="ml-0.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                         >
@@ -794,22 +795,20 @@ export function QuestionCard({
                         </button>
                       </span>
                     ))}
+                    {/* Text input */}
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={commentText}
+                      onChange={handleCommentChange}
+                      placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
+                      className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-sm placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+                      onKeyDown={handleMentionKeyDown}
+                    />
                   </div>
-                )}
-                
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={commentText}
-                    onChange={handleCommentChange}
-                    placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
-                    className="h-[38px] flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
-                    onKeyDown={handleMentionKeyDown}
-                  />
                   <Button
                     onClick={submitComment}
-                    disabled={!commentText.trim() || submittingComment}
+                    disabled={(!commentText.trim() && mentionedUsers.length === 0) || submittingComment}
                     className="h-[38px] px-3"
                   >
                     {submittingComment ? (
