@@ -11,6 +11,7 @@ import {
   Heart,
   Swords,
   RotateCcw,
+  LogOut,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Profile, VoteType, Compatibility, CommonGround, Divergence } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
 
 interface ResponseWithQuestion {
   id: string;
@@ -80,6 +82,7 @@ export function ProfileClient({
   divergence,
   currentUserId,
 }: ProfileClientProps) {
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>(
     isOwnProfile ? 'stances' : compatibility ? 'comparison' : 'stances'
   );
@@ -133,6 +136,21 @@ export function ProfileClient({
                 showLabels
                 size="lg"
               />
+            </div>
+          )}
+
+          {/* Sign Out Button (only on own profile) */}
+          {isOwnProfile && (
+            <div className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="w-full gap-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
             </div>
           )}
         </CardContent>

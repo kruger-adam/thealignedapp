@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scale, User, LogIn, LogOut, Home } from 'lucide-react';
+import { Scale, LogIn, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
 export function Header() {
-  const { user, profile, loading, signInWithGoogle, signOut } = useAuth();
+  const { user, profile, loading, signInWithGoogle } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -41,40 +41,17 @@ export function Header() {
             </Button>
           </Link>
 
-          {user && (
-            <Link href={`/profile/${user.id}`}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'gap-1.5',
-                  pathname.startsWith('/profile') && 'bg-zinc-100 dark:bg-zinc-800'
-                )}
-              >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Profile</span>
-              </Button>
-            </Link>
-          )}
-
           {loading ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
+            <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
-            <div className="ml-2 flex items-center gap-2">
+            <Link href={`/profile/${user.id}`} className="ml-2">
               <Avatar
                 src={profile?.avatar_url}
                 fallback={profile?.username || user.email || ''}
                 size="sm"
+                className="cursor-pointer transition-opacity hover:opacity-80"
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={signOut}
-                className="h-8 w-8 text-zinc-500"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+            </Link>
           ) : (
             <Button
               onClick={signInWithGoogle}
