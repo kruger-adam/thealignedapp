@@ -240,7 +240,6 @@ export default function FeedPage() {
                 question={question}
                 authorName={question.author?.username || undefined}
                 authorAvatar={question.author?.avatar_url}
-                onVote={() => fetchQuestions()}
               />
             </div>
           ))}
