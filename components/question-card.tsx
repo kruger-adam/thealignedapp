@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo, useEffect } from 'react';
+import { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,12 @@ interface Comment {
   avatar_url: string | null;
 }
 
+interface MentionSuggestion {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+}
+
 export function QuestionCard({
   question,
   authorName,
@@ -55,6 +61,14 @@ export function QuestionCard({
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  
+  // Mention autocomplete state
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchVoters = async () => {
     if (voters.length > 0) {
@@ -131,6 +145,124 @@ export function QuestionCard({
     };
     fetchCommentCount();
   }, [question.id]);
+
+  // Search users for @mention autocomplete
+  const searchUsers = useCallback(async (query: string) => {
+    if (query.length < 1) {
+      setMentionSuggestions([]);
+      setShowMentions(false);
+      return;
+    }
+    
+    try {
+      // Search by username using ilike for case-insensitive partial match
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&username=ilike.*${encodeURIComponent(query)}*&limit=5`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const users = await res.json();
+      
+      const suggestions: MentionSuggestion[] = users
+        .filter((u: { username: string | null }) => u.username)
+        .map((u: { id: string; username: string; avatar_url: string | null }) => ({
+          id: u.id,
+          username: u.username,
+          avatar_url: u.avatar_url,
+        }));
+      
+      setMentionSuggestions(suggestions);
+      setShowMentions(suggestions.length > 0);
+      setSelectedMentionIndex(0);
+    } catch (err) {
+      console.error('Error searching users:', err);
+    }
+  }, []);
+
+  // Handle comment input change - detect @mentions
+  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart || 0;
+    setCommentText(value);
+    
+    // Find the @ symbol before cursor
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+      // Check if there's a space after @ (meaning mention is complete)
+      if (!textAfterAt.includes(' ')) {
+        setMentionQuery(textAfterAt);
+        setMentionStartIndex(lastAtIndex);
+        searchUsers(textAfterAt);
+        return;
+      }
+    }
+    
+    // No active mention
+    setShowMentions(false);
+    setMentionQuery('');
+    setMentionStartIndex(-1);
+  };
+
+  // Insert selected mention into comment
+  // Format: @[username](userId) for storage, displayed as @username
+  const insertMention = (selectedUser: MentionSuggestion) => {
+    if (mentionStartIndex === -1) return;
+    
+    const beforeMention = commentText.substring(0, mentionStartIndex);
+    const afterMention = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
+    // Store as @[username](id) format for proper linking
+    const newText = `${beforeMention}@[${selectedUser.username}](${selectedUser.id}) ${afterMention}`;
+    
+    setCommentText(newText);
+    setShowMentions(false);
+    setMentionQuery('');
+    setMentionStartIndex(-1);
+    
+    // Focus back on input
+    inputRef.current?.focus();
+  };
+
+  // Handle keyboard navigation in mention dropdown
+  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showMentions) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitComment();
+      }
+      return;
+    }
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev < mentionSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : mentionSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault();
+        if (mentionSuggestions[selectedMentionIndex]) {
+          insertMention(mentionSuggestions[selectedMentionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowMentions(false);
+        break;
+    }
+  };
 
   const fetchComments = async () => {
     // If already showing, just collapse
@@ -229,6 +361,60 @@ export function QuestionCard({
       console.error('Error submitting comment:', err);
     }
     setSubmittingComment(false);
+  };
+
+  // Render comment content with clickable @mentions
+  // Supports both @[username](id) format and plain @username format
+  const renderCommentContent = (content: string) => {
+    // Match @[username](id) format first, then fall back to simple @username
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = mentionRegex.exec(content)) !== null) {
+      // Add text before the mention
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
+      }
+      
+      // Check which format matched
+      if (match[1] && match[2]) {
+        // @[username](id) format - we have the user ID
+        const username = match[1];
+        const userId = match[2];
+        parts.push(
+          <Link
+            key={`${match.index}-${userId}`}
+            href={`/profile/${userId}`}
+            className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            @{username}
+          </Link>
+        );
+      } else if (match[3]) {
+        // Simple @username format - just show as styled text (no link without ID)
+        const username = match[3];
+        parts.push(
+          <span
+            key={`${match.index}-${username}`}
+            className="font-medium text-blue-600 dark:text-blue-400"
+          >
+            @{username}
+          </span>
+        );
+      }
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : content;
   };
   
   // Local state for vote (persists after voting without refetch)
@@ -467,7 +653,7 @@ export function QuestionCard({
                       </span>
                     </div>
                     <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">
-                      {comment.content}
+                      {renderCommentContent(comment.content)}
                     </p>
                   </div>
                 </div>
@@ -476,31 +662,55 @@ export function QuestionCard({
             
             {/* Comment Form */}
             {user ? (
-              <div className="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="h-[38px] flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      submitComment();
-                    }
-                  }}
-                />
-                <Button
-                  onClick={submitComment}
-                  disabled={!commentText.trim() || submittingComment}
-                  className="h-[38px] px-3"
-                >
-                  {submittingComment ? (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
+              <div className="relative pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                {/* Mention Suggestions Dropdown */}
+                {showMentions && mentionSuggestions.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
+                    {mentionSuggestions.map((user, index) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700",
+                          index === selectedMentionIndex && "bg-zinc-100 dark:bg-zinc-700"
+                        )}
+                        onClick={() => insertMention(user)}
+                      >
+                        <Avatar
+                          src={user.avatar_url}
+                          fallback={user.username}
+                          size="sm"
+                        />
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {user.username}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={commentText}
+                    onChange={handleCommentChange}
+                    placeholder="Add a comment... (use @ to mention)"
+                    className="h-[38px] flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
+                    onKeyDown={handleMentionKeyDown}
+                  />
+                  <Button
+                    onClick={submitComment}
+                    disabled={!commentText.trim() || submittingComment}
+                    className="h-[38px] px-3"
+                  >
+                    {submittingComment ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800">
