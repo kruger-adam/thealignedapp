@@ -19,7 +19,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image 
-            src="/logo.svg" 
+            src="/logo.png" 
             alt="YesNoNotSure" 
             width={36} 
             height={36}
