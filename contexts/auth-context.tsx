@@ -21,17 +21,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
+  // Helper to fetch profile using direct fetch (Supabase client hangs on DB queries)
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const data = await res.json();
+      return data?.[0] || null;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        const profile = await fetchProfile(user.id);
         setProfile(profile);
       }
       
@@ -45,11 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          const profile = await fetchProfile(session.user.id);
           setProfile(profile);
         } else {
           setProfile(null);
