@@ -5,13 +5,13 @@ import {
   Check,
   X,
   HelpCircle,
-  Users,
   Clock,
   TrendingUp,
   Heart,
   Swords,
   RotateCcw,
   LogOut,
+  Vote,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -128,7 +128,7 @@ export function ProfileClient({
 
           {/* Stats Row */}
           <div className="mt-6 grid grid-cols-5 gap-3">
-            <StatBox label="Votes" value={stats.totalVotes} icon={Users} />
+            <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
             <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
             <StatBox label="No" value={stats.noCount} icon={X} className="text-rose-600" />
             <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
@@ -200,8 +200,8 @@ export function ProfileClient({
         <TabButton
           active={activeTab === 'stances'}
           onClick={() => setActiveTab('stances')}
-          icon={Users}
-          label={isOwnProfile ? 'My Stances' : 'Stances'}
+          icon={Vote}
+          label={isOwnProfile ? 'My Votes' : 'Votes'}
         />
         <TabButton
           active={activeTab === 'questions'}
