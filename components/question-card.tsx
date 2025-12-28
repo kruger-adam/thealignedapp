@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useOptimistic, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,56 +88,58 @@ export function QuestionCard({
     setLoadingVoters(false);
   };
   
-  // Optimistic UI state
-  const [optimisticData, setOptimisticData] = useOptimistic(
-    {
-      userVote: question.user_vote,
-      stats: question.stats,
-    },
-    (state, newVote: VoteType | null) => {
-      const oldVote = state.userVote;
-      const newStats = { ...state.stats };
+  // Local state for vote (persists after voting without refetch)
+  const [localUserVote, setLocalUserVote] = useState<VoteType | null>(question.user_vote ?? null);
+  const [localStats, setLocalStats] = useState(question.stats);
 
-      // Remove old vote count
-      if (oldVote) {
-        if (oldVote === 'YES') newStats.yes_count--;
-        else if (oldVote === 'NO') newStats.no_count--;
-        else newStats.unsure_count--;
-        newStats.total_votes--;
-      }
+  const updateVoteState = (newVote: VoteType) => {
+    const oldVote = localUserVote;
+    const newStats = { ...localStats };
 
-      // Add new vote count
-      if (newVote) {
-        if (newVote === 'YES') newStats.yes_count++;
-        else if (newVote === 'NO') newStats.no_count++;
-        else newStats.unsure_count++;
-        newStats.total_votes++;
-      }
-
-      // Recalculate percentages
-      if (newStats.total_votes > 0) {
-        newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
-        newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
-        newStats.unsure_percentage = 100 - newStats.yes_percentage - newStats.no_percentage;
-      } else {
-        newStats.yes_percentage = 0;
-        newStats.no_percentage = 0;
-        newStats.unsure_percentage = 0;
-      }
-
-      return {
-        userVote: newVote,
-        stats: newStats,
-      };
+    // Remove old vote count
+    if (oldVote) {
+      if (oldVote === 'YES') newStats.yes_count--;
+      else if (oldVote === 'NO') newStats.no_count--;
+      else newStats.unsure_count--;
+      newStats.total_votes--;
     }
-  );
+
+    // Add new vote count
+    if (newVote) {
+      if (newVote === 'YES') newStats.yes_count++;
+      else if (newVote === 'NO') newStats.no_count++;
+      else newStats.unsure_count++;
+      newStats.total_votes++;
+    }
+
+    // Recalculate percentages
+    if (newStats.total_votes > 0) {
+      newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
+      newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
+      newStats.unsure_percentage = 100 - newStats.yes_percentage - newStats.no_percentage;
+    } else {
+      newStats.yes_percentage = 0;
+      newStats.no_percentage = 0;
+      newStats.unsure_percentage = 0;
+    }
+
+    setLocalUserVote(newVote);
+    setLocalStats(newStats);
+  };
+
+  // Create optimisticData object for compatibility with existing code
+  const optimisticData = {
+    userVote: localUserVote,
+    stats: localStats,
+  };
 
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
 
+    // Update local state immediately
+    updateVoteState(vote);
+
     startTransition(async () => {
-      // Optimistically update
-      setOptimisticData(vote);
 
       // Perform the actual update
       const { error } = await supabase
