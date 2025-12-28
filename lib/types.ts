@@ -17,7 +17,7 @@ export interface Question {
   content: string;
   created_at: string;
   updated_at: string;
-  author?: Profile;
+  author?: Partial<Profile>;
 }
 
 export interface Response {
