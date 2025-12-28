@@ -359,24 +359,46 @@ export function QuestionCard({
       }
       
       if (newComment) {
-        // Create notifications for mentioned users
+        // Create notifications
+        const notifications: Array<{
+          user_id: string;
+          type: 'mention' | 'comment';
+          actor_id: string;
+          question_id: string;
+          comment_id: string;
+        }> = [];
+        
+        // Notify mentioned users
         if (mentionedUsers.length > 0) {
-          const notifications = mentionedUsers
+          mentionedUsers
             .filter(u => u.id !== user.id) // Don't notify yourself
-            .map(mentionedUser => ({
-              user_id: mentionedUser.id,
-              type: 'mention' as const,
-              actor_id: user.id,
-              question_id: question.id,
-              comment_id: newComment.id,
-            }));
-          
-          if (notifications.length > 0) {
-            // Insert notifications (fire and forget - don't block on this)
-            supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
-              if (notifError) console.error('Error creating notifications:', notifError);
+            .forEach(mentionedUser => {
+              notifications.push({
+                user_id: mentionedUser.id,
+                type: 'mention',
+                actor_id: user.id,
+                question_id: question.id,
+                comment_id: newComment.id,
+              });
             });
-          }
+        }
+        
+        // Notify question author (if not the commenter and not already mentioned)
+        if (question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
+          notifications.push({
+            user_id: question.author_id,
+            type: 'comment',
+            actor_id: user.id,
+            question_id: question.id,
+            comment_id: newComment.id,
+          });
+        }
+        
+        // Insert all notifications (fire and forget)
+        if (notifications.length > 0) {
+          supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+            if (notifError) console.error('Error creating notifications:', notifError);
+          });
         }
         
         // Add the new comment to the list
@@ -516,6 +538,9 @@ export function QuestionCard({
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
 
+    // Check if this is the user's first vote on this question
+    const isFirstVote = !localUserVote;
+
     // Update local state immediately
     setHasVotedLocally(true);
     updateVoteState(vote);
@@ -540,6 +565,20 @@ export function QuestionCard({
       if (error) {
         console.error('Error voting:', error);
         // Revert on error - would need proper error handling in production
+        return;
+      }
+
+      // Notify question author (only on first vote, not vote changes)
+      // Don't notify yourself
+      if (isFirstVote && question.author_id !== user.id) {
+        supabase.from('notifications').insert({
+          user_id: question.author_id,
+          type: 'vote',
+          actor_id: user.id,
+          question_id: question.id,
+        }).then(({ error: notifError }) => {
+          if (notifError) console.error('Error creating vote notification:', notifError);
+        });
       }
 
       onVote?.(question.id, vote);
@@ -702,25 +741,58 @@ export function QuestionCard({
                 {/* Mention Suggestions Dropdown */}
                 {showMentions && mentionSuggestions.length > 0 && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
-                    {mentionSuggestions.map((user, index) => (
+                    {mentionSuggestions.map((suggestionUser, index) => (
                       <button
-                        key={user.id}
+                        key={suggestionUser.id}
                         type="button"
                         className={cn(
                           "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700",
                           index === selectedMentionIndex && "bg-zinc-100 dark:bg-zinc-700"
                         )}
-                        onClick={() => insertMention(user)}
+                        onClick={() => insertMention(suggestionUser)}
                       >
                         <Avatar
-                          src={user.avatar_url}
-                          fallback={user.username}
+                          src={suggestionUser.avatar_url}
+                          fallback={suggestionUser.username}
                           size="sm"
                         />
                         <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {user.username}
+                          {suggestionUser.username}
                         </span>
                       </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Tagged Users Chips */}
+                {mentionedUsers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {mentionedUsers.map((taggedUser) => (
+                      <span
+                        key={taggedUser.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-2 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                      >
+                        <Avatar
+                          src={taggedUser.avatar_url}
+                          fallback={taggedUser.username}
+                          size="xs"
+                        />
+                        <span>@{taggedUser.username}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Remove from tracked users
+                            setMentionedUsers(prev => prev.filter(u => u.id !== taggedUser.id));
+                            // Remove from comment text
+                            setCommentText(prev => 
+                              prev.replace(new RegExp(`@${taggedUser.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?`, 'g'), '')
+                            );
+                          }}
+                          className="ml-0.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                        >
+                          ×
+                        </button>
+                      </span>
                     ))}
                   </div>
                 )}
@@ -731,7 +803,7 @@ export function QuestionCard({
                     type="text"
                     value={commentText}
                     onChange={handleCommentChange}
-                    placeholder="Add a comment... (use @ to mention)"
+                    placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
                     className="h-[38px] flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500"
                     onKeyDown={handleMentionKeyDown}
                   />
