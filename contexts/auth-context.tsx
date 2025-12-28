@@ -63,11 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // This MUST match one of the URLs you whitelisted in Supabase above
-        redirectTo: 'http://localhost:3000/auth/callback',
+        redirectTo: redirectUrl,
       },
     });
   };
