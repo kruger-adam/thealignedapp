@@ -160,6 +160,8 @@ export default function FeedPage() {
     // Sort questions
     const sorted = [...transformedQuestions].sort((a, b) => {
       switch (sortBy) {
+        case 'popular':
+          return b.stats.total_votes - a.stats.total_votes;
         case 'controversial':
           return b.stats.controversy_score - a.stats.controversy_score;
         case 'consensus':
@@ -184,19 +186,14 @@ export default function FeedPage() {
   }, [fetchQuestions]);
 
   // Realtime subscription for new questions and votes
+  // Realtime subscription for new questions only
+  // (votes use optimistic updates, so no need to refetch on response changes)
   useEffect(() => {
     const channel = supabase
       .channel('realtime-feed')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'questions' },
-        () => {
-          fetchQuestions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'responses' },
+        { event: 'INSERT', schema: 'public', table: 'questions' },
         () => {
           fetchQuestions();
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Flame, TrendingUp, Clock } from 'lucide-react';
+import { Flame, TrendingUp, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SortOption } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ interface FeedFiltersProps {
 
 const sortOptions: { value: SortOption; label: string; icon: React.ElementType }[] = [
   { value: 'newest', label: 'Newest', icon: Clock },
+  { value: 'popular', label: 'Most Votes', icon: Users },
   { value: 'controversial', label: 'Most Split', icon: Flame },
   { value: 'consensus', label: 'Most Agreed', icon: TrendingUp },
 ];

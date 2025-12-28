@@ -89,6 +89,6 @@ export interface Divergence {
   controversy_score: number;
 }
 
-export type SortOption = 'newest' | 'controversial' | 'consensus';
+export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus';
 
 
