@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import {
   Check,
-  X,
+  X as XIcon,
   HelpCircle,
   Clock,
   TrendingUp,
@@ -14,8 +14,10 @@ import {
   Vote,
   UserPlus,
   UserMinus,
-  Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -54,6 +56,12 @@ interface CreatedQuestion {
   created_at: string;
 }
 
+interface FollowUser {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+}
+
 interface ProfileClientProps {
   profile: Profile;
   isOwnProfile: boolean;
@@ -83,7 +91,7 @@ type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 const voteConfig = {
   YES: { icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Yes' },
-  NO: { icon: X, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
+  NO: { icon: XIcon, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
   UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure' },
 };
 
@@ -110,6 +118,65 @@ export function ProfileClient({
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [localFollowerCount, setLocalFollowerCount] = useState(followCounts.followers);
   const [followLoading, setFollowLoading] = useState(false);
+  
+  // Followers/Following list state
+  const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
+  const [followList, setFollowList] = useState<FollowUser[]>([]);
+  const [loadingFollowList, setLoadingFollowList] = useState(false);
+
+  const fetchFollowList = async (type: 'followers' | 'following') => {
+    if (showFollowList === type) {
+      setShowFollowList(null);
+      return;
+    }
+    
+    setLoadingFollowList(true);
+    setShowFollowList(type);
+    
+    try {
+      if (type === 'followers') {
+        // Get users who follow this profile
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', profile.id);
+        
+        if (follows && follows.length > 0) {
+          const userIds = follows.map(f => f.follower_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+          
+          setFollowList(profiles || []);
+        } else {
+          setFollowList([]);
+        }
+      } else {
+        // Get users this profile follows
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', profile.id);
+        
+        if (follows && follows.length > 0) {
+          const userIds = follows.map(f => f.following_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+          
+          setFollowList(profiles || []);
+        } else {
+          setFollowList([]);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching follow list:', err);
+      setFollowList([]);
+    }
+    setLoadingFollowList(false);
+  };
 
   const handleFollow = async () => {
     if (!user || isOwnProfile) return;
@@ -203,13 +270,64 @@ export function ProfileClient({
               <p className="text-sm text-zinc-500">Member since {memberSince}</p>
               {/* Follower/Following counts */}
               <div className="mt-2 flex items-center gap-4 text-sm">
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{localFollowerCount}</span> followers
-                </span>
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{followCounts.following}</span> following
-                </span>
+                <button
+                  onClick={() => fetchFollowList('followers')}
+                  className="flex items-center gap-1 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{localFollowerCount}</span>
+                  <span>followers</span>
+                  {loadingFollowList && showFollowList === 'followers' ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                  ) : showFollowList === 'followers' ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+                <button
+                  onClick={() => fetchFollowList('following')}
+                  className="flex items-center gap-1 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{followCounts.following}</span>
+                  <span>following</span>
+                  {loadingFollowList && showFollowList === 'following' ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                  ) : showFollowList === 'following' ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
               </div>
+              
+              {/* Followers/Following List */}
+              {showFollowList && (
+                <div className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                  <h4 className="mb-2 text-xs font-semibold uppercase text-zinc-500">
+                    {showFollowList === 'followers' ? 'Followers' : 'Following'}
+                  </h4>
+                  {followList.length === 0 ? (
+                    <p className="text-sm text-zinc-500">
+                      {showFollowList === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {followList.map(followUser => (
+                        <Link
+                          key={followUser.id}
+                          href={`/profile/${followUser.id}`}
+                          className="flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2.5 text-xs shadow-sm hover:bg-zinc-100 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                        >
+                          <Avatar src={followUser.avatar_url} fallback={followUser.username || 'A'} size="xs" />
+                          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                            {followUser.username || 'Anonymous'}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {/* Follow/Unfollow Button */}
             {!isOwnProfile && user && (
@@ -241,7 +359,7 @@ export function ProfileClient({
           <div className="mt-6 grid grid-cols-5 gap-3">
             <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
             <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
-            <StatBox label="No" value={stats.noCount} icon={X} className="text-rose-600" />
+            <StatBox label="No" value={stats.noCount} icon={XIcon} className="text-rose-600" />
             <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
             <StatBox label="Changed" value={stats.changedVotes} icon={RotateCcw} className="text-violet-600" />
           </div>
