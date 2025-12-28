@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,6 +91,21 @@ export function QuestionCard({
   // Local state for vote (persists after voting without refetch)
   const [localUserVote, setLocalUserVote] = useState<VoteType | null>(question.user_vote ?? null);
   const [localStats, setLocalStats] = useState(question.stats);
+  const [hasVotedLocally, setHasVotedLocally] = useState(false);
+
+  // Sync with prop when it changes (e.g., on initial load)
+  // But don't override if user just voted locally
+  useEffect(() => {
+    if (!hasVotedLocally && question.user_vote !== undefined) {
+      setLocalUserVote(question.user_vote);
+    }
+  }, [question.user_vote, hasVotedLocally]);
+
+  useEffect(() => {
+    if (!hasVotedLocally) {
+      setLocalStats(question.stats);
+    }
+  }, [question.stats, hasVotedLocally]);
 
   const updateVoteState = (newVote: VoteType) => {
     const oldVote = localUserVote;
@@ -137,6 +152,7 @@ export function QuestionCard({
     if (!user) return;
 
     // Update local state immediately
+    setHasVotedLocally(true);
     updateVoteState(vote);
 
     startTransition(async () => {
