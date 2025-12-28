@@ -37,7 +37,6 @@ interface Voter {
 interface QuestionDetailClientProps {
   question: QuestionWithStats;
   initialComments: Comment[];
-  currentUserId?: string;
 }
 
 function getTimeAgo(date: Date): string {
@@ -49,7 +48,7 @@ function getTimeAgo(date: Date): string {
   return date.toLocaleDateString();
 }
 
-export function QuestionDetailClient({ question, initialComments, currentUserId }: QuestionDetailClientProps) {
+export function QuestionDetailClient({ question, initialComments }: QuestionDetailClientProps) {
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
@@ -146,6 +145,47 @@ export function QuestionDetailClient({ question, initialComments, currentUserId 
         });
       }
     });
+  };
+
+  // Fetch voters
+  const fetchVoters = async () => {
+    if (voters.length > 0) {
+      setShowVoters(!showVoters);
+      return;
+    }
+    
+    setLoadingVoters(true);
+    try {
+      const { data: responses } = await supabase
+        .from('responses')
+        .select('vote, user_id')
+        .eq('question_id', question.id);
+      
+      if (responses && responses.length > 0) {
+        const userIds = responses.map(r => r.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', userIds);
+        
+        const profileMap = Object.fromEntries(
+          (profiles || []).map(p => [p.id, p])
+        );
+        
+        const votersList: Voter[] = responses.map(r => ({
+          id: r.user_id,
+          username: profileMap[r.user_id]?.username || 'Anonymous',
+          avatar_url: profileMap[r.user_id]?.avatar_url || null,
+          vote: r.vote as VoteType,
+        }));
+        
+        setVoters(votersList);
+      }
+      setShowVoters(true);
+    } catch (err) {
+      console.error('Error fetching voters:', err);
+    }
+    setLoadingVoters(false);
   };
 
   // Mention search
@@ -456,9 +496,81 @@ export function QuestionDetailClient({ question, initialComments, currentUserId 
                 no={localStats.no_percentage}
                 unsure={localStats.unsure_percentage}
               />
-              <p className="mt-2 text-sm text-zinc-500">
-                {localStats.total_votes} vote{localStats.total_votes !== 1 ? 's' : ''}
-              </p>
+              <button
+                onClick={fetchVoters}
+                className="mt-2 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              >
+                <span>{localStats.total_votes} vote{localStats.total_votes !== 1 ? 's' : ''}</span>
+                {loadingVoters ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                ) : showVoters ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </button>
+              
+              {/* Voters List */}
+              {showVoters && voters.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {/* Yes voters */}
+                  {voters.filter(v => v.vote === 'YES').length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
+                      <div className="flex flex-wrap gap-2">
+                        {voters.filter(v => v.vote === 'YES').map(voter => (
+                          <Link
+                            key={voter.id}
+                            href={`/profile/${voter.id}`}
+                            className="flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-1 pr-2.5 text-xs hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50"
+                          >
+                            <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
+                            <span className="text-emerald-700 dark:text-emerald-300">{voter.username}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* No voters */}
+                  {voters.filter(v => v.vote === 'NO').length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
+                      <div className="flex flex-wrap gap-2">
+                        {voters.filter(v => v.vote === 'NO').map(voter => (
+                          <Link
+                            key={voter.id}
+                            href={`/profile/${voter.id}`}
+                            className="flex items-center gap-1.5 rounded-full bg-rose-50 py-1 pl-1 pr-2.5 text-xs hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50"
+                          >
+                            <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
+                            <span className="text-rose-700 dark:text-rose-300">{voter.username}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Not Sure voters */}
+                  {voters.filter(v => v.vote === 'UNSURE').length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
+                      <div className="flex flex-wrap gap-2">
+                        {voters.filter(v => v.vote === 'UNSURE').map(voter => (
+                          <Link
+                            key={voter.id}
+                            href={`/profile/${voter.id}`}
+                            className="flex items-center gap-1.5 rounded-full bg-amber-50 py-1 pl-1 pr-2.5 text-xs hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
+                          >
+                            <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
+                            <span className="text-amber-700 dark:text-amber-300">{voter.username}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

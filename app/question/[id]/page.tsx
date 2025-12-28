@@ -103,7 +103,6 @@ export default async function QuestionPage({ params }: PageProps) {
         user_vote: userVote,
       }}
       initialComments={enrichedComments}
-      currentUserId={user?.id}
     />
   );
 }
