@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useOptimistic, useTransition, useMemo } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -19,6 +19,13 @@ interface QuestionCardProps {
   onVote?: (questionId: string, vote: VoteType) => void;
 }
 
+interface Voter {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  vote: VoteType;
+}
+
 export function QuestionCard({
   question,
   authorName,
@@ -28,6 +35,58 @@ export function QuestionCard({
   const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
+  const [showVoters, setShowVoters] = useState(false);
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [loadingVoters, setLoadingVoters] = useState(false);
+
+  const fetchVoters = async () => {
+    if (voters.length > 0) {
+      // Already fetched, just toggle
+      setShowVoters(!showVoters);
+      return;
+    }
+    
+    setLoadingVoters(true);
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id&question_id=eq.${question.id}`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const responses = await res.json();
+      
+      if (responses.length > 0) {
+        const userIds = responses.map((r: { user_id: string }) => r.user_id);
+        const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${userIds.join(',')})`;
+        const profilesRes = await fetch(profilesUrl, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          },
+        });
+        const profiles = await profilesRes.json();
+        
+        const profileMap = Object.fromEntries(
+          profiles.map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
+        );
+        
+        const votersList: Voter[] = responses.map((r: { user_id: string; vote: string }) => ({
+          id: r.user_id,
+          username: profileMap[r.user_id]?.username || 'Anonymous',
+          avatar_url: profileMap[r.user_id]?.avatar_url || null,
+          vote: r.vote as VoteType,
+        }));
+        
+        setVoters(votersList);
+      }
+      setShowVoters(true);
+    } catch (err) {
+      console.error('Error fetching voters:', err);
+    }
+    setLoadingVoters(false);
+  };
   
   // Optimistic UI state
   const [optimisticData, setOptimisticData] = useOptimistic(
@@ -130,12 +189,84 @@ export function QuestionCard({
               </span>
             </div>
           </Link>
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <button
+            onClick={fetchVoters}
+            disabled={optimisticData.stats.total_votes === 0}
+            className={cn(
+              "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
+              optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+            )}
+          >
             <MessageCircle className="h-3.5 w-3.5" />
             <span>{optimisticData.stats.total_votes} votes</span>
-          </div>
+            {optimisticData.stats.total_votes > 0 && (
+              loadingVoters ? (
+                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+              ) : showVoters ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )
+            )}
+          </button>
         </div>
       </CardHeader>
+
+      {/* Expandable Voters List */}
+      {showVoters && voters.length > 0 && (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+          <div className="space-y-3">
+            {/* Yes voters */}
+            {voters.filter(v => v.vote === 'YES').length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
+                <div className="flex flex-wrap gap-2">
+                  {voters.filter(v => v.vote === 'YES').map(voter => (
+                    <Link key={voter.id} href={`/profile/${voter.id}`}>
+                      <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40">
+                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                        <span className="text-xs text-emerald-700 dark:text-emerald-300">{voter.username}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* No voters */}
+            {voters.filter(v => v.vote === 'NO').length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
+                <div className="flex flex-wrap gap-2">
+                  {voters.filter(v => v.vote === 'NO').map(voter => (
+                    <Link key={voter.id} href={`/profile/${voter.id}`}>
+                      <div className="flex items-center gap-1.5 rounded-full bg-rose-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40">
+                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                        <span className="text-xs text-rose-700 dark:text-rose-300">{voter.username}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Not Sure voters */}
+            {voters.filter(v => v.vote === 'UNSURE').length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
+                <div className="flex flex-wrap gap-2">
+                  {voters.filter(v => v.vote === 'UNSURE').map(voter => (
+                    <Link key={voter.id} href={`/profile/${voter.id}`}>
+                      <div className="flex items-center gap-1.5 rounded-full bg-amber-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/40">
+                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                        <span className="text-xs text-amber-700 dark:text-amber-300">{voter.username}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       <CardContent className="pb-4">
         <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
