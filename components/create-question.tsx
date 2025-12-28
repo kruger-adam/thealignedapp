@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +16,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
   const charCount = content.length;
@@ -25,23 +25,25 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const isValid = content.trim().length > 0 && !isOverLimit;
 
   const handleSubmit = async () => {
-    if (!user || !isValid) return;
+    if (!user || !isValid || isLoading) return;
 
-    startTransition(async () => {
-      const { error } = await supabase.from('questions').insert({
-        author_id: user.id,
-        content: content.trim(),
-      });
-
-      if (error) {
-        console.error('Error creating question:', error);
-        return;
-      }
-
-      setContent('');
-      setIsExpanded(false);
-      onQuestionCreated?.();
+    setIsLoading(true);
+    
+    const { error } = await supabase.from('questions').insert({
+      author_id: user.id,
+      content: content.trim(),
     });
+
+    if (error) {
+      console.error('Error creating question:', error);
+      setIsLoading(false);
+      return;
+    }
+
+    setContent('');
+    setIsExpanded(false);
+    setIsLoading(false);
+    onQuestionCreated?.();
   };
 
   if (!user) {
@@ -121,10 +123,10 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                 <Button
                   size="sm"
                   onClick={handleSubmit}
-                  disabled={!isValid || isPending}
+                  disabled={!isValid || isLoading}
                   className="gap-1.5"
                 >
-                  {isPending ? (
+                  {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="h-4 w-4" />

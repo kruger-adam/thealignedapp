@@ -45,16 +45,20 @@ export default function FeedPage() {
       }
     }
 
-    // Fetch author profiles
-    const authorIds = [...new Set(questionsData.map((q) => q.author_id))];
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url')
-      .in('id', authorIds);
+    // Fetch author profiles (only if there are questions)
+    let profilesMap: Record<string, { id: string; username: string | null; avatar_url: string | null }> = {};
+    
+    if (questionsData.length > 0) {
+      const authorIds = [...new Set(questionsData.map((q) => q.author_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', authorIds);
 
-    const profilesMap = Object.fromEntries(
-      (profiles || []).map((p) => [p.id, p])
-    );
+      profilesMap = Object.fromEntries(
+        (profiles || []).map((p) => [p.id, p])
+      );
+    }
 
     // Transform data
     const transformedQuestions: QuestionWithStats[] = questionsData.map((q) => ({
