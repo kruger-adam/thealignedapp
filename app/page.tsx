@@ -21,14 +21,22 @@ export default function FeedPage() {
     setLoading(true);
 
     try {
-      console.log('[Feed] Making Supabase query...');
-      // Fetch questions
-      const { data: rawQuestions, error: questionsError } = await supabase
-        .from('questions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Direct fetch test to bypass Supabase client
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc`;
+      console.log('[Feed] Direct fetch to:', url);
       
-      console.log('[Feed] Query result:', { count: rawQuestions?.length, error: questionsError });
+      const response = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      
+      console.log('[Feed] Fetch status:', response.status);
+      const rawQuestions = await response.json();
+      console.log('[Feed] Fetch result:', rawQuestions);
+      
+      const questionsError = response.ok ? null : { message: 'Fetch failed' };
 
       if (questionsError) {
         console.error('Error fetching questions:', questionsError);
