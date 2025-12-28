@@ -638,7 +638,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               {user?.id === question.author_id && (
                 <button
                   onClick={() => setIsEditingQuestion(true)}
-                  className="absolute -right-1 -top-1 rounded p-1 opacity-0 transition-opacity hover:bg-zinc-100 group-hover:opacity-100 dark:hover:bg-zinc-700"
+                  className="absolute -right-1 -top-1 rounded p-1 opacity-60 md:opacity-0 transition-opacity hover:bg-zinc-100 hover:opacity-100 md:group-hover:opacity-100 dark:hover:bg-zinc-700"
                   title="Edit question"
                 >
                   <Pencil className="h-4 w-4 text-zinc-400" />
@@ -821,7 +821,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                       {user?.id === comment.user_id && editingCommentId !== comment.id && (
                         <button
                           onClick={() => startEditingComment(comment)}
-                          className="rounded p-0.5 opacity-0 transition-opacity hover:bg-zinc-100 group-hover:opacity-100 dark:hover:bg-zinc-700"
+                          className="rounded p-0.5 opacity-60 md:opacity-0 transition-opacity hover:bg-zinc-100 hover:opacity-100 md:group-hover:opacity-100 dark:hover:bg-zinc-700"
                           title="Edit comment"
                         >
                           <Pencil className="h-3 w-3 text-zinc-400" />
