@@ -17,9 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Consensus - Discover What People Really Think',
+  title: 'YesNoNotSure - Discover What People Really Think',
   description: 'A modern polling platform to track opinions, find common ground, and understand where people stand on the issues that matter.',
-  keywords: ['polling', 'opinions', 'consensus', 'voting', 'social'],
+  keywords: ['polling', 'opinions', 'yes', 'no', 'voting', 'social'],
 };
 
 export default function RootLayout({

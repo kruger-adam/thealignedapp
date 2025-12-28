@@ -1,0 +1,12 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Red X (background) -->
+  <path d="M20 15 L35 30 L50 15 L58 23 L43 38 L58 53 L50 61 L35 46 L20 61 L12 53 L27 38 L12 23 Z" fill="#DC2626"/>
+  
+  <!-- Green Checkmark -->
+  <path d="M15 55 L30 70 L55 35 L65 45 L30 85 L5 60 Z" fill="#16A34A"/>
+  
+  <!-- Yellow Question Mark -->
+  <path d="M60 10 Q85 10 85 35 Q85 50 70 55 L70 65 L60 65 L60 50 Q75 45 75 35 Q75 20 60 20 Q50 20 50 30 L40 30 Q40 10 60 10 Z" fill="#EAB308"/>
+  <rect x="60" y="70" width="10" height="10" fill="#EAB308"/>
+</svg>
+

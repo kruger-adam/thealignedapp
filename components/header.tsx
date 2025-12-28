@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scale, LogIn, Home } from 'lucide-react';
+import { LogIn, Home } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
@@ -16,12 +17,16 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-700 dark:from-zinc-100 dark:to-zinc-300">
-            <Scale className="h-5 w-5 text-white dark:text-zinc-900" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Consensus
+        <Link href="/" className="flex items-center gap-2">
+          <Image 
+            src="/logo.svg" 
+            alt="YesNoNotSure" 
+            width={36} 
+            height={36}
+            className="h-9 w-9"
+          />
+          <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            YesNoNotSure
           </span>
         </Link>
 
