@@ -67,17 +67,21 @@ export default function FeedPage() {
       controversy_score: 0,
     }));
 
-    // Fetch user's votes if logged in
+    // Fetch user's votes if logged in (using direct fetch)
     let userVotes: Record<string, VoteType> = {};
     if (user) {
-      const { data: votesData } = await supabase
-        .from('responses')
-        .select('question_id, vote')
-        .eq('user_id', user.id);
+      const votesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote&user_id=eq.${user.id}`;
+      const votesRes = await fetch(votesUrl, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const votesData = await votesRes.json();
 
-      if (votesData) {
+      if (votesData && Array.isArray(votesData)) {
         userVotes = Object.fromEntries(
-          votesData.map((v) => [v.question_id, v.vote as VoteType])
+          votesData.map((v: { question_id: string; vote: string }) => [v.question_id, v.vote as VoteType])
         );
       }
     }
@@ -87,13 +91,17 @@ export default function FeedPage() {
     
     if (questionsData.length > 0) {
       const authorIds = [...new Set(questionsData.map((q) => q.author_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url')
-        .in('id', authorIds);
+      const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${authorIds.join(',')})`;
+      const profilesRes = await fetch(profilesUrl, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const profiles = await profilesRes.json();
 
       profilesMap = Object.fromEntries(
-        (profiles || []).map((p) => [p.id, p])
+        (profiles || []).map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
       );
     }
 
