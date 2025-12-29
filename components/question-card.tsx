@@ -835,7 +835,7 @@ export function QuestionCard({
               )}
             >
               <Vote className="h-3.5 w-3.5" />
-              <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> votes</span></span>
+              <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span></span>
               {optimisticData.stats.total_votes > 0 && (
                 loadingVoters ? (
                   <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
@@ -851,7 +851,7 @@ export function QuestionCard({
               className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span>{commentCount}<span className="hidden sm:inline"> comments</span></span>
+              <span>{commentCount}<span className="hidden sm:inline"> comment{commentCount !== 1 ? 's' : ''}</span></span>
               {loadingComments ? (
                 <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
               ) : showComments ? (
