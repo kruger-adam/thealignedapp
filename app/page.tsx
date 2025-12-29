@@ -8,7 +8,7 @@ import { FeedFilters } from '@/components/feed-filters';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
-import { MinVotes } from '@/components/feed-filters';
+import { MinVotes, TimePeriod } from '@/components/feed-filters';
 
 export default function FeedPage() {
   const { user } = useAuth();
@@ -17,10 +17,11 @@ export default function FeedPage() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
-  // Filter questions by category, min votes, and unanswered
+  // Filter questions by category, min votes, time period, and unanswered
   const filteredQuestions = useMemo(() => {
     let filtered = questions;
     if (categoryFilter) {
@@ -29,11 +30,27 @@ export default function FeedPage() {
     if (minVotes > 0) {
       filtered = filtered.filter(q => q.stats.total_votes >= minVotes);
     }
+    if (timePeriod !== 'all') {
+      const now = new Date();
+      let cutoff: Date;
+      switch (timePeriod) {
+        case 'day':
+          cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'week':
+          cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      filtered = filtered.filter(q => new Date(q.created_at) >= cutoff);
+    }
     if (unansweredOnly) {
       filtered = filtered.filter(q => !q.user_vote);
     }
     return filtered;
-  }, [questions, categoryFilter, minVotes, unansweredOnly]);
+  }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -306,12 +323,15 @@ export default function FeedPage() {
             </h1>
             <p className="text-xs text-zinc-500">
               Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'most_commented' ? 'Most Commented' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
-              {(categoryFilter || minVotes > 0 || unansweredOnly) && (
+              {(categoryFilter || minVotes > 0 || timePeriod !== 'all' || unansweredOnly) && (
                 <span>
                   {' · '}
                   {[
                     categoryFilter,
                     minVotes > 0 && `${minVotes}+ votes`,
+                    timePeriod === 'day' && 'Last 24h',
+                    timePeriod === 'week' && 'Last week',
+                    timePeriod === 'month' && 'Last month',
                     unansweredOnly && 'Unanswered',
                   ].filter(Boolean).join(', ')}
                 </span>
@@ -325,6 +345,8 @@ export default function FeedPage() {
             onCategoryChange={setCategoryFilter}
             minVotes={minVotes}
             onMinVotesChange={setMinVotes}
+            timePeriod={timePeriod}
+            onTimePeriodChange={setTimePeriod}
             unansweredOnly={unansweredOnly}
             onUnansweredChange={setUnansweredOnly}
             isLoggedIn={!!user}

@@ -6,6 +6,7 @@ import { SortOption, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export type MinVotes = 0 | 5 | 10 | 25;
+export type TimePeriod = 'all' | 'day' | 'week' | 'month';
 
 interface FeedFiltersProps {
   currentSort: SortOption;
@@ -14,6 +15,8 @@ interface FeedFiltersProps {
   onCategoryChange: (category: Category | null) => void;
   minVotes: MinVotes;
   onMinVotesChange: (min: MinVotes) => void;
+  timePeriod: TimePeriod;
+  onTimePeriodChange: (period: TimePeriod) => void;
   unansweredOnly: boolean;
   onUnansweredChange: (value: boolean) => void;
   isLoggedIn: boolean;
@@ -36,6 +39,13 @@ const minVotesOptions: { value: MinVotes; label: string }[] = [
   { value: 25, label: '25+' },
 ];
 
+const timePeriodOptions: { value: TimePeriod; label: string }[] = [
+  { value: 'all', label: 'All Time' },
+  { value: 'day', label: '24h' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+];
+
 const categories: Category[] = [
   'Politics & Society',
   'Relationships & Dating',
@@ -56,6 +66,8 @@ export function FeedFilters({
   onCategoryChange,
   minVotes,
   onMinVotesChange,
+  timePeriod,
+  onTimePeriodChange,
   unansweredOnly,
   onUnansweredChange,
   isLoggedIn,
@@ -64,7 +76,7 @@ export function FeedFilters({
   const filterRef = useRef<HTMLDivElement>(null);
   
   // Count active filters
-  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (unansweredOnly ? 1 : 0);
+  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0);
   
   // Close on click outside
   useEffect(() => {
@@ -123,6 +135,7 @@ export function FeedFilters({
                   onClick={() => {
                     onCategoryChange(null);
                     onMinVotesChange(0);
+                    onTimePeriodChange('all');
                     onUnansweredChange(false);
                   }}
                   className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -164,6 +177,29 @@ export function FeedFilters({
                     className={cn(
                       'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                       minVotes === value
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Time period filter */}
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Time Period
+              </label>
+              <div className="flex gap-2">
+                {timePeriodOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => onTimePeriodChange(value)}
+                    className={cn(
+                      'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors',
+                      timePeriod === value
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                         : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
                     )}
