@@ -333,9 +333,10 @@ BEGIN
         FROM responses r1
         INNER JOIN responses r2 ON r1.question_id = r2.question_id
         WHERE r1.user_id = user_a AND r2.user_id = user_b
-        -- Exclude SKIP votes and anonymous votes from compatibility calculation
+        -- Exclude SKIP votes, anonymous votes, and AI votes from compatibility calculation
         AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
         AND r1.is_anonymous = false AND r2.is_anonymous = false
+        AND r1.is_ai = false AND r2.is_ai = false
     )
     SELECT 
         CASE 
