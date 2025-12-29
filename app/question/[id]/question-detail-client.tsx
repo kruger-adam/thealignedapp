@@ -703,7 +703,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 >
                   <DropdownMenuItem onClick={shareQuestion}>
                     <Share2 className="h-3.5 w-3.5" />
-                    {copied ? 'Copied!' : 'Share'}
+                    Share
                   </DropdownMenuItem>
                   {user?.id === question.author_id && (
                     <>
@@ -722,6 +722,13 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                     </>
                   )}
                 </DropdownMenu>
+                {copied && (
+                  <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+                      Link copied!
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
