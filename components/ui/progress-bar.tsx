@@ -49,7 +49,7 @@ export function ProgressBar({
   const yesPercent = Math.round((yes / total) * 100);
   const noPercent = Math.round((no / total) * 100);
   const unsurePercent = Math.round((unsure / total) * 100);
-  const skipPercent = 100 - yesPercent - noPercent - unsurePercent;
+  const skipPercent = Math.round((skip / total) * 100);
 
   return (
     <div className="space-y-2">
