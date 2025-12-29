@@ -880,7 +880,7 @@ export function QuestionCard({
           return;
         }
       } else {
-        // Perform the actual update/insert
+        // Perform the actual update/insert (explicitly mark as non-AI vote)
         const { error } = await supabase
           .from('responses')
           .upsert(
@@ -889,10 +889,11 @@ export function QuestionCard({
               question_id: question.id,
               vote,
               is_anonymous: isPrivateMode,
+              is_ai: false,
               updated_at: new Date().toISOString(),
             },
             {
-              onConflict: 'user_id,question_id',
+              onConflict: 'user_id,question_id,is_ai',
             }
           );
 

@@ -178,9 +178,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               question_id: question.id,
               vote,
               is_anonymous: isPrivateMode,
+              is_ai: false,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: 'user_id,question_id' }
+            { onConflict: 'user_id,question_id,is_ai' }
           );
 
         if (error) {
