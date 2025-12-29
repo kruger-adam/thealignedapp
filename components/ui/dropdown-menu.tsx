@@ -42,7 +42,7 @@ export function DropdownMenu({ trigger, children, align = 'right', className }: 
       {open && (
         <div
           className={cn(
-            'absolute z-50 mt-1 min-w-[120px] max-h-[300px] overflow-y-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800',
+            'absolute z-50 mt-1 min-w-[120px] max-h-[100px] overflow-y-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800',
             align === 'right' ? 'right-0' : 'left-0'
           )}
         >
