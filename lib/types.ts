@@ -103,7 +103,7 @@ export interface Divergence {
   controversy_score: number;
 }
 
-export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus';
+export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 'most_undecided';
 
 export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment';
 

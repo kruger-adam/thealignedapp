@@ -185,6 +185,9 @@ export default function FeedPage() {
         case 'consensus':
           // Highest consensus = lowest controversy
           return a.stats.controversy_score - b.stats.controversy_score;
+        case 'most_undecided':
+          // Sort by highest "Not Sure" count
+          return b.stats.unsure_count - a.stats.unsure_count;
         case 'newest':
         default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -232,7 +235,7 @@ export default function FeedPage() {
               Feed
             </h1>
             <p className="text-xs text-zinc-500">
-              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : 'Most Agreed'}
+              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : 'Most Undecided'}
               {categoryFilter && <span> · {categoryFilter}</span>}
             </p>
           </div>
