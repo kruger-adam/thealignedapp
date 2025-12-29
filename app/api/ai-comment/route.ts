@@ -114,7 +114,7 @@ Respond thoughtfully in 1-2 sentences.`;
     // Call OpenAI
     console.log('Calling OpenAI with prompt:', userPrompt.substring(0, 200) + '...');
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o', // Using GPT-4o for quality responses
+      model: 'gpt-4.1-mini', // Using GPT-4.1-mini for cost-effective responses
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
