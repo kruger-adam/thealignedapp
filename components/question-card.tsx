@@ -123,7 +123,17 @@ export function QuestionCard({
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
         },
       });
-      const responses: { user_id: string; vote: string; is_anonymous: boolean; is_ai?: boolean; ai_reasoning?: string | null }[] = await res.json();
+      const data = await res.json();
+      
+      // Handle API errors (e.g., missing columns)
+      if (!Array.isArray(data)) {
+        console.error('Error fetching voters:', data);
+        setLoadingVoters(false);
+        setShowVoters(true);
+        return;
+      }
+      
+      const responses: { user_id: string; vote: string; is_anonymous: boolean; is_ai?: boolean; ai_reasoning?: string | null }[] = data;
       
       // Separate AI, public, and anonymous votes
       const aiVotes = responses.filter(r => r.is_ai);

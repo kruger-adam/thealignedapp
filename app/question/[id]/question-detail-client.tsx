@@ -216,10 +216,17 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     setLoadingVoters(true);
     try {
       // Fetch all votes (including anonymous and AI)
-      const { data: responses } = await supabase
+      const { data: responses, error } = await supabase
         .from('responses')
         .select('vote, user_id, is_anonymous, is_ai, ai_reasoning')
         .eq('question_id', question.id);
+      
+      if (error) {
+        console.error('Error fetching voters:', error);
+        setLoadingVoters(false);
+        setShowVoters(true);
+        return;
+      }
       
       if (responses && responses.length > 0) {
         // Separate AI, public, and anonymous votes
