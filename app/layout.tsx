@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/auth-context';
 import { Header } from '@/components/header';
+import { InstallPrompt } from '@/components/install-prompt';
 import './globals.css';
 
 const instrumentSans = Instrument_Sans({
@@ -48,6 +49,7 @@ export default function RootLayout({
         <AuthProvider>
           <Header />
           <main>{children}</main>
+          <InstallPrompt />
         </AuthProvider>
       </body>
     </html>
