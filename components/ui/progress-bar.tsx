@@ -7,7 +7,6 @@ interface ProgressBarProps {
   yes: number;
   no: number;
   unsure: number;
-  skip?: number;
   showLabels?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -22,11 +21,10 @@ export function ProgressBar({
   yes,
   no,
   unsure,
-  skip = 0,
   showLabels = true,
   size = 'md',
 }: ProgressBarProps) {
-  const total = yes + no + unsure + skip;
+  const total = yes + no + unsure;
   
   if (total === 0) {
     return (
@@ -49,7 +47,6 @@ export function ProgressBar({
   const yesPercent = Math.round((yes / total) * 100);
   const noPercent = Math.round((no / total) * 100);
   const unsurePercent = Math.round((unsure / total) * 100);
-  const skipPercent = Math.round((skip / total) * 100);
 
   return (
     <div className="space-y-2">
@@ -75,12 +72,6 @@ export function ProgressBar({
           <div
             className="bg-amber-500 transition-all duration-500 ease-out"
             style={{ width: `${unsurePercent}%` }}
-          />
-        )}
-        {skipPercent > 0 && (
-          <div
-            className="bg-zinc-400 transition-all duration-500 ease-out"
-            style={{ width: `${skipPercent}%` }}
           />
         )}
       </div>
@@ -110,18 +101,8 @@ export function ProgressBar({
               {unsurePercent}% Not Sure
             </span>
           )}
-          {skipPercent > 0 && (
-            <span 
-              className="text-center text-zinc-500 dark:text-zinc-400"
-              style={{ width: `${skipPercent}%` }}
-            >
-              {skipPercent}% Skip
-            </span>
-          )}
         </div>
       )}
     </div>
   );
 }
-
-

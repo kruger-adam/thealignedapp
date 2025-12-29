@@ -694,12 +694,11 @@ export function QuestionCard({
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
-    // Remove old vote count (SKIP doesn't affect total_votes for percentage calculation)
+    // Remove old vote count
     if (oldVote) {
       if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
       else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
       else if (oldVote === 'UNSURE') { newStats.unsure_count--; newStats.total_votes--; }
-      else if (oldVote === 'SKIP') { newStats.skip_count--; }
     }
 
     // Add new vote count
@@ -707,10 +706,9 @@ export function QuestionCard({
       if (newVote === 'YES') { newStats.yes_count++; newStats.total_votes++; }
       else if (newVote === 'NO') { newStats.no_count++; newStats.total_votes++; }
       else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
-      else if (newVote === 'SKIP') { newStats.skip_count++; }
     }
 
-    // Recalculate percentages (based on non-SKIP votes)
+    // Recalculate percentages
     if (newStats.total_votes > 0) {
       newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
       newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);

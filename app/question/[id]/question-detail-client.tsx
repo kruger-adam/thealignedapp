@@ -112,7 +112,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
       else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
       else if (oldVote === 'UNSURE') { newStats.unsure_count--; newStats.total_votes--; }
-      else if (oldVote === 'SKIP') { newStats.skip_count--; }
     }
 
     // Add new vote count
@@ -120,7 +119,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       if (newVote === 'YES') { newStats.yes_count++; newStats.total_votes++; }
       else if (newVote === 'NO') { newStats.no_count++; newStats.total_votes++; }
       else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
-      else if (newVote === 'SKIP') { newStats.skip_count++; }
     }
 
     // Recalculate percentages (based on non-SKIP votes)
@@ -778,13 +776,12 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           )}
 
           {/* Vote stats */}
-          {(localStats.total_votes > 0 || localStats.skip_count > 0) && (
+          {localStats.total_votes > 0 && (
             <div className="mb-4">
               <ProgressBar
                 yes={localStats.yes_count}
                 no={localStats.no_count}
                 unsure={localStats.unsure_count}
-                skip={localStats.skip_count}
               />
               <button
                 onClick={fetchVoters}
