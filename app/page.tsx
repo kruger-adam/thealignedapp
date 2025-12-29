@@ -17,9 +17,10 @@ export default function FeedPage() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
+  const [unansweredOnly, setUnansweredOnly] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
-  // Filter questions by category and min votes
+  // Filter questions by category, min votes, and unanswered
   const filteredQuestions = useMemo(() => {
     let filtered = questions;
     if (categoryFilter) {
@@ -28,8 +29,11 @@ export default function FeedPage() {
     if (minVotes > 0) {
       filtered = filtered.filter(q => q.stats.total_votes >= minVotes);
     }
+    if (unansweredOnly) {
+      filtered = filtered.filter(q => !q.user_vote);
+    }
     return filtered;
-  }, [questions, categoryFilter, minVotes]);
+  }, [questions, categoryFilter, minVotes, unansweredOnly]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -278,12 +282,14 @@ export default function FeedPage() {
             </h1>
             <p className="text-xs text-zinc-500">
               Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
-              {(categoryFilter || minVotes > 0) && (
+              {(categoryFilter || minVotes > 0 || unansweredOnly) && (
                 <span>
                   {' · '}
-                  {categoryFilter && categoryFilter}
-                  {categoryFilter && minVotes > 0 && ', '}
-                  {minVotes > 0 && `${minVotes}+ votes`}
+                  {[
+                    categoryFilter,
+                    minVotes > 0 && `${minVotes}+ votes`,
+                    unansweredOnly && 'Unanswered',
+                  ].filter(Boolean).join(', ')}
                 </span>
               )}
             </p>
@@ -295,6 +301,9 @@ export default function FeedPage() {
             onCategoryChange={setCategoryFilter}
             minVotes={minVotes}
             onMinVotesChange={setMinVotes}
+            unansweredOnly={unansweredOnly}
+            onUnansweredChange={setUnansweredOnly}
+            isLoggedIn={!!user}
           />
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />

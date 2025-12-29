@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUpDown, Filter, X } from 'lucide-react';
+import { ArrowUpDown, Filter } from 'lucide-react';
 import { SortOption, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,9 @@ interface FeedFiltersProps {
   onCategoryChange: (category: Category | null) => void;
   minVotes: MinVotes;
   onMinVotesChange: (min: MinVotes) => void;
+  unansweredOnly: boolean;
+  onUnansweredChange: (value: boolean) => void;
+  isLoggedIn: boolean;
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -52,12 +55,15 @@ export function FeedFilters({
   onCategoryChange,
   minVotes,
   onMinVotesChange,
+  unansweredOnly,
+  onUnansweredChange,
+  isLoggedIn,
 }: FeedFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   
   // Count active filters
-  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0);
+  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (unansweredOnly ? 1 : 0);
   
   // Close on click outside
   useEffect(() => {
@@ -116,6 +122,7 @@ export function FeedFilters({
                   onClick={() => {
                     onCategoryChange(null);
                     onMinVotesChange(0);
+                    onUnansweredChange(false);
                   }}
                   className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 >
@@ -144,7 +151,7 @@ export function FeedFilters({
             </div>
             
             {/* Min votes filter */}
-            <div>
+            <div className="mb-4">
               <label className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Minimum Votes
               </label>
@@ -165,6 +172,31 @@ export function FeedFilters({
                 ))}
               </div>
             </div>
+            
+            {/* Unanswered only toggle - only show when logged in */}
+            {isLoggedIn && (
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-zinc-700 dark:text-zinc-300">
+                  Unanswered only
+                </label>
+                <button
+                  onClick={() => onUnansweredChange(!unansweredOnly)}
+                  className={cn(
+                    'relative h-6 w-11 rounded-full transition-colors',
+                    unansweredOnly 
+                      ? 'bg-zinc-900 dark:bg-zinc-100' 
+                      : 'bg-zinc-200 dark:bg-zinc-600'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900',
+                      unansweredOnly && 'translate-x-5'
+                    )}
+                  />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
