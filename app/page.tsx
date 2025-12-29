@@ -8,6 +8,7 @@ import { FeedFilters } from '@/components/feed-filters';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
+import { MinVotes } from '@/components/feed-filters';
 
 export default function FeedPage() {
   const { user } = useAuth();
@@ -15,13 +16,20 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
+  const [minVotes, setMinVotes] = useState<MinVotes>(0);
   const supabase = useMemo(() => createClient(), []);
 
-  // Filter questions by category
+  // Filter questions by category and min votes
   const filteredQuestions = useMemo(() => {
-    if (!categoryFilter) return questions;
-    return questions.filter(q => q.category === categoryFilter);
-  }, [questions, categoryFilter]);
+    let filtered = questions;
+    if (categoryFilter) {
+      filtered = filtered.filter(q => q.category === categoryFilter);
+    }
+    if (minVotes > 0) {
+      filtered = filtered.filter(q => q.stats.total_votes >= minVotes);
+    }
+    return filtered;
+  }, [questions, categoryFilter, minVotes]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -175,16 +183,44 @@ export default function FeedPage() {
       user_vote_is_anonymous: userVotes[q.question_id]?.is_anonymous || false,
     }));
 
+    // Helper: Calculate agreement score (max of yes/no ratio, ignoring unsure)
+    // Returns { splitScore, agreementScore } where:
+    // - splitScore: how close YES/(YES+NO) is to 50% (100 = perfectly split)
+    // - agreementScore: max(YES,NO)/(YES+NO) as percentage (100 = total agreement)
+    const getScores = (stats: typeof transformedQuestions[0]['stats']) => {
+      const decisiveVotes = stats.yes_count + stats.no_count;
+      if (decisiveVotes === 0) {
+        return { splitScore: 0, agreementScore: 0, decisiveVotes: 0 };
+      }
+      const yesRatio = stats.yes_count / decisiveVotes;
+      const splitScore = 100 - Math.abs(yesRatio - 0.5) * 200; // 100 when 50/50, 0 when 100/0
+      const agreementScore = (Math.max(stats.yes_count, stats.no_count) / decisiveVotes) * 100;
+      return { splitScore, agreementScore, decisiveVotes };
+    };
+
     // Sort questions
     const sorted = [...transformedQuestions].sort((a, b) => {
       switch (sortBy) {
         case 'popular':
           return b.stats.total_votes - a.stats.total_votes;
-        case 'controversial':
-          return b.stats.controversy_score - a.stats.controversy_score;
-        case 'consensus':
-          // Highest consensus = lowest controversy
-          return a.stats.controversy_score - b.stats.controversy_score;
+        case 'controversial': {
+          // Most Split: highest splitScore first, tiebreaker by total votes
+          const aScores = getScores(a.stats);
+          const bScores = getScores(b.stats);
+          if (bScores.splitScore !== aScores.splitScore) {
+            return bScores.splitScore - aScores.splitScore;
+          }
+          return bScores.decisiveVotes - aScores.decisiveVotes; // tiebreaker
+        }
+        case 'consensus': {
+          // Most Agreed: highest agreementScore first, tiebreaker by total votes
+          const aScores = getScores(a.stats);
+          const bScores = getScores(b.stats);
+          if (bScores.agreementScore !== aScores.agreementScore) {
+            return bScores.agreementScore - aScores.agreementScore;
+          }
+          return bScores.decisiveVotes - aScores.decisiveVotes; // tiebreaker
+        }
         case 'most_undecided':
           // Sort by highest "Not Sure" count
           return b.stats.unsure_count - a.stats.unsure_count;
@@ -236,7 +272,14 @@ export default function FeedPage() {
             </h1>
             <p className="text-xs text-zinc-500">
               Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : 'Most Undecided'}
-              {categoryFilter && <span> · {categoryFilter}</span>}
+              {(categoryFilter || minVotes > 0) && (
+                <span>
+                  {' · '}
+                  {categoryFilter && categoryFilter}
+                  {categoryFilter && minVotes > 0 && ', '}
+                  {minVotes > 0 && `${minVotes}+ votes`}
+                </span>
+              )}
             </p>
           </div>
           <FeedFilters 
@@ -244,6 +287,8 @@ export default function FeedPage() {
             onSortChange={setSortBy} 
             currentCategory={categoryFilter}
             onCategoryChange={setCategoryFilter}
+            minVotes={minVotes}
+            onMinVotesChange={setMinVotes}
           />
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />
