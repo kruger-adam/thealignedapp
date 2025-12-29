@@ -22,6 +22,7 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'controversial', label: 'Most Split' },
   { value: 'consensus', label: 'Most Agreed' },
   { value: 'most_undecided', label: 'Most Undecided' },
+  { value: 'most_sensitive', label: 'Most Sensitive' },
 ];
 
 const minVotesOptions: { value: MinVotes; label: string }[] = [

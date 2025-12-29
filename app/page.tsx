@@ -71,10 +71,10 @@ export default function FeedPage() {
     }
     
     const questionIds = (rawQuestions as RawQuestion[]).map(q => q.id);
-    let allResponses: { question_id: string; vote: string }[] = [];
+    let allResponses: { question_id: string; vote: string; is_anonymous: boolean }[] = [];
     
     if (questionIds.length > 0) {
-      const responsesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote&question_id=in.(${questionIds.join(',')})`;
+      const responsesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote,is_anonymous&question_id=in.(${questionIds.join(',')})`;
       const responsesRes = await fetch(responsesUrl, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -85,20 +85,21 @@ export default function FeedPage() {
     }
     
     // Calculate vote stats per question
-    const voteStats: Record<string, { yes: number; no: number; unsure: number; skip: number }> = {};
+    const voteStats: Record<string, { yes: number; no: number; unsure: number; skip: number; anonymous: number }> = {};
     for (const r of allResponses) {
       if (!voteStats[r.question_id]) {
-        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0, skip: 0 };
+        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0, skip: 0, anonymous: 0 };
       }
       if (r.vote === 'YES') voteStats[r.question_id].yes++;
       else if (r.vote === 'NO') voteStats[r.question_id].no++;
       else if (r.vote === 'UNSURE') voteStats[r.question_id].unsure++;
       else if (r.vote === 'SKIP') voteStats[r.question_id].skip++;
+      if (r.is_anonymous) voteStats[r.question_id].anonymous++;
     }
     
     // Transform to match expected format
     const questionsData = (rawQuestions as RawQuestion[]).map((q) => {
-      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0, skip: 0 };
+      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0, skip: 0, anonymous: 0 };
       // Total for percentages excludes SKIP votes
       const total = stats.yes + stats.no + stats.unsure;
       return {
@@ -112,6 +113,7 @@ export default function FeedPage() {
         yes_count: stats.yes,
         no_count: stats.no,
         unsure_count: stats.unsure,
+        anonymous_count: stats.anonymous,
         yes_percentage: total > 0 ? Math.round((stats.yes / total) * 100) : 0,
         no_percentage: total > 0 ? Math.round((stats.no / total) * 100) : 0,
         unsure_percentage: total > 0 ? Math.round((stats.unsure / total) * 100) : 0,
@@ -174,6 +176,7 @@ export default function FeedPage() {
         yes_count: q.yes_count,
         no_count: q.no_count,
         unsure_count: q.unsure_count,
+        anonymous_count: q.anonymous_count,
         yes_percentage: q.yes_percentage,
         no_percentage: q.no_percentage,
         unsure_percentage: q.unsure_percentage,
@@ -224,6 +227,9 @@ export default function FeedPage() {
         case 'most_undecided':
           // Sort by highest "Not Sure" count
           return b.stats.unsure_count - a.stats.unsure_count;
+        case 'most_sensitive':
+          // Sort by highest anonymous/private vote count
+          return b.stats.anonymous_count - a.stats.anonymous_count;
         case 'newest':
         default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -271,7 +277,7 @@ export default function FeedPage() {
               Feed
             </h1>
             <p className="text-xs text-zinc-500">
-              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : 'Most Undecided'}
+              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
               {(categoryFilter || minVotes > 0) && (
                 <span>
                   {' · '}

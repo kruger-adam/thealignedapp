@@ -34,12 +34,13 @@ export default async function QuestionPage({ params }: PageProps) {
   // Fetch vote stats
   const { data: votes } = await supabase
     .from('responses')
-    .select('vote')
+    .select('vote,is_anonymous')
     .eq('question_id', id);
 
   const yes_count = votes?.filter(v => v.vote === 'YES').length || 0;
   const no_count = votes?.filter(v => v.vote === 'NO').length || 0;
   const unsure_count = votes?.filter(v => v.vote === 'UNSURE').length || 0;
+  const anonymous_count = votes?.filter(v => v.is_anonymous).length || 0;
   const total_votes = yes_count + no_count + unsure_count;
 
   const stats = {
@@ -47,6 +48,7 @@ export default async function QuestionPage({ params }: PageProps) {
     yes_count,
     no_count,
     unsure_count,
+    anonymous_count,
     yes_percentage: 0,
     no_percentage: 0,
     unsure_percentage: 0,
