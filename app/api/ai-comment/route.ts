@@ -6,9 +6,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// AI user ID - we'll create this profile in the database
-const AI_USER_ID = '00000000-0000-0000-0000-000000000001';
-
 // Rate limit: 100 queries per user per day
 const DAILY_LIMIT = 100;
 
@@ -71,12 +68,12 @@ export async function POST(request: NextRequest) {
     const noPercent = totalVotes > 0 ? Math.round((noCount / totalVotes) * 100) : 0;
     const unsurePercent = totalVotes > 0 ? Math.round((unsureCount / totalVotes) * 100) : 0;
 
-    // Fetch recent comments (last 10)
+    // Fetch recent comments (last 10, excluding AI comments)
     const { data: comments } = await supabase
       .from('comments')
-      .select('content, profiles(username)')
+      .select('content, is_ai, profiles(username)')
       .eq('question_id', questionId)
-      .neq('user_id', AI_USER_ID) // Exclude previous AI comments
+      .or('is_ai.is.null,is_ai.eq.false') // Exclude AI comments
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -140,15 +137,16 @@ Respond thoughtfully in 1-2 sentences.`;
       question_id: questionId,
     });
 
-    // Insert the AI comment
+    // Insert the AI comment (use the requesting user's ID but mark as AI)
     const { data: aiComment, error: insertError } = await supabase
       .from('comments')
       .insert({
         question_id: questionId,
-        user_id: AI_USER_ID,
+        user_id: userId,
         content: aiResponse,
+        is_ai: true,
       })
-      .select('id, content, created_at')
+      .select('id, content, created_at, is_ai')
       .single();
 
     if (insertError) {
@@ -163,12 +161,7 @@ Respond thoughtfully in 1-2 sentences.`;
       success: true,
       comment: {
         ...aiComment,
-        user_id: AI_USER_ID,
-        profiles: {
-          id: AI_USER_ID,
-          username: 'AI',
-          avatar_url: null,
-        },
+        is_ai: true,
       },
     });
   } catch (error) {

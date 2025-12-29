@@ -14,9 +14,6 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 
-// AI user ID for AI-generated comments
-const AI_USER_ID = '00000000-0000-0000-0000-000000000001';
-
 interface QuestionCardProps {
   question: QuestionWithStats;
   authorName?: string;
@@ -493,12 +490,13 @@ export function QuestionCard({
           const aiPlaceholderId = `ai-thinking-${Date.now()}`;
           setComments(prev => [...prev, {
             id: aiPlaceholderId,
-            user_id: AI_USER_ID,
+            user_id: user.id,
             content: '...',
             created_at: new Date().toISOString(),
             username: 'AI',
             avatar_url: null,
             isThinking: true,
+            is_ai: true,
           }]);
           
           // Call the AI API
@@ -520,11 +518,12 @@ export function QuestionCard({
                 c.id === aiPlaceholderId 
                   ? {
                       id: aiComment.id,
-                      user_id: AI_USER_ID,
+                      user_id: user.id,
                       content: aiComment.content,
                       created_at: aiComment.created_at,
                       username: 'AI',
                       avatar_url: null,
+                      is_ai: true,
                     }
                   : c
               ));
@@ -1060,7 +1059,7 @@ export function QuestionCard({
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
               comments.map(comment => {
-                const isAIComment = comment.user_id === AI_USER_ID;
+                const isAIComment = (comment as { is_ai?: boolean }).is_ai === true;
                 const isThinking = (comment as { isThinking?: boolean }).isThinking;
                 const isError = (comment as { isError?: boolean }).isError;
                 

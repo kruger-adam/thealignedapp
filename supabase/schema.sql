@@ -491,15 +491,8 @@ CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 -- AI COMMENTS
 -- ============================================
 
--- AI user profile (special system user for AI-generated comments)
--- This uses a fixed UUID that we reference in the application code
-INSERT INTO profiles (id, email, username, avatar_url)
-VALUES (
-  '00000000-0000-0000-0000-000000000001',
-  'ai@yesnonotsure.app',
-  'AI',
-  NULL
-) ON CONFLICT (id) DO NOTHING;
+-- Add is_ai flag to comments table
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_ai BOOLEAN DEFAULT false;
 
 -- Table to track AI query rate limits
 CREATE TABLE IF NOT EXISTS ai_queries (
