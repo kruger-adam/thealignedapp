@@ -71,12 +71,13 @@ export function FeedFilters({
   
   return (
     <div className="flex items-center gap-2">
-      {/* Sort dropdown */}
+      {/* Sort dropdown - icon only */}
       <div className="relative">
         <select
           value={currentSort}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="h-8 cursor-pointer appearance-none rounded-lg border-0 bg-zinc-100 pl-8 pr-3 text-sm font-medium text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-800/50 dark:text-zinc-300 dark:focus:ring-zinc-600"
+          className="h-8 w-8 cursor-pointer appearance-none rounded-lg border-0 bg-zinc-100 text-transparent focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-800/50 dark:focus:ring-zinc-600"
+          title={sortOptions.find(s => s.value === currentSort)?.label}
         >
           {sortOptions.map(({ value, label }) => (
             <option key={value} value={value}>
@@ -84,22 +85,22 @@ export function FeedFilters({
             </option>
           ))}
         </select>
-        <ArrowUpDown className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <ArrowUpDown className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       </div>
 
       {/* Filters button + dropdown */}
       <div className="relative" ref={filterRef}>
         <button
           onClick={() => setShowFilters(!showFilters)}
+          title="Filters"
           className={cn(
-            'flex h-8 items-center gap-1.5 rounded-lg bg-zinc-100 px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:hover:bg-zinc-700/50',
+            'relative flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 transition-colors hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-700/50',
             activeFilterCount > 0 && 'ring-2 ring-zinc-400 dark:ring-zinc-500'
           )}
         >
-          <Filter className="h-4 w-4" />
-          <span className="hidden sm:inline">Filters</span>
+          <Filter className="h-4 w-4 text-zinc-500" />
           {activeFilterCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-700 text-xs text-white dark:bg-zinc-300 dark:text-zinc-900">
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 text-[10px] text-white dark:bg-zinc-300 dark:text-zinc-900">
               {activeFilterCount}
             </span>
           )}
