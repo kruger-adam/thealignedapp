@@ -85,18 +85,36 @@ export function ProgressBar({
         )}
       </div>
       {showLabels && (
-        <div className="flex justify-between text-xs font-medium">
-          <span className="text-emerald-600 dark:text-emerald-400">
-            {yesPercent}% Yes
-          </span>
-          <span className="text-rose-600 dark:text-rose-400">
-            {noPercent}% No
-          </span>
-          <span className="text-amber-600 dark:text-amber-400">
-            {unsurePercent}% Not Sure
-          </span>
-          {skip > 0 && (
-            <span className="text-zinc-500 dark:text-zinc-400">
+        <div className="flex w-full text-xs font-medium">
+          {yesPercent > 0 && (
+            <span 
+              className="text-center text-emerald-600 dark:text-emerald-400"
+              style={{ width: `${yesPercent}%` }}
+            >
+              {yesPercent}% Yes
+            </span>
+          )}
+          {noPercent > 0 && (
+            <span 
+              className="text-center text-rose-600 dark:text-rose-400"
+              style={{ width: `${noPercent}%` }}
+            >
+              {noPercent}% No
+            </span>
+          )}
+          {unsurePercent > 0 && (
+            <span 
+              className="text-center text-amber-600 dark:text-amber-400"
+              style={{ width: `${unsurePercent}%` }}
+            >
+              {unsurePercent}% Not Sure
+            </span>
+          )}
+          {skipPercent > 0 && (
+            <span 
+              className="text-center text-zinc-500 dark:text-zinc-400"
+              style={{ width: `${skipPercent}%` }}
+            >
               {skipPercent}% Skip
             </span>
           )}
