@@ -61,6 +61,7 @@ export interface QuestionStats {
   no_count: number;
   unsure_count: number;
   anonymous_count: number;
+  comment_count: number;
   yes_percentage: number;
   no_percentage: number;
   unsure_percentage: number;
@@ -74,6 +75,7 @@ export interface QuestionWithStats extends Question {
     no_count: number;
     unsure_count: number;
     anonymous_count: number;
+    comment_count: number;
     yes_percentage: number;
     no_percentage: number;
     unsure_percentage: number;
@@ -105,7 +107,7 @@ export interface Divergence {
   controversy_score: number;
 }
 
-export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 'most_undecided' | 'most_sensitive';
+export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 'most_undecided' | 'most_sensitive' | 'most_commented';
 
 export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment';
 

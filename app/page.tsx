@@ -88,6 +88,25 @@ export default function FeedPage() {
       allResponses = await responsesRes.json();
     }
     
+    // Fetch comment counts per question
+    let allComments: { question_id: string }[] = [];
+    if (questionIds.length > 0) {
+      const commentsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/comments?select=question_id&question_id=in.(${questionIds.join(',')})`;
+      const commentsRes = await fetch(commentsUrl, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      allComments = await commentsRes.json();
+    }
+    
+    // Calculate comment counts per question
+    const commentCounts: Record<string, number> = {};
+    for (const c of allComments) {
+      commentCounts[c.question_id] = (commentCounts[c.question_id] || 0) + 1;
+    }
+    
     // Calculate vote stats per question
     const voteStats: Record<string, { yes: number; no: number; unsure: number; skip: number; anonymous: number }> = {};
     for (const r of allResponses) {
@@ -118,6 +137,7 @@ export default function FeedPage() {
         no_count: stats.no,
         unsure_count: stats.unsure,
         anonymous_count: stats.anonymous,
+        comment_count: commentCounts[q.id] || 0,
         yes_percentage: total > 0 ? Math.round((stats.yes / total) * 100) : 0,
         no_percentage: total > 0 ? Math.round((stats.no / total) * 100) : 0,
         unsure_percentage: total > 0 ? Math.round((stats.unsure / total) * 100) : 0,
@@ -181,6 +201,7 @@ export default function FeedPage() {
         no_count: q.no_count,
         unsure_count: q.unsure_count,
         anonymous_count: q.anonymous_count,
+        comment_count: q.comment_count,
         yes_percentage: q.yes_percentage,
         no_percentage: q.no_percentage,
         unsure_percentage: q.unsure_percentage,
@@ -234,6 +255,9 @@ export default function FeedPage() {
         case 'most_sensitive':
           // Sort by highest anonymous/private vote count
           return b.stats.anonymous_count - a.stats.anonymous_count;
+        case 'most_commented':
+          // Sort by highest comment count
+          return b.stats.comment_count - a.stats.comment_count;
         case 'newest':
         default:
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -281,7 +305,7 @@ export default function FeedPage() {
               Feed
             </h1>
             <p className="text-xs text-zinc-500">
-              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
+              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'most_commented' ? 'Most Commented' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
               {(categoryFilter || minVotes > 0 || unansweredOnly) && (
                 <span>
                   {' · '}

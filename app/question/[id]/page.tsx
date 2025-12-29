@@ -43,12 +43,19 @@ export default async function QuestionPage({ params }: PageProps) {
   const anonymous_count = votes?.filter(v => v.is_anonymous).length || 0;
   const total_votes = yes_count + no_count + unsure_count;
 
+  // Fetch comment count
+  const { count: comment_count } = await supabase
+    .from('comments')
+    .select('*', { count: 'exact', head: true })
+    .eq('question_id', id);
+
   const stats = {
     total_votes,
     yes_count,
     no_count,
     unsure_count,
     anonymous_count,
+    comment_count: comment_count || 0,
     yes_percentage: 0,
     no_percentage: 0,
     unsure_percentage: 0,

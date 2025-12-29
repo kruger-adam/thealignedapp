@@ -22,6 +22,7 @@ interface FeedFiltersProps {
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
   { value: 'popular', label: 'Most Votes' },
+  { value: 'most_commented', label: 'Most Commented' },
   { value: 'controversial', label: 'Most Split' },
   { value: 'consensus', label: 'Most Agreed' },
   { value: 'most_undecided', label: 'Most Undecided' },
