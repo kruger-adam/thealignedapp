@@ -10,42 +10,9 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
-import { QuestionWithStats, VoteType } from '@/lib/types';
+import { QuestionWithStats, VoteType, Comment, MentionSuggestion, Voter, AI_MENTION } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-interface Comment {
-  id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at?: string;
-  username: string | null;
-  avatar_url: string | null;
-  is_ai?: boolean;
-}
-
-interface MentionSuggestion {
-  id: string;
-  username: string;
-  avatar_url: string | null;
-  is_ai?: boolean;
-}
-
-const AI_MENTION: MentionSuggestion = {
-  id: 'ai',
-  username: 'AI',
-  avatar_url: null,
-  is_ai: true,
-};
-
-interface Voter {
-  id: string;
-  username: string | null;
-  avatar_url: string | null;
-  vote: VoteType;
-  is_ai?: boolean;
-  ai_reasoning?: string | null;
-}
+import { VoterList } from '@/components/voter-list';
 
 interface QuestionDetailClientProps {
   question: QuestionWithStats;
@@ -912,135 +879,8 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               
               {/* Voters List */}
               {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
-                <div className="mt-3 space-y-3">
-                  {/* Yes voters */}
-                  {(voters.filter(v => v.vote === 'YES').length > 0 || anonymousCounts.YES > 0) && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          {voters.filter(v => v.vote === 'YES').map((voter, idx) => (
-                            voter.is_ai ? (
-                              <div key={`ai-yes-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
-                                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                                  <Bot className="h-3 w-3 text-white" />
-                                </div>
-                                <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
-                              </div>
-                            ) : (
-                              <Link
-                                key={voter.id}
-                                href={`/profile/${voter.id}`}
-                                className="flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-1 pr-2.5 text-xs hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50"
-                              >
-                                <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
-                                <span className="text-emerald-700 dark:text-emerald-300">{voter.username}</span>
-                              </Link>
-                            )
-                          ))}
-                          {anonymousCounts.YES > 0 && (
-                            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50/50 py-1 px-2.5 dark:bg-emerald-900/20">
-                              <Lock className="h-3 w-3 text-emerald-400" />
-                              <span className="text-xs italic text-emerald-500 dark:text-emerald-400">
-                                +{anonymousCounts.YES} privately
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        {voters.find(v => v.vote === 'YES' && v.is_ai && v.ai_reasoning) && (
-                          <p className="text-xs italic text-violet-600 dark:text-violet-400 pl-1">
-                            &ldquo;{voters.find(v => v.vote === 'YES' && v.is_ai)?.ai_reasoning}&rdquo;
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* No voters */}
-                  {(voters.filter(v => v.vote === 'NO').length > 0 || anonymousCounts.NO > 0) && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          {voters.filter(v => v.vote === 'NO').map((voter, idx) => (
-                            voter.is_ai ? (
-                              <div key={`ai-no-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
-                                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                                  <Bot className="h-3 w-3 text-white" />
-                                </div>
-                                <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
-                              </div>
-                            ) : (
-                              <Link
-                                key={voter.id}
-                                href={`/profile/${voter.id}`}
-                                className="flex items-center gap-1.5 rounded-full bg-rose-50 py-1 pl-1 pr-2.5 text-xs hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50"
-                              >
-                                <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
-                                <span className="text-rose-700 dark:text-rose-300">{voter.username}</span>
-                              </Link>
-                            )
-                          ))}
-                          {anonymousCounts.NO > 0 && (
-                            <div className="flex items-center gap-1.5 rounded-full bg-rose-50/50 py-1 px-2.5 dark:bg-rose-900/20">
-                              <Lock className="h-3 w-3 text-rose-400" />
-                              <span className="text-xs italic text-rose-500 dark:text-rose-400">
-                                +{anonymousCounts.NO} privately
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        {voters.find(v => v.vote === 'NO' && v.is_ai && v.ai_reasoning) && (
-                          <p className="text-xs italic text-violet-600 dark:text-violet-400 pl-1">
-                            &ldquo;{voters.find(v => v.vote === 'NO' && v.is_ai)?.ai_reasoning}&rdquo;
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Not Sure voters */}
-                  {(voters.filter(v => v.vote === 'UNSURE').length > 0 || anonymousCounts.UNSURE > 0) && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          {voters.filter(v => v.vote === 'UNSURE').map((voter, idx) => (
-                            voter.is_ai ? (
-                              <div key={`ai-unsure-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
-                                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                                  <Bot className="h-3 w-3 text-white" />
-                                </div>
-                                <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
-                              </div>
-                            ) : (
-                              <Link
-                                key={voter.id}
-                                href={`/profile/${voter.id}`}
-                                className="flex items-center gap-1.5 rounded-full bg-amber-50 py-1 pl-1 pr-2.5 text-xs hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
-                              >
-                                <Avatar src={voter.avatar_url} fallback={voter.username || 'A'} size="xs" />
-                                <span className="text-amber-700 dark:text-amber-300">{voter.username}</span>
-                              </Link>
-                            )
-                          ))}
-                          {anonymousCounts.UNSURE > 0 && (
-                            <div className="flex items-center gap-1.5 rounded-full bg-amber-50/50 py-1 px-2.5 dark:bg-amber-900/20">
-                              <Lock className="h-3 w-3 text-amber-400" />
-                              <span className="text-xs italic text-amber-500 dark:text-amber-400">
-                                +{anonymousCounts.UNSURE} privately
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        {voters.find(v => v.vote === 'UNSURE' && v.is_ai && v.ai_reasoning) && (
-                          <p className="text-xs italic text-violet-600 dark:text-violet-400 pl-1">
-                            &ldquo;{voters.find(v => v.vote === 'UNSURE' && v.is_ai)?.ai_reasoning}&rdquo;
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                <div className="mt-3">
+                  <VoterList voters={voters} anonymousCounts={anonymousCounts} />
                 </div>
               )}
             </div>
