@@ -1175,7 +1175,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                     value={commentText}
                     onChange={handleCommentChange}
                     placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
-                    className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-sm placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+                    className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
                     onKeyDown={handleMentionKeyDown}
                   />
                 </div>
