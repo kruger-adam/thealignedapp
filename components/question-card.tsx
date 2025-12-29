@@ -26,6 +26,7 @@ interface Voter {
   username: string | null;
   avatar_url: string | null;
   vote: VoteType;
+  is_ai?: boolean;
 }
 
 interface Comment {
@@ -113,19 +114,20 @@ export function QuestionCard({
     
     setLoadingVoters(true);
     try {
-      // Fetch all votes (including anonymous) except SKIP
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id,is_anonymous&question_id=eq.${question.id}&vote=neq.SKIP`;
+      // Fetch all votes (including anonymous and AI)
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id,is_anonymous,is_ai&question_id=eq.${question.id}`;
       const res = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
         },
       });
-      const responses: { user_id: string; vote: string; is_anonymous: boolean }[] = await res.json();
+      const responses: { user_id: string; vote: string; is_anonymous: boolean; is_ai?: boolean }[] = await res.json();
       
-      // Separate public and anonymous votes
-      const publicVotes = responses.filter(r => !r.is_anonymous);
-      const anonymousVotes = responses.filter(r => r.is_anonymous);
+      // Separate AI, public, and anonymous votes
+      const aiVotes = responses.filter(r => r.is_ai);
+      const publicVotes = responses.filter(r => !r.is_anonymous && !r.is_ai);
+      const anonymousVotes = responses.filter(r => r.is_anonymous && !r.is_ai);
       
       // Count anonymous votes per type
       const anonCounts = { YES: 0, NO: 0, UNSURE: 0 };
@@ -136,7 +138,17 @@ export function QuestionCard({
       });
       setAnonymousCounts(anonCounts);
       
+      // Create AI voter entries (they go first)
+      const aiVotersList: Voter[] = aiVotes.map(r => ({
+        id: 'ai',
+        username: 'AI',
+        avatar_url: null,
+        vote: r.vote as VoteType,
+        is_ai: true,
+      }));
+      
       // Fetch profiles for public voters only
+      let humanVotersList: Voter[] = [];
       if (publicVotes.length > 0) {
         const userIds = publicVotes.map(r => r.user_id);
         const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${userIds.join(',')})`;
@@ -152,15 +164,17 @@ export function QuestionCard({
           profiles.map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
         );
         
-        const votersList: Voter[] = publicVotes.map(r => ({
+        humanVotersList = publicVotes.map(r => ({
           id: r.user_id,
           username: profileMap[r.user_id]?.username || 'Anonymous',
           avatar_url: profileMap[r.user_id]?.avatar_url || null,
           vote: r.vote as VoteType,
+          is_ai: false,
         }));
-        
-        setVoters(votersList);
       }
+      
+      // AI voters go first, then human voters
+      setVoters([...aiVotersList, ...humanVotersList]);
       setShowVoters(true);
     } catch (err) {
       console.error('Error fetching voters:', err);
@@ -1002,13 +1016,22 @@ export function QuestionCard({
               <div>
                 <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
                 <div className="flex flex-wrap gap-2">
-                  {voters.filter(v => v.vote === 'YES').map(voter => (
-                    <Link key={voter.id} href={`/profile/${voter.id}`}>
-                      <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40">
-                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
-                        <span className="text-xs text-emerald-700 dark:text-emerald-300">{voter.username}</span>
+                  {voters.filter(v => v.vote === 'YES').map((voter, idx) => (
+                    voter.is_ai ? (
+                      <div key={`ai-yes-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                          <Bot className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link key={voter.id} href={`/profile/${voter.id}`}>
+                        <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40">
+                          <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                          <span className="text-xs text-emerald-700 dark:text-emerald-300">{voter.username}</span>
+                        </div>
+                      </Link>
+                    )
                   ))}
                   {anonymousCounts.YES > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full bg-emerald-50/50 py-1 px-2.5 dark:bg-emerald-950/20">
@@ -1026,13 +1049,22 @@ export function QuestionCard({
               <div>
                 <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
                 <div className="flex flex-wrap gap-2">
-                  {voters.filter(v => v.vote === 'NO').map(voter => (
-                    <Link key={voter.id} href={`/profile/${voter.id}`}>
-                      <div className="flex items-center gap-1.5 rounded-full bg-rose-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40">
-                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
-                        <span className="text-xs text-rose-700 dark:text-rose-300">{voter.username}</span>
+                  {voters.filter(v => v.vote === 'NO').map((voter, idx) => (
+                    voter.is_ai ? (
+                      <div key={`ai-no-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                          <Bot className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link key={voter.id} href={`/profile/${voter.id}`}>
+                        <div className="flex items-center gap-1.5 rounded-full bg-rose-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40">
+                          <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                          <span className="text-xs text-rose-700 dark:text-rose-300">{voter.username}</span>
+                        </div>
+                      </Link>
+                    )
                   ))}
                   {anonymousCounts.NO > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full bg-rose-50/50 py-1 px-2.5 dark:bg-rose-950/20">
@@ -1050,13 +1082,22 @@ export function QuestionCard({
               <div>
                 <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
                 <div className="flex flex-wrap gap-2">
-                  {voters.filter(v => v.vote === 'UNSURE').map(voter => (
-                    <Link key={voter.id} href={`/profile/${voter.id}`}>
-                      <div className="flex items-center gap-1.5 rounded-full bg-amber-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/40">
-                        <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
-                        <span className="text-xs text-amber-700 dark:text-amber-300">{voter.username}</span>
+                  {voters.filter(v => v.vote === 'UNSURE').map((voter, idx) => (
+                    voter.is_ai ? (
+                      <div key={`ai-unsure-${idx}`} className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                          <Bot className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">AI</span>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link key={voter.id} href={`/profile/${voter.id}`}>
+                        <div className="flex items-center gap-1.5 rounded-full bg-amber-50 py-1 pl-1 pr-2.5 transition-colors hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/40">
+                          <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
+                          <span className="text-xs text-amber-700 dark:text-amber-300">{voter.username}</span>
+                        </div>
+                      </Link>
+                    )
                   ))}
                   {anonymousCounts.UNSURE > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full bg-amber-50/50 py-1 px-2.5 dark:bg-amber-950/20">

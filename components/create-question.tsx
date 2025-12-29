@@ -78,6 +78,17 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       })
       .catch(err => console.error('Error categorizing question:', err));
 
+    // AI votes on the question in background (fire and forget)
+    fetch('/api/ai-vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        questionId: newQuestion.id,
+        questionContent: questionContent,
+        authorId: user.id,
+      }),
+    }).catch(err => console.error('Error getting AI vote:', err));
+
     // Notify followers in background (fire and forget)
     supabase
       .from('follows')
