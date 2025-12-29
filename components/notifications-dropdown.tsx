@@ -91,6 +91,21 @@ export function NotificationsDropdown() {
     return filteredNotifications.filter(n => !n.read).length;
   }, [filteredNotifications]);
 
+  // Update app badge (Android PWA support)
+  useEffect(() => {
+    if ('setAppBadge' in navigator) {
+      if (filteredUnreadCount > 0) {
+        (navigator as Navigator & { setAppBadge: (count: number) => Promise<void> })
+          .setAppBadge(filteredUnreadCount)
+          .catch(() => {}); // Ignore errors silently
+      } else {
+        (navigator as Navigator & { clearAppBadge: () => Promise<void> })
+          .clearAppBadge?.()
+          .catch(() => {});
+      }
+    }
+  }, [filteredUnreadCount]);
+
   // Fetch notifications
   const fetchNotifications = async () => {
     if (!user) return;
