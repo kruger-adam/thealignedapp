@@ -1,6 +1,6 @@
 'use client';
 
-import { Flame, TrendingUp, Clock, Users, Filter, X } from 'lucide-react';
+import { Flame, TrendingUp, Clock, Users, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SortOption, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -35,40 +35,31 @@ const categories: Category[] = [
 export function FeedFilters({ currentSort, onSortChange, currentCategory, onCategoryChange }: FeedFiltersProps) {
   return (
     <div className="flex items-center gap-2">
-      {/* Category filter dropdown */}
+      {/* Category filter - icon-only select */}
       <div className="relative">
         <select
           value={currentCategory || ''}
           onChange={(e) => onCategoryChange(e.target.value as Category || null)}
           className={cn(
-            'h-8 appearance-none rounded-lg border-0 bg-zinc-100 pl-7 pr-8 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-800/50 dark:focus:ring-zinc-600',
-            currentCategory
-              ? 'text-zinc-900 dark:text-zinc-100'
-              : 'text-zinc-500 dark:text-zinc-400'
+            'h-8 w-8 cursor-pointer appearance-none rounded-lg border-0 bg-zinc-100 pl-2 pr-2 text-transparent focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-800/50 dark:focus:ring-zinc-600',
+            currentCategory && 'ring-2 ring-zinc-400 dark:ring-zinc-500'
           )}
+          title={currentCategory || 'Filter by category'}
         >
-          <option value="">All Categories</option>
+          <option value="">All</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
           ))}
         </select>
-        <Filter className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-        {currentCategory && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCategoryChange(null);
-            }}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-          >
-            <X className="h-3 w-3 text-zinc-400" />
-          </button>
-        )}
+        <Filter className={cn(
+          "pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2",
+          currentCategory ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400'
+        )} />
       </div>
 
-      {/* Sort options */}
+      {/* Sort options - icon only */}
       <div className="flex items-center gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/50">
         {sortOptions.map(({ value, label, icon: Icon }) => (
           <Button
@@ -76,15 +67,15 @@ export function FeedFilters({ currentSort, onSortChange, currentCategory, onCate
             variant="ghost"
             size="sm"
             onClick={() => onSortChange(value)}
+            title={label}
             className={cn(
-              'flex-1 gap-1.5 text-xs font-medium',
+              'h-7 w-7 p-0',
               currentSort === value
                 ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{label}</span>
+            <Icon className="h-4 w-4" />
           </Button>
         ))}
       </div>

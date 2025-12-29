@@ -229,8 +229,9 @@ export default function FeedPage() {
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               Feed
             </h1>
-            <p className="text-xs text-zinc-500 sm:hidden">
+            <p className="text-xs text-zinc-500">
               Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : 'Most Agreed'}
+              {categoryFilter && <span> · {categoryFilter}</span>}
             </p>
           </div>
           <FeedFilters 
