@@ -3,23 +3,40 @@
 import { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
 
+// Trigger function to show the install prompt after user engagement
+export function triggerInstallPrompt() {
+  window.dispatchEvent(new CustomEvent('user-engaged'));
+}
+
 export function InstallPrompt() {
   const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [canShow, setCanShow] = useState(false);
 
   useEffect(() => {
-    // Only show on mobile devices
+    // Check if we should show on mobile devices
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const dismissed = localStorage.getItem('pwa-prompt-dismissed');
 
     if (isMobile && !isStandalone && !dismissed) {
-      // Small delay so it doesn't appear immediately
-      setTimeout(() => setShow(true), 3000);
+      setCanShow(true);
       setIsIOS(isIOSDevice);
     }
   }, []);
+
+  useEffect(() => {
+    if (!canShow) return;
+
+    const handleEngagement = () => {
+      // Show after a short delay following engagement
+      setTimeout(() => setShow(true), 2000);
+    };
+
+    window.addEventListener('user-engaged', handleEngagement);
+    return () => window.removeEventListener('user-engaged', handleEngagement);
+  }, [canShow]);
 
   const dismiss = () => {
     setShow(false);

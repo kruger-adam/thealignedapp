@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { triggerInstallPrompt } from '@/components/install-prompt';
 
 interface CreateQuestionProps {
   onQuestionCreated?: () => void;
@@ -52,6 +53,9 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     setIsExpanded(false);
     setIsLoading(false);
     onQuestionCreated?.();
+
+    // Trigger install prompt after creating a question
+    triggerInstallPrompt();
 
     // Categorize in background (fire and forget)
     fetch('/api/categorize', {

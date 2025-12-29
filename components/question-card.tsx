@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, VoteType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { triggerInstallPrompt } from '@/components/install-prompt';
 
 interface QuestionCardProps {
   question: QuestionWithStats;
@@ -761,6 +762,11 @@ export function QuestionCard({
           console.error('Error voting:', error);
           // Revert on error - would need proper error handling in production
           return;
+        }
+
+        // Trigger install prompt on first vote
+        if (isFirstVote) {
+          triggerInstallPrompt();
         }
 
         // Notify question author (only on first vote, not vote changes)
