@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const [editedQuestionContent, setEditedQuestionContent] = useState(question.content);
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [deletingQuestion, setDeletingQuestion] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [localQuestionContent, setLocalQuestionContent] = useState(question.content);
   const [questionWasEdited, setQuestionWasEdited] = useState(
     question.updated_at && new Date(question.updated_at).getTime() > new Date(question.created_at).getTime() + 1000
@@ -282,6 +283,18 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       console.error('Error deleting question:', err);
     }
     setDeletingQuestion(false);
+  };
+
+  // Share question
+  const shareQuestion = async () => {
+    const url = `${window.location.origin}/question/${question.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+    }
   };
 
   // Save edited comment
@@ -683,27 +696,33 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               {questionWasEdited && (
                 <span className="text-xs text-zinc-400 italic">(edited)</span>
               )}
-              {user?.id === question.author_id && (
-                <div className="absolute -right-1 -top-1">
-                  <DropdownMenu
-                    trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
-                    align="right"
-                  >
-                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={deleteQuestion}
-                      variant="destructive"
-                      disabled={deletingQuestion}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {deletingQuestion ? 'Deleting...' : 'Delete'}
-                    </DropdownMenuItem>
-                  </DropdownMenu>
-                </div>
-              )}
+              <div className="absolute -right-1 -top-1">
+                <DropdownMenu
+                  trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
+                  align="right"
+                >
+                  <DropdownMenuItem onClick={shareQuestion}>
+                    <Share2 className="h-3.5 w-3.5" />
+                    {copied ? 'Copied!' : 'Share'}
+                  </DropdownMenuItem>
+                  {user?.id === question.author_id && (
+                    <>
+                      <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={deleteQuestion}
+                        variant="destructive"
+                        disabled={deletingQuestion}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {deletingQuestion ? 'Deleting...' : 'Delete'}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenu>
+              </div>
             </div>
           )}
 
