@@ -907,6 +907,10 @@ export function QuestionCard({
         if (isPrivateMode) {
           setIsPrivateMode(false);
         }
+        
+        // Clear cached voters so next expansion refetches with new vote
+        setVoters([]);
+        setAnonymousCounts({ YES: 0, NO: 0, UNSURE: 0 });
 
         // Trigger install prompt on first vote
         if (isFirstVote) {

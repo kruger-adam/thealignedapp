@@ -193,6 +193,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
         if (isPrivateMode) {
           setIsPrivateMode(false);
         }
+        
+        // Clear cached voters so next expansion refetches with new vote
+        setVoters([]);
+        setAnonymousCounts({ YES: 0, NO: 0, UNSURE: 0 });
 
         // Notify question author on first vote (not for anonymous votes)
         if (isFirstVote && question.author_id !== user.id && !isPrivateMode) {
