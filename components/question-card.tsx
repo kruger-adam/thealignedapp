@@ -388,7 +388,10 @@ export function QuestionCard({
     setSubmittingComment(true);
     try {
       // Build content: prepend mentions as @[username](id), then add the message
-      const mentionStrings = mentionedUsers.map(u => `@[${u.username}](${u.id})`);
+      // For AI mentions, just use @AI (no ID needed)
+      const mentionStrings = mentionedUsers.map(u => 
+        u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
+      );
       const messageText = commentText.trim();
       const contentToSave = mentionStrings.length > 0 
         ? messageText 
@@ -423,10 +426,10 @@ export function QuestionCard({
           comment_id: string;
         }> = [];
         
-        // Notify mentioned users
+        // Notify mentioned users (skip AI and self)
         if (mentionedUsers.length > 0) {
           mentionedUsers
-            .filter(u => u.id !== user.id) // Don't notify yourself
+            .filter(u => u.id !== user.id && !u.is_ai) // Don't notify yourself or AI
             .forEach(mentionedUser => {
               notifications.push({
                 user_id: mentionedUser.id,
@@ -466,7 +469,7 @@ export function QuestionCard({
               // Don't notify: question author (already notified), mentioned users (already notified)
               const alreadyNotified = new Set([
                 question.author_id,
-                ...mentionedUsers.map(u => u.id),
+                ...mentionedUsers.filter(u => !u.is_ai).map(u => u.id),
               ]);
               
               const followerNotifications = followers
