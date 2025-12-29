@@ -18,7 +18,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center">
           <Image 
             src="/logo-transparent.png" 
             alt="YesNoNotSure" 
@@ -26,9 +26,6 @@ export function Header() {
             height={36}
             className="h-9 w-9"
           />
-          <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            YesNoNotSure
-          </span>
         </Link>
 
         {/* Navigation */}
