@@ -162,10 +162,10 @@ export default function FeedPage() {
       };
     });
 
-    // Fetch user's votes if logged in (using direct fetch)
+    // Fetch user's votes if logged in (using direct fetch) - exclude AI votes
     let userVotes: Record<string, { vote: VoteType; is_anonymous: boolean }> = {};
     if (user) {
-      const votesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote,is_anonymous&user_id=eq.${user.id}`;
+      const votesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote,is_anonymous&user_id=eq.${user.id}&is_ai=eq.false`;
       const votesRes = await fetch(votesUrl, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

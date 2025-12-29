@@ -68,7 +68,7 @@ export default async function QuestionPage({ params }: PageProps) {
     stats.unsure_percentage = 100 - stats.yes_percentage - stats.no_percentage;
   }
 
-  // Fetch user's vote if logged in
+  // Fetch user's vote if logged in (exclude AI votes)
   let userVote = null;
   let userVoteIsAnonymous = false;
   if (user) {
@@ -77,6 +77,7 @@ export default async function QuestionPage({ params }: PageProps) {
       .select('vote, is_anonymous')
       .eq('question_id', id)
       .eq('user_id', user.id)
+      .eq('is_ai', false)
       .single();
     
     userVote = userResponse?.vote || null;
