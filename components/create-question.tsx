@@ -78,7 +78,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       })
       .catch(err => console.error('Error categorizing question:', err));
 
-    // AI votes on the question in background (fire and forget)
+    // AI votes on the question in background, then refresh to show the vote
     fetch('/api/ai-vote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,7 +87,12 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         questionContent: questionContent,
         authorId: user.id,
       }),
-    }).catch(err => console.error('Error getting AI vote:', err));
+    })
+      .then(() => {
+        // Refresh questions to show AI vote
+        onQuestionCreated?.();
+      })
+      .catch(err => console.error('Error getting AI vote:', err));
 
     // Notify followers in background (fire and forget)
     supabase
