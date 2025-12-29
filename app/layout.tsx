@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   title: 'YesNoNotSure - Discover What People Really Think',
   description: 'A modern polling platform to track opinions, find common ground, and understand where people stand on the issues that matter.',
   keywords: ['polling', 'opinions', 'yes', 'no', 'voting', 'social'],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'YesNoNotSure',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +38,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${instrumentSans.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <link rel="apple-touch-icon" href="/logo-transparent.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#18181b" />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <AuthProvider>
           <Header />
