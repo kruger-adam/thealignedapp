@@ -42,7 +42,16 @@ interface MentionSuggestion {
   id: string;
   username: string;
   avatar_url: string | null;
+  is_ai?: boolean;
 }
+
+// Special AI mention suggestion
+const AI_MENTION: MentionSuggestion = {
+  id: 'ai',
+  username: 'AI',
+  avatar_url: null,
+  is_ai: true,
+};
 
 export function QuestionCard({
   question,
@@ -212,6 +221,12 @@ export function QuestionCard({
           username: u.username,
           avatar_url: u.avatar_url,
         }));
+      
+      // Add AI to suggestions if query matches
+      const queryLower = query.toLowerCase();
+      if ('ai'.startsWith(queryLower) || queryLower === 'ai') {
+        suggestions.unshift(AI_MENTION);
+      }
       
       setMentionSuggestions(suggestions);
       setShowMentions(suggestions.length > 0);
@@ -1189,14 +1204,28 @@ export function QuestionCard({
                         )}
                         onClick={() => insertMention(suggestionUser)}
                       >
-                        <Avatar
-                          src={suggestionUser.avatar_url}
-                          fallback={suggestionUser.username}
-                          size="sm"
-                        />
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                        {suggestionUser.is_ai ? (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                            <Bot className="h-4 w-4 text-white" />
+                          </div>
+                        ) : (
+                          <Avatar
+                            src={suggestionUser.avatar_url}
+                            fallback={suggestionUser.username}
+                            size="sm"
+                          />
+                        )}
+                        <span className={cn(
+                          "font-medium",
+                          suggestionUser.is_ai 
+                            ? "bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"
+                            : "text-zinc-900 dark:text-zinc-100"
+                        )}>
                           {suggestionUser.username}
                         </span>
+                        {suggestionUser.is_ai && (
+                          <span className="text-xs text-zinc-500">Ask AI anything</span>
+                        )}
                       </button>
                     ))}
                   </div>
