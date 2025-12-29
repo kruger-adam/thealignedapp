@@ -29,11 +29,26 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
 
     setIsLoading(true);
     
+    // Get category from LLM
+    let category = 'Other';
+    try {
+      const categoryRes = await fetch('/api/categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: content.trim() }),
+      });
+      const categoryData = await categoryRes.json();
+      category = categoryData.category || 'Other';
+    } catch (err) {
+      console.error('Error categorizing question:', err);
+    }
+    
     const { data: newQuestion, error } = await supabase
       .from('questions')
       .insert({
         author_id: user.id,
         content: content.trim(),
+        category,
       })
       .select('id')
       .single();

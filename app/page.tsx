@@ -14,7 +14,14 @@ export default function FeedPage() {
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
   const supabase = useMemo(() => createClient(), []);
+
+  // Filter questions by category
+  const filteredQuestions = useMemo(() => {
+    if (!categoryFilter) return questions;
+    return questions.filter(q => q.category === categoryFilter);
+  }, [questions, categoryFilter]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -50,6 +57,7 @@ export default function FeedPage() {
       id: string;
       author_id: string;
       content: string;
+      category: string | null;
       created_at: string;
       updated_at: string;
     }
@@ -89,6 +97,7 @@ export default function FeedPage() {
         question_id: q.id,
         author_id: q.author_id,
         content: q.content,
+        category: q.category,
         created_at: q.created_at,
         updated_at: q.updated_at,
         total_votes: total,
@@ -146,6 +155,7 @@ export default function FeedPage() {
       id: q.question_id,
       author_id: q.author_id,
       content: q.content,
+      category: q.category as import('@/lib/types').Category | undefined,
       created_at: q.created_at,
       updated_at: q.updated_at,
       author: profilesMap[q.author_id],
@@ -223,7 +233,12 @@ export default function FeedPage() {
               Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : 'Most Agreed'}
             </p>
           </div>
-          <FeedFilters currentSort={sortBy} onSortChange={setSortBy} />
+          <FeedFilters 
+            currentSort={sortBy} 
+            onSortChange={setSortBy} 
+            currentCategory={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+          />
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />
       </div>
@@ -232,16 +247,18 @@ export default function FeedPage() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
         </div>
-      ) : questions.length === 0 ? (
+      ) : filteredQuestions.length === 0 ? (
         <div className="py-12 text-center">
-          <p className="text-lg text-zinc-500">No questions yet.</p>
+          <p className="text-lg text-zinc-500">
+            {categoryFilter ? `No questions in "${categoryFilter}"` : 'No questions yet.'}
+          </p>
           <p className="mt-1 text-sm text-zinc-400">
-            Be the first to ask something!
+            {categoryFilter ? 'Try a different category' : 'Be the first to ask something!'}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {questions.map((question, index) => (
+          {filteredQuestions.map((question, index) => (
             <div
               key={question.id}
               className="animate-in fade-in slide-in-from-bottom-2"

@@ -11,10 +11,23 @@ export interface Profile {
   updated_at: string;
 }
 
+export type Category = 
+  | 'Politics & Society'
+  | 'Relationships & Dating'
+  | 'Health & Wellness'
+  | 'Technology'
+  | 'Entertainment & Pop Culture'
+  | 'Food & Lifestyle'
+  | 'Sports'
+  | 'Work & Career'
+  | 'Philosophy & Ethics'
+  | 'Other';
+
 export interface Question {
   id: string;
   author_id: string;
   content: string;
+  category?: Category;
   created_at: string;
   updated_at: string;
   author?: Partial<Profile>;
