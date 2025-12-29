@@ -222,11 +222,18 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
--- Function to update updated_at timestamp
+-- Function to update updated_at timestamp (only when content changes)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    -- Only update timestamp if content actually changed (for questions/comments)
+    IF TG_TABLE_NAME = 'questions' AND OLD.content = NEW.content THEN
+        NEW.updated_at = OLD.updated_at;  -- Preserve original timestamp
+    ELSIF TG_TABLE_NAME = 'comments' AND OLD.content = NEW.content THEN
+        NEW.updated_at = OLD.updated_at;  -- Preserve original timestamp
+    ELSE
+        NEW.updated_at = NOW();
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
