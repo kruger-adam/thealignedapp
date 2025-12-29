@@ -991,7 +991,180 @@ export function QuestionCard({
         </div>
       </CardHeader>
 
-      {/* Expandable Comments Section */}
+      <CardContent className="pb-4">
+        {isEditingQuestion ? (
+          <div className="space-y-2">
+            <textarea
+              value={editedQuestionContent}
+              onChange={(e) => setEditedQuestionContent(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg font-medium text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              rows={3}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsEditingQuestion(false);
+                  setEditedQuestionContent(localQuestionContent);
+                }}
+                disabled={savingQuestion}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={saveQuestionEdit}
+                disabled={savingQuestion || !editedQuestionContent.trim()}
+              >
+                {savingQuestion ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  'Save'
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="group relative">
+            <Link href={`/question/${question.id}`} className="block hover:opacity-80 transition-opacity">
+        <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
+                {localQuestionContent}
+              </p>
+            </Link>
+            {questionWasEdited && (
+              <span className="text-xs text-zinc-400 italic">(edited)</span>
+            )}
+            <div className="absolute -right-1 -top-1">
+              <DropdownMenu
+                trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
+                align="right"
+              >
+                <DropdownMenuItem onClick={shareQuestion}>
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
+                </DropdownMenuItem>
+                {user && (
+                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
+                    <Lock className="h-3.5 w-3.5" />
+                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
+                  </DropdownMenuItem>
+                )}
+                {user?.id === question.author_id && (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={deleteQuestion}
+                      variant="destructive"
+                      disabled={deletingQuestion}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingQuestion ? 'Deleting...' : 'Delete'}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenu>
+              {copied && (
+                <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+                    Link copied!
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        {/* Private Mode Indicator */}
+        {isPrivateMode && (
+          <div className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <Lock className="h-4 w-4" />
+            <span>Private mode: your vote won&apos;t be visible to others</span>
+            <button 
+              onClick={() => setIsPrivateMode(false)}
+              className="ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        
+        {/* Vote Buttons */}
+        <div className="grid w-full grid-cols-3 gap-2">
+          <Button
+            variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
+            size="sm"
+            onClick={() => handleVote('YES')}
+            disabled={isPending || !user}
+            className={cn(
+              'flex-1 gap-1.5',
+              optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
+              isPrivateMode && 'border-dashed'
+            )}
+          >
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'YES')) && <Lock className="h-3 w-3" />}
+            <Check className="h-4 w-4" />
+            Yes
+          </Button>
+          <Button
+            variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
+            size="sm"
+            onClick={() => handleVote('NO')}
+            disabled={isPending || !user}
+            className={cn(
+              'flex-1 gap-1.5',
+              optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
+              isPrivateMode && 'border-dashed'
+            )}
+          >
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'NO')) && <Lock className="h-3 w-3" />}
+            <X className="h-4 w-4" />
+            No
+          </Button>
+          <Button
+            variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
+            size="sm"
+            onClick={() => handleVote('UNSURE')}
+            disabled={isPending || !user}
+            className={cn(
+              'flex-1 gap-1.5',
+              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
+              isPrivateMode && 'border-dashed'
+            )}
+          >
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
+            <HelpCircle className="h-4 w-4" />
+            Not Sure
+          </Button>
+        </div>
+
+        {/* Results - Show after voting or if has votes */}
+        {(hasVoted || optimisticData.stats.total_votes > 0) && (
+          <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
+            <ProgressBar
+              yes={optimisticData.stats.yes_count}
+              no={optimisticData.stats.no_count}
+              unsure={optimisticData.stats.unsure_count}
+              size="md"
+            />
+          </div>
+        )}
+      </CardFooter>
+
+      {/* Expandable Voters List - at bottom of card */}
+      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+          <VoterList voters={voters} anonymousCounts={anonymousCounts} />
+        </div>
+      )}
+
+      {/* Expandable Comments Section - at bottom of card */}
       {showComments && (
         <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
           <div className="space-y-3">
@@ -1232,179 +1405,6 @@ export function QuestionCard({
               </p>
             )}
           </div>
-        </div>
-      )}
-      
-      <CardContent className="pb-4">
-        {isEditingQuestion ? (
-          <div className="space-y-2">
-            <textarea
-              value={editedQuestionContent}
-              onChange={(e) => setEditedQuestionContent(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg font-medium text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-              rows={3}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsEditingQuestion(false);
-                  setEditedQuestionContent(localQuestionContent);
-                }}
-                disabled={savingQuestion}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={saveQuestionEdit}
-                disabled={savingQuestion || !editedQuestionContent.trim()}
-              >
-                {savingQuestion ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  'Save'
-                )}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="group relative">
-            <Link href={`/question/${question.id}`} className="block hover:opacity-80 transition-opacity">
-        <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
-                {localQuestionContent}
-              </p>
-            </Link>
-            {questionWasEdited && (
-              <span className="text-xs text-zinc-400 italic">(edited)</span>
-            )}
-            <div className="absolute -right-1 -top-1">
-              <DropdownMenu
-                trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
-                align="right"
-              >
-                <DropdownMenuItem onClick={shareQuestion}>
-                  <Share2 className="h-3.5 w-3.5" />
-                  Share
-                </DropdownMenuItem>
-                {user && (
-                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
-                    <Lock className="h-3.5 w-3.5" />
-                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
-                  </DropdownMenuItem>
-                )}
-                {user?.id === question.author_id && (
-                  <>
-                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={deleteQuestion}
-                      variant="destructive"
-                      disabled={deletingQuestion}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {deletingQuestion ? 'Deleting...' : 'Delete'}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenu>
-              {copied && (
-                <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
-                    Link copied!
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-        {/* Private Mode Indicator */}
-        {isPrivateMode && (
-          <div className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-            <Lock className="h-4 w-4" />
-            <span>Private mode: your vote won&apos;t be visible to others</span>
-            <button 
-              onClick={() => setIsPrivateMode(false)}
-              className="ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        
-        {/* Vote Buttons */}
-        <div className="grid w-full grid-cols-3 gap-2">
-          <Button
-            variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
-            size="sm"
-            onClick={() => handleVote('YES')}
-            disabled={isPending || !user}
-            className={cn(
-              'flex-1 gap-1.5',
-              optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
-              isPrivateMode && 'border-dashed'
-            )}
-          >
-            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'YES')) && <Lock className="h-3 w-3" />}
-            <Check className="h-4 w-4" />
-            Yes
-          </Button>
-          <Button
-            variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
-            size="sm"
-            onClick={() => handleVote('NO')}
-            disabled={isPending || !user}
-            className={cn(
-              'flex-1 gap-1.5',
-              optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
-              isPrivateMode && 'border-dashed'
-            )}
-          >
-            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'NO')) && <Lock className="h-3 w-3" />}
-            <X className="h-4 w-4" />
-            No
-          </Button>
-          <Button
-            variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
-            size="sm"
-            onClick={() => handleVote('UNSURE')}
-            disabled={isPending || !user}
-            className={cn(
-              'flex-1 gap-1.5',
-              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
-              isPrivateMode && 'border-dashed'
-            )}
-          >
-            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
-            <HelpCircle className="h-4 w-4" />
-            Not Sure
-          </Button>
-        </div>
-
-        {/* Results - Show after voting or if has votes */}
-        {(hasVoted || optimisticData.stats.total_votes > 0) && (
-          <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
-            <ProgressBar
-              yes={optimisticData.stats.yes_count}
-              no={optimisticData.stats.no_count}
-              unsure={optimisticData.stats.unsure_count}
-              size="md"
-            />
-          </div>
-        )}
-      </CardFooter>
-
-      {/* Expandable Voters List - at bottom of card */}
-      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
-          <VoterList voters={voters} anonymousCounts={anonymousCounts} />
         </div>
       )}
     </Card>
