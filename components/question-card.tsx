@@ -55,6 +55,7 @@ export function QuestionCard({
   const [isPending, startTransition] = useTransition();
   const [showVoters, setShowVoters] = useState(false);
   const [voters, setVoters] = useState<Voter[]>([]);
+  const [anonymousCounts, setAnonymousCounts] = useState<{ YES: number; NO: number; UNSURE: number }>({ YES: 0, NO: 0, UNSURE: 0 });
   const [loadingVoters, setLoadingVoters] = useState(false);
   
   // Comments state
@@ -95,7 +96,7 @@ export function QuestionCard({
   const [isPrivateMode, setIsPrivateMode] = useState(false);
 
   const fetchVoters = async () => {
-    if (voters.length > 0) {
+    if (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) {
       // Already fetched, just toggle
       setShowVoters(!showVoters);
       return;
@@ -103,18 +104,32 @@ export function QuestionCard({
     
     setLoadingVoters(true);
     try {
-      // Exclude anonymous votes and SKIP votes from the public voter list
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id&question_id=eq.${question.id}&is_anonymous=eq.false&vote=neq.SKIP`;
+      // Fetch all votes (including anonymous) except SKIP
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id,is_anonymous&question_id=eq.${question.id}&vote=neq.SKIP`;
       const res = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
         },
       });
-      const responses = await res.json();
+      const responses: { user_id: string; vote: string; is_anonymous: boolean }[] = await res.json();
       
-      if (responses.length > 0) {
-        const userIds = responses.map((r: { user_id: string }) => r.user_id);
+      // Separate public and anonymous votes
+      const publicVotes = responses.filter(r => !r.is_anonymous);
+      const anonymousVotes = responses.filter(r => r.is_anonymous);
+      
+      // Count anonymous votes per type
+      const anonCounts = { YES: 0, NO: 0, UNSURE: 0 };
+      anonymousVotes.forEach(r => {
+        if (r.vote === 'YES' || r.vote === 'NO' || r.vote === 'UNSURE') {
+          anonCounts[r.vote]++;
+        }
+      });
+      setAnonymousCounts(anonCounts);
+      
+      // Fetch profiles for public voters only
+      if (publicVotes.length > 0) {
+        const userIds = publicVotes.map(r => r.user_id);
         const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${userIds.join(',')})`;
         const profilesRes = await fetch(profilesUrl, {
           headers: {
@@ -128,7 +143,7 @@ export function QuestionCard({
           profiles.map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
         );
         
-        const votersList: Voter[] = responses.map((r: { user_id: string; vote: string }) => ({
+        const votersList: Voter[] = publicVotes.map(r => ({
           id: r.user_id,
           username: profileMap[r.user_id]?.username || 'Anonymous',
           avatar_url: profileMap[r.user_id]?.avatar_url || null,
@@ -887,11 +902,11 @@ export function QuestionCard({
       </CardHeader>
 
       {/* Expandable Voters List */}
-      {showVoters && voters.length > 0 && (
+      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
         <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
           <div className="space-y-3">
             {/* Yes voters */}
-            {voters.filter(v => v.vote === 'YES').length > 0 && (
+            {(voters.filter(v => v.vote === 'YES').length > 0 || anonymousCounts.YES > 0) && (
               <div>
                 <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
                 <div className="flex flex-wrap gap-2">
@@ -903,11 +918,19 @@ export function QuestionCard({
                       </div>
                     </Link>
                   ))}
+                  {anonymousCounts.YES > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-50/50 py-1 px-2.5 dark:bg-emerald-950/20">
+                      <Lock className="h-3 w-3 text-emerald-400" />
+                      <span className="text-xs italic text-emerald-500 dark:text-emerald-400">
+                        +{anonymousCounts.YES} privately
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             {/* No voters */}
-            {voters.filter(v => v.vote === 'NO').length > 0 && (
+            {(voters.filter(v => v.vote === 'NO').length > 0 || anonymousCounts.NO > 0) && (
               <div>
                 <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
                 <div className="flex flex-wrap gap-2">
@@ -919,11 +942,19 @@ export function QuestionCard({
                       </div>
                     </Link>
                   ))}
+                  {anonymousCounts.NO > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-rose-50/50 py-1 px-2.5 dark:bg-rose-950/20">
+                      <Lock className="h-3 w-3 text-rose-400" />
+                      <span className="text-xs italic text-rose-500 dark:text-rose-400">
+                        +{anonymousCounts.NO} privately
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             {/* Not Sure voters */}
-            {voters.filter(v => v.vote === 'UNSURE').length > 0 && (
+            {(voters.filter(v => v.vote === 'UNSURE').length > 0 || anonymousCounts.UNSURE > 0) && (
               <div>
                 <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
                 <div className="flex flex-wrap gap-2">
@@ -935,6 +966,14 @@ export function QuestionCard({
                       </div>
                     </Link>
                   ))}
+                  {anonymousCounts.UNSURE > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-amber-50/50 py-1 px-2.5 dark:bg-amber-950/20">
+                      <Lock className="h-3 w-3 text-amber-400" />
+                      <span className="text-xs italic text-amber-500 dark:text-amber-400">
+                        +{anonymousCounts.UNSURE} privately
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

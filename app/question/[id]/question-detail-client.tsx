@@ -62,6 +62,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   // Voters state
   const [showVoters, setShowVoters] = useState(false);
   const [voters, setVoters] = useState<Voter[]>([]);
+  const [anonymousCounts, setAnonymousCounts] = useState<{ YES: number; NO: number; UNSURE: number }>({ YES: 0, NO: 0, UNSURE: 0 });
   const [loadingVoters, setLoadingVoters] = useState(false);
   
   // Comments state
@@ -204,39 +205,55 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
 
   // Fetch voters (exclude anonymous and SKIP votes)
   const fetchVoters = async () => {
-    if (voters.length > 0) {
+    if (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) {
       setShowVoters(!showVoters);
       return;
     }
     
     setLoadingVoters(true);
     try {
+      // Fetch all votes (including anonymous) except SKIP
       const { data: responses } = await supabase
         .from('responses')
-        .select('vote, user_id')
+        .select('vote, user_id, is_anonymous')
         .eq('question_id', question.id)
-        .eq('is_anonymous', false)
         .neq('vote', 'SKIP');
       
       if (responses && responses.length > 0) {
-        const userIds = responses.map(r => r.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url')
-          .in('id', userIds);
+        // Separate public and anonymous votes
+        const publicVotes = responses.filter(r => !r.is_anonymous);
+        const anonymousVotes = responses.filter(r => r.is_anonymous);
         
-        const profileMap = Object.fromEntries(
-          (profiles || []).map(p => [p.id, p])
-        );
+        // Count anonymous votes per type
+        const anonCounts = { YES: 0, NO: 0, UNSURE: 0 };
+        anonymousVotes.forEach(r => {
+          if (r.vote === 'YES' || r.vote === 'NO' || r.vote === 'UNSURE') {
+            anonCounts[r.vote as 'YES' | 'NO' | 'UNSURE']++;
+          }
+        });
+        setAnonymousCounts(anonCounts);
         
-        const votersList: Voter[] = responses.map(r => ({
-          id: r.user_id,
-          username: profileMap[r.user_id]?.username || 'Anonymous',
-          avatar_url: profileMap[r.user_id]?.avatar_url || null,
-          vote: r.vote as VoteType,
-        }));
-        
-        setVoters(votersList);
+        // Fetch profiles for public voters only
+        if (publicVotes.length > 0) {
+          const userIds = publicVotes.map(r => r.user_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+          
+          const profileMap = Object.fromEntries(
+            (profiles || []).map(p => [p.id, p])
+          );
+          
+          const votersList: Voter[] = publicVotes.map(r => ({
+            id: r.user_id,
+            username: profileMap[r.user_id]?.username || 'Anonymous',
+            avatar_url: profileMap[r.user_id]?.avatar_url || null,
+            vote: r.vote as VoteType,
+          }));
+          
+          setVoters(votersList);
+        }
       }
       setShowVoters(true);
     } catch (err) {
@@ -774,10 +791,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               </button>
               
               {/* Voters List */}
-              {showVoters && voters.length > 0 && (
+              {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
                 <div className="mt-3 space-y-3">
                   {/* Yes voters */}
-                  {voters.filter(v => v.vote === 'YES').length > 0 && (
+                  {(voters.filter(v => v.vote === 'YES').length > 0 || anonymousCounts.YES > 0) && (
                     <div>
                       <p className="mb-1.5 text-xs font-medium text-emerald-600">Yes</p>
                       <div className="flex flex-wrap gap-2">
@@ -791,12 +808,20 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                             <span className="text-emerald-700 dark:text-emerald-300">{voter.username}</span>
                           </Link>
                         ))}
+                        {anonymousCounts.YES > 0 && (
+                          <div className="flex items-center gap-1.5 rounded-full bg-emerald-50/50 py-1 px-2.5 dark:bg-emerald-900/20">
+                            <Lock className="h-3 w-3 text-emerald-400" />
+                            <span className="text-xs italic text-emerald-500 dark:text-emerald-400">
+                              +{anonymousCounts.YES} privately
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
                   
                   {/* No voters */}
-                  {voters.filter(v => v.vote === 'NO').length > 0 && (
+                  {(voters.filter(v => v.vote === 'NO').length > 0 || anonymousCounts.NO > 0) && (
                     <div>
                       <p className="mb-1.5 text-xs font-medium text-rose-600">No</p>
                       <div className="flex flex-wrap gap-2">
@@ -810,12 +835,20 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                             <span className="text-rose-700 dark:text-rose-300">{voter.username}</span>
                           </Link>
                         ))}
+                        {anonymousCounts.NO > 0 && (
+                          <div className="flex items-center gap-1.5 rounded-full bg-rose-50/50 py-1 px-2.5 dark:bg-rose-900/20">
+                            <Lock className="h-3 w-3 text-rose-400" />
+                            <span className="text-xs italic text-rose-500 dark:text-rose-400">
+                              +{anonymousCounts.NO} privately
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
                   
                   {/* Not Sure voters */}
-                  {voters.filter(v => v.vote === 'UNSURE').length > 0 && (
+                  {(voters.filter(v => v.vote === 'UNSURE').length > 0 || anonymousCounts.UNSURE > 0) && (
                     <div>
                       <p className="mb-1.5 text-xs font-medium text-amber-600">Not Sure</p>
                       <div className="flex flex-wrap gap-2">
@@ -829,13 +862,16 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                             <span className="text-amber-700 dark:text-amber-300">{voter.username}</span>
                           </Link>
                         ))}
+                        {anonymousCounts.UNSURE > 0 && (
+                          <div className="flex items-center gap-1.5 rounded-full bg-amber-50/50 py-1 px-2.5 dark:bg-amber-900/20">
+                            <Lock className="h-3 w-3 text-amber-400" />
+                            <span className="text-xs italic text-amber-500 dark:text-amber-400">
+                              +{anonymousCounts.UNSURE} privately
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Skip voters - anonymous count only */}
-                  {voters.filter(v => v.vote === 'SKIP').length > 0 && (
-                    null
                   )}
                 </div>
               )}
