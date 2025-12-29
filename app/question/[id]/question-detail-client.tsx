@@ -731,7 +731,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   }, [question.id, supabase, comments]);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6">
+    <main className="mx-auto max-w-2xl px-4 py-6 page-transition-in">
       {/* Back button */}
       <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
         <ArrowLeft className="h-4 w-4" />
