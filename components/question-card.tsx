@@ -502,6 +502,11 @@ export function QuestionCard({
         setCommentCount(prev => prev + 1);
         setShowComments(true);
         
+        // Clear input immediately after posting (don't wait for AI)
+        setCommentText('');
+        setMentionedUsers([]);
+        setSubmittingComment(false);
+        
         // Check if comment mentions @AI
         const hasAIMention = contentToSave.toLowerCase().includes('@ai');
         
@@ -568,14 +573,11 @@ export function QuestionCard({
             setComments(prev => prev.filter(c => c.id !== aiPlaceholderId));
           }
         }
-        
-        setCommentText('');
-        setMentionedUsers([]); // Clear tracked mentions
       }
     } catch (err) {
       console.error('Error submitting comment:', err);
+      setSubmittingComment(false);
     }
-    setSubmittingComment(false);
   };
 
   // Save edited question
