@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, EyeOff } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, EyeOff, Vote } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -780,8 +780,8 @@ export function QuestionCard({
                 optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
               )}
             >
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span>{optimisticData.stats.total_votes} votes</span>
+              <Vote className="h-3.5 w-3.5" />
+              <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> votes</span></span>
               {optimisticData.stats.total_votes > 0 && (
                 loadingVoters ? (
                   <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
@@ -797,7 +797,7 @@ export function QuestionCard({
               className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span>{commentCount} comments</span>
+              <span>{commentCount}<span className="hidden sm:inline"> comments</span></span>
               {loadingComments ? (
                 <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
               ) : showComments ? (

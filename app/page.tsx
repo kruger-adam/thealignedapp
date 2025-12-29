@@ -215,9 +215,14 @@ export default function FeedPage() {
     <div className="mx-auto max-w-2xl px-4 py-6">
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Feed
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Feed
+            </h1>
+            <p className="text-xs text-zinc-500 sm:hidden">
+              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'controversial' ? 'Most Split' : 'Most Agreed'}
+            </p>
+          </div>
           <FeedFilters currentSort={sortBy} onSortChange={setSortBy} />
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />
