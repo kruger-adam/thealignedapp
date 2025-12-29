@@ -372,9 +372,10 @@ BEGIN
     WHERE r1.user_id = user_a 
       AND r2.user_id = user_b 
       AND r1.vote = r2.vote
-      -- Exclude SKIP votes and anonymous votes
+      -- Exclude SKIP votes, anonymous votes, and AI votes
       AND r1.vote != 'SKIP'
       AND r1.is_anonymous = false AND r2.is_anonymous = false
+      AND r1.is_ai = false AND r2.is_ai = false
     ORDER BY qs.controversy_score DESC
     LIMIT limit_count;
 END;
@@ -404,9 +405,10 @@ BEGIN
     WHERE r1.user_id = user_a 
       AND r2.user_id = user_b 
       AND r1.vote != r2.vote
-      -- Exclude SKIP votes and anonymous votes
+      -- Exclude SKIP votes, anonymous votes, and AI votes
       AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
       AND r1.is_anonymous = false AND r2.is_anonymous = false
+      AND r1.is_ai = false AND r2.is_ai = false
     ORDER BY qs.controversy_score DESC
     LIMIT limit_count;
 END;
