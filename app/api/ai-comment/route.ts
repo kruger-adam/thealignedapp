@@ -111,9 +111,10 @@ User asks: "${userQuery.replace('@AI', '').trim()}"
 
 Respond thoughtfully in 1-2 sentences.`;
 
-    // Call GPT-5.2-Instant
+    // Call OpenAI
+    console.log('Calling OpenAI with prompt:', userPrompt.substring(0, 200) + '...');
     const completion = await openai.chat.completions.create({
-      model: 'gpt-5.2-instant', // Using the new instant model
+      model: 'gpt-4o', // Using GPT-4o for quality responses
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -121,6 +122,7 @@ Respond thoughtfully in 1-2 sentences.`;
       max_tokens: 150,
       temperature: 0.8,
     });
+    console.log('OpenAI response received');
 
     const aiResponse = completion.choices[0]?.message?.content?.trim();
 
@@ -164,10 +166,11 @@ Respond thoughtfully in 1-2 sentences.`;
         is_ai: true,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('AI comment error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `AI error: ${errorMessage}` },
       { status: 500 }
     );
   }
