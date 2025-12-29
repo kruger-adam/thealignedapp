@@ -28,27 +28,15 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     if (!user || !isValid || isLoading) return;
 
     setIsLoading(true);
+    const questionContent = content.trim();
     
-    // Get category from LLM
-    let category = 'Other';
-    try {
-      const categoryRes = await fetch('/api/categorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: content.trim() }),
-      });
-      const categoryData = await categoryRes.json();
-      category = categoryData.category || 'Other';
-    } catch (err) {
-      console.error('Error categorizing question:', err);
-    }
-    
+    // Insert question immediately with default category
     const { data: newQuestion, error } = await supabase
       .from('questions')
       .insert({
         author_id: user.id,
-        content: content.trim(),
-        category,
+        content: questionContent,
+        category: 'Other', // Default, will be updated async
       })
       .select('id')
       .single();
@@ -59,29 +47,52 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       return;
     }
 
-    // Notify followers about the new question
-    const { data: followers } = await supabase
-      .from('follows')
-      .select('follower_id')
-      .eq('following_id', user.id);
-
-    if (followers && followers.length > 0) {
-      const notifications = followers.map(f => ({
-        user_id: f.follower_id,
-        type: 'new_question' as const,
-        actor_id: user.id,
-        question_id: newQuestion.id,
-      }));
-      
-      supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
-        if (notifError) console.error('Error creating notifications:', notifError);
-      });
-    }
-
+    // Reset form immediately - don't wait for categorization or notifications
     setContent('');
     setIsExpanded(false);
     setIsLoading(false);
     onQuestionCreated?.();
+
+    // Categorize in background (fire and forget)
+    fetch('/api/categorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: questionContent }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        const category = data.category || 'Other';
+        if (category !== 'Other') {
+          supabase
+            .from('questions')
+            .update({ category })
+            .eq('id', newQuestion.id)
+            .then(({ error: updateError }) => {
+              if (updateError) console.error('Error updating category:', updateError);
+            });
+        }
+      })
+      .catch(err => console.error('Error categorizing question:', err));
+
+    // Notify followers in background (fire and forget)
+    supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', user.id)
+      .then(({ data: followers }) => {
+        if (followers && followers.length > 0) {
+          const notifications = followers.map(f => ({
+            user_id: f.follower_id,
+            type: 'new_question' as const,
+            actor_id: user.id,
+            question_id: newQuestion.id,
+          }));
+          
+          supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+            if (notifError) console.error('Error creating notifications:', notifError);
+          });
+        }
+      });
   };
 
   if (!user) {
