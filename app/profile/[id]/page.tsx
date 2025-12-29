@@ -27,12 +27,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const isOwnProfile = user?.id === profile.id;
 
   // Fetch user's responses with questions
-  const { data: rawResponses } = await supabase
+  // If viewing someone else's profile, exclude their anonymous votes
+  let responsesQuery = supabase
     .from('responses')
     .select(`
       id,
       vote,
       updated_at,
+      is_anonymous,
       question:questions (
         id,
         content,
@@ -42,12 +44,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     `)
     .eq('user_id', profile.id)
     .order('updated_at', { ascending: false });
+  
+  // Only filter out anonymous votes when viewing someone else's profile
+  if (!isOwnProfile) {
+    responsesQuery = responsesQuery.eq('is_anonymous', false);
+  }
+  
+  const { data: rawResponses } = await responsesQuery;
 
   // Transform responses to handle Supabase's array return for single relations
   const responses = (rawResponses || []).map((r) => ({
     id: r.id as string,
     vote: r.vote as VoteType,
     updated_at: r.updated_at as string,
+    is_anonymous: r.is_anonymous as boolean,
     question: Array.isArray(r.question) ? r.question[0] : r.question,
   }));
 

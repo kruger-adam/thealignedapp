@@ -333,8 +333,9 @@ BEGIN
         FROM responses r1
         INNER JOIN responses r2 ON r1.question_id = r2.question_id
         WHERE r1.user_id = user_a AND r2.user_id = user_b
-        -- Exclude SKIP votes from compatibility calculation (they are anonymous/neutral)
+        -- Exclude SKIP votes and anonymous votes from compatibility calculation
         AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
+        AND r1.is_anonymous = false AND r2.is_anonymous = false
     )
     SELECT 
         CASE 
@@ -371,8 +372,9 @@ BEGIN
     WHERE r1.user_id = user_a 
       AND r2.user_id = user_b 
       AND r1.vote = r2.vote
-      -- Exclude SKIP votes (they are anonymous)
+      -- Exclude SKIP votes and anonymous votes
       AND r1.vote != 'SKIP'
+      AND r1.is_anonymous = false AND r2.is_anonymous = false
     ORDER BY qs.controversy_score DESC
     LIMIT limit_count;
 END;
@@ -402,8 +404,9 @@ BEGIN
     WHERE r1.user_id = user_a 
       AND r2.user_id = user_b 
       AND r1.vote != r2.vote
-      -- Exclude SKIP votes (they are anonymous)
+      -- Exclude SKIP votes and anonymous votes
       AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
+      AND r1.is_anonymous = false AND r2.is_anonymous = false
     ORDER BY qs.controversy_score DESC
     LIMIT limit_count;
 END;
