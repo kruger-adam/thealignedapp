@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, EyeOff, Vote, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -90,6 +90,9 @@ export function QuestionCard({
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [savingComment, setSavingComment] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  
+  // Private voting mode
+  const [isPrivateMode, setIsPrivateMode] = useState(false);
 
   const fetchVoters = async () => {
     if (voters.length > 0) {
@@ -100,7 +103,8 @@ export function QuestionCard({
     
     setLoadingVoters(true);
     try {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id&question_id=eq.${question.id}`;
+      // Exclude anonymous votes and SKIP votes from the public voter list
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,user_id&question_id=eq.${question.id}&is_anonymous=eq.false&vote=neq.SKIP`;
       const res = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -751,6 +755,7 @@ export function QuestionCard({
               user_id: user.id,
               question_id: question.id,
               vote,
+              is_anonymous: isPrivateMode,
               updated_at: new Date().toISOString(),
             },
             {
@@ -763,6 +768,11 @@ export function QuestionCard({
           // Revert on error - would need proper error handling in production
           return;
         }
+        
+        // Reset private mode after voting
+        if (isPrivateMode) {
+          setIsPrivateMode(false);
+        }
 
         // Trigger install prompt on first vote
         if (isFirstVote) {
@@ -770,8 +780,8 @@ export function QuestionCard({
         }
 
         // Notify question author (only on first vote, not vote changes)
-        // Don't notify yourself
-        if (isFirstVote && question.author_id !== user.id) {
+        // Don't notify yourself, and don't notify for anonymous votes
+        if (isFirstVote && question.author_id !== user.id && !isPrivateMode) {
           supabase.from('notifications').insert({
             user_id: question.author_id,
             type: 'vote',
@@ -926,15 +936,6 @@ export function QuestionCard({
                     </Link>
                   ))}
                 </div>
-              </div>
-            )}
-            {/* Skip voters - anonymous count only */}
-            {voters.filter(v => v.vote === 'SKIP').length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-medium text-zinc-500">Prefer Not to Answer</p>
-                <p className="text-xs text-zinc-400 italic">
-                  {voters.filter(v => v.vote === 'SKIP').length} {voters.filter(v => v.vote === 'SKIP').length === 1 ? 'person' : 'people'} (anonymous)
-                </p>
               </div>
             )}
           </div>
@@ -1177,6 +1178,12 @@ export function QuestionCard({
                   <Share2 className="h-3.5 w-3.5" />
                   Share
                 </DropdownMenuItem>
+                {user && (
+                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
+                    <Lock className="h-3.5 w-3.5" />
+                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
+                  </DropdownMenuItem>
+                )}
                 {user?.id === question.author_id && (
                   <>
                     <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
@@ -1207,8 +1214,22 @@ export function QuestionCard({
       </CardContent>
 
       <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        {/* Private Mode Indicator */}
+        {isPrivateMode && (
+          <div className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            <Lock className="h-4 w-4" />
+            <span>Private mode: your vote won&apos;t be visible to others</span>
+            <button 
+              onClick={() => setIsPrivateMode(false)}
+              className="ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        
         {/* Vote Buttons */}
-        <div className="grid w-full grid-cols-4 gap-2">
+        <div className="grid w-full grid-cols-3 gap-2">
           <Button
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
@@ -1216,9 +1237,11 @@ export function QuestionCard({
             disabled={isPending || !user}
             className={cn(
               'flex-1 gap-1.5',
-              optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50'
+              optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
+              isPrivateMode && 'border-dashed'
             )}
           >
+            {isPrivateMode && <Lock className="h-3 w-3" />}
             <Check className="h-4 w-4" />
             Yes
           </Button>
@@ -1229,9 +1252,11 @@ export function QuestionCard({
             disabled={isPending || !user}
             className={cn(
               'flex-1 gap-1.5',
-              optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50'
+              optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
+              isPrivateMode && 'border-dashed'
             )}
           >
+            {isPrivateMode && <Lock className="h-3 w-3" />}
             <X className="h-4 w-4" />
             No
           </Button>
@@ -1242,35 +1267,23 @@ export function QuestionCard({
             disabled={isPending || !user}
             className={cn(
               'flex-1 gap-1.5',
-              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50'
+              optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
+              isPrivateMode && 'border-dashed'
             )}
           >
+            {isPrivateMode && <Lock className="h-3 w-3" />}
             <HelpCircle className="h-4 w-4" />
             Not Sure
-          </Button>
-          <Button
-            variant={optimisticData.userVote === 'SKIP' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleVote('SKIP')}
-            disabled={isPending || !user}
-            className={cn(
-              'flex-1 gap-1.5',
-              optimisticData.userVote === 'SKIP' && 'bg-zinc-600 hover:bg-zinc-700 ring-2 ring-zinc-500/50'
-            )}
-          >
-            <EyeOff className="h-4 w-4" />
-            Skip
           </Button>
         </div>
 
         {/* Results - Show after voting or if has votes */}
-        {(hasVoted || optimisticData.stats.total_votes > 0 || optimisticData.stats.skip_count > 0) && (
+        {(hasVoted || optimisticData.stats.total_votes > 0) && (
           <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
             <ProgressBar
               yes={optimisticData.stats.yes_count}
               no={optimisticData.stats.no_count}
               unsure={optimisticData.stats.unsure_count}
-              skip={optimisticData.stats.skip_count}
               size="md"
             />
           </div>

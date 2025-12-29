@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,6 +94,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [savingComment, setSavingComment] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  
+  // Private voting mode
+  const [isPrivateMode, setIsPrivateMode] = useState(false);
 
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
@@ -170,6 +173,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               user_id: user.id,
               question_id: question.id,
               vote,
+              is_anonymous: isPrivateMode,
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id,question_id' }
@@ -179,9 +183,14 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           console.error('Error voting:', error);
           return;
         }
+        
+        // Reset private mode after voting
+        if (isPrivateMode) {
+          setIsPrivateMode(false);
+        }
 
-        // Notify question author on first vote
-        if (isFirstVote && question.author_id !== user.id) {
+        // Notify question author on first vote (not for anonymous votes)
+        if (isFirstVote && question.author_id !== user.id && !isPrivateMode) {
           supabase.from('notifications').insert({
             user_id: question.author_id,
             type: 'vote',
@@ -193,7 +202,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     });
   };
 
-  // Fetch voters
+  // Fetch voters (exclude anonymous and SKIP votes)
   const fetchVoters = async () => {
     if (voters.length > 0) {
       setShowVoters(!showVoters);
@@ -205,7 +214,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       const { data: responses } = await supabase
         .from('responses')
         .select('vote, user_id')
-        .eq('question_id', question.id);
+        .eq('question_id', question.id)
+        .eq('is_anonymous', false)
+        .neq('vote', 'SKIP');
       
       if (responses && responses.length > 0) {
         const userIds = responses.map(r => r.user_id);
@@ -705,6 +716,12 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                     <Share2 className="h-3.5 w-3.5" />
                     Share
                   </DropdownMenuItem>
+                  {user && (
+                    <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
+                      <Lock className="h-3.5 w-3.5" />
+                      {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
+                    </DropdownMenuItem>
+                  )}
                   {user?.id === question.author_id && (
                     <>
                       <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
@@ -818,30 +835,41 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   
                   {/* Skip voters - anonymous count only */}
                   {voters.filter(v => v.vote === 'SKIP').length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-zinc-500">Prefer Not to Answer</p>
-                      <p className="text-xs text-zinc-400 italic">
-                        {voters.filter(v => v.vote === 'SKIP').length} {voters.filter(v => v.vote === 'SKIP').length === 1 ? 'person' : 'people'} (anonymous)
-                      </p>
-                    </div>
+                    null
                   )}
                 </div>
               )}
             </div>
           )}
 
+          {/* Private Mode Indicator */}
+          {isPrivateMode && user && (
+            <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <Lock className="h-4 w-4" />
+              <span>Private mode: your vote won&apos;t be visible to others</span>
+              <button 
+                onClick={() => setIsPrivateMode(false)}
+                className="ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          
           {/* Vote buttons */}
           {user && (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 variant={localUserVote === 'YES' ? 'default' : 'outline'}
                 onClick={() => handleVote('YES')}
                 disabled={isPending}
                 className={cn(
                   'gap-2',
-                  localUserVote === 'YES' && 'bg-emerald-600 hover:bg-emerald-700'
+                  localUserVote === 'YES' && 'bg-emerald-600 hover:bg-emerald-700',
+                  isPrivateMode && 'border-dashed'
                 )}
               >
+                {isPrivateMode && <Lock className="h-3 w-3" />}
                 <Check className="h-4 w-4" />
                 Yes
               </Button>
@@ -851,9 +879,11 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 disabled={isPending}
                 className={cn(
                   'gap-2',
-                  localUserVote === 'NO' && 'bg-rose-600 hover:bg-rose-700'
+                  localUserVote === 'NO' && 'bg-rose-600 hover:bg-rose-700',
+                  isPrivateMode && 'border-dashed'
                 )}
               >
+                {isPrivateMode && <Lock className="h-3 w-3" />}
                 <X className="h-4 w-4" />
                 No
               </Button>
@@ -863,23 +893,13 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 disabled={isPending}
                 className={cn(
                   'gap-2',
-                  localUserVote === 'UNSURE' && 'bg-amber-600 hover:bg-amber-700'
+                  localUserVote === 'UNSURE' && 'bg-amber-600 hover:bg-amber-700',
+                  isPrivateMode && 'border-dashed'
                 )}
               >
+                {isPrivateMode && <Lock className="h-3 w-3" />}
                 <HelpCircle className="h-4 w-4" />
                 Not Sure
-              </Button>
-              <Button
-                variant={localUserVote === 'SKIP' ? 'default' : 'outline'}
-                onClick={() => handleVote('SKIP')}
-                disabled={isPending}
-                className={cn(
-                  'gap-2',
-                  localUserVote === 'SKIP' && 'bg-zinc-600 hover:bg-zinc-700'
-                )}
-              >
-                <EyeOff className="h-4 w-4" />
-                Skip
               </Button>
             </div>
           )}

@@ -98,6 +98,7 @@ CREATE TABLE responses (
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
     vote vote_type NOT NULL,
+    is_anonymous BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE(user_id, question_id)
