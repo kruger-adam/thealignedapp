@@ -111,6 +111,46 @@ export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 
 
 export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment';
 
+// Comment types
+export interface Comment {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at?: string;
+  username: string | null;
+  avatar_url: string | null;
+  is_ai?: boolean;
+  isThinking?: boolean;
+  isError?: boolean;
+}
+
+// Mention suggestion for @mention autocomplete
+export interface MentionSuggestion {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  is_ai?: boolean;
+}
+
+// AI mention constant
+export const AI_MENTION: MentionSuggestion = {
+  id: 'ai',
+  username: 'AI',
+  avatar_url: null,
+  is_ai: true,
+};
+
+// Voter display type
+export interface Voter {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  vote: VoteType;
+  is_ai?: boolean;
+  ai_reasoning?: string | null;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
