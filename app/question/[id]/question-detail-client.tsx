@@ -724,9 +724,16 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               <p className="text-xl font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {localQuestionContent}
               </p>
-              {questionWasEdited && (
-                <span className="text-xs text-zinc-400 italic">(edited)</span>
-              )}
+              <div className="mt-2 flex items-center gap-2">
+                {questionWasEdited && (
+                  <span className="text-xs text-zinc-400 italic">(edited)</span>
+                )}
+                {question.category && (
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    {question.category}
+                  </span>
+                )}
+              </div>
               <div className="absolute -right-1 -top-1">
                 <DropdownMenu
                   trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
