@@ -21,56 +21,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  // Helper to fetch profile with retry logic and timeout
-  const fetchProfile = async (userId: string, retries = 3): Promise<Profile | null> => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        console.log(`[Auth] Fetching profile attempt ${i + 1} for user:`, userId);
-        
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-        );
-        
-        const fetchPromise = supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
-        const result = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        if (!result || 'error' in result === false) {
-          console.error(`[Auth] Profile fetch attempt ${i + 1} timed out`);
-          if (i < retries - 1) {
-            await new Promise(r => setTimeout(r, 500 * (i + 1)));
-            continue;
-          }
-          return null;
-        }
-        
-        const { data: profile, error } = result;
-        
-        if (error) {
-          console.error(`[Auth] Profile fetch attempt ${i + 1} failed:`, error);
-          if (i < retries - 1) {
-            await new Promise(r => setTimeout(r, 500 * (i + 1)));
-            continue;
-          }
-          return null;
-        }
-        
-        console.log(`[Auth] Profile fetched successfully:`, profile?.username);
-        return profile;
-      } catch (err) {
-        console.error(`[Auth] Profile fetch attempt ${i + 1} threw:`, err);
-        if (i < retries - 1) {
-          await new Promise(r => setTimeout(r, 500 * (i + 1)));
-        }
+  // Helper to fetch profile using direct fetch (more reliable than Supabase client)
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    console.log(`[Auth] Fetching profile via direct fetch for user:`, userId);
+    
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=*`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      
+      if (!response.ok) {
+        console.error(`[Auth] Profile fetch failed:`, response.status, response.statusText);
+        return null;
       }
+      
+      const profiles = await response.json();
+      const profile = profiles[0] || null;
+      
+      console.log(`[Auth] Profile fetched successfully:`, profile?.username);
+      return profile;
+    } catch (err) {
+      console.error(`[Auth] Profile fetch threw:`, err);
+      return null;
     }
-    console.error('[Auth] All profile fetch attempts failed');
-    return null;
   };
 
   useEffect(() => {
