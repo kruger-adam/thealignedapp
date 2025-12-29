@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, EyeOff, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, VoteType } from '@/lib/types';
@@ -81,6 +82,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editedQuestionContent, setEditedQuestionContent] = useState(question.content);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [deletingQuestion, setDeletingQuestion] = useState(false);
   const [localQuestionContent, setLocalQuestionContent] = useState(question.content);
   const [questionWasEdited, setQuestionWasEdited] = useState(
     question.updated_at && new Date(question.updated_at).getTime() > new Date(question.created_at).getTime() + 1000
@@ -90,6 +92,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [savingComment, setSavingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
@@ -259,6 +262,28 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     setSavingQuestion(false);
   };
 
+  // Delete question
+  const deleteQuestion = async () => {
+    if (!user || user.id !== question.author_id) return;
+    if (!confirm('Are you sure you want to delete this question? This cannot be undone.')) return;
+    
+    setDeletingQuestion(true);
+    try {
+      const { error } = await supabase
+        .from('questions')
+        .delete()
+        .eq('id', question.id);
+      
+      if (!error) {
+        // Navigate back to feed after deletion
+        window.location.href = '/';
+      }
+    } catch (err) {
+      console.error('Error deleting question:', err);
+    }
+    setDeletingQuestion(false);
+  };
+
   // Save edited comment
   const saveCommentEdit = async (commentId: string) => {
     if (!user) return;
@@ -291,7 +316,27 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     setSavingComment(false);
   };
 
-  // Start editing a comment
+  // Delete comment
+  const deleteComment = async (commentId: string, commentUserId: string) => {
+    if (!user || user.id !== commentUserId) return;
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+    
+    setDeletingCommentId(commentId);
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+      
+      if (!error) {
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
+    setDeletingCommentId(null);
+  };
+
   // Start editing a comment - convert @[username](id) format to @username for display
   const startEditingComment = (comment: Comment) => {
     setEditingCommentId(comment.id);
@@ -639,13 +684,25 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 <span className="text-xs text-zinc-400 italic">(edited)</span>
               )}
               {user?.id === question.author_id && (
-                <button
-                  onClick={() => setIsEditingQuestion(true)}
-                  className="absolute -right-1 -top-1 rounded p-1 opacity-60 md:opacity-0 transition-opacity hover:bg-zinc-100 hover:opacity-100 md:group-hover:opacity-100 dark:hover:bg-zinc-700"
-                  title="Edit question"
-                >
-                  <Pencil className="h-4 w-4 text-zinc-400" />
-                </button>
+                <div className="absolute -right-1 -top-1">
+                  <DropdownMenu
+                    trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
+                    align="right"
+                  >
+                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={deleteQuestion}
+                      variant="destructive"
+                      disabled={deletingQuestion}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingQuestion ? 'Deleting...' : 'Delete'}
+                    </DropdownMenuItem>
+                  </DropdownMenu>
+                </div>
               )}
             </div>
           )}
@@ -846,13 +903,23 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                         <span className="text-xs text-zinc-400 italic">(edited)</span>
                       )}
                       {user?.id === comment.user_id && editingCommentId !== comment.id && (
-                        <button
-                          onClick={() => startEditingComment(comment)}
-                          className="rounded p-0.5 opacity-60 md:opacity-0 transition-opacity hover:bg-zinc-100 hover:opacity-100 md:group-hover:opacity-100 dark:hover:bg-zinc-700"
-                          title="Edit comment"
+                        <DropdownMenu
+                          trigger={<MoreHorizontal className="h-3.5 w-3.5 text-zinc-400" />}
+                          align="right"
                         >
-                          <Pencil className="h-3 w-3 text-zinc-400" />
-                        </button>
+                          <DropdownMenuItem onClick={() => startEditingComment(comment)}>
+                            <Pencil className="h-3 w-3" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteComment(comment.id, comment.user_id)}
+                            variant="destructive"
+                            disabled={deletingCommentId === comment.id}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            {deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}
+                          </DropdownMenuItem>
+                        </DropdownMenu>
                       )}
                     </div>
                     {editingCommentId === comment.id ? (
