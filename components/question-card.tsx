@@ -815,7 +815,7 @@ export function QuestionCard({
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
   return (
-    <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
+    <Card className="transition-all duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <Link 
