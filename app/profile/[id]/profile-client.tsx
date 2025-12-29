@@ -256,7 +256,7 @@ export function ProfileClient({
   });
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="mx-auto max-w-2xl px-4 py-6 slide-in-from-bottom-2">
       {/* Profile Header */}
       <Card className="mb-6 overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800" />
