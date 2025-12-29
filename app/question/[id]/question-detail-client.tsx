@@ -21,13 +21,22 @@ interface Comment {
   updated_at?: string;
   username: string | null;
   avatar_url: string | null;
+  is_ai?: boolean;
 }
 
 interface MentionSuggestion {
   id: string;
   username: string;
   avatar_url: string | null;
+  is_ai?: boolean;
 }
+
+const AI_MENTION: MentionSuggestion = {
+  id: 'ai',
+  username: 'AI',
+  avatar_url: null,
+  is_ai: true,
+};
 
 interface Voter {
   id: string;
@@ -437,6 +446,12 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           avatar_url: u.avatar_url,
         }));
       
+      // Add AI to suggestions if query matches
+      const queryLower = query.toLowerCase();
+      if ('ai'.startsWith(queryLower) || queryLower === 'ai') {
+        suggestions.unshift(AI_MENTION);
+      }
+      
       setMentionSuggestions(suggestions);
       setShowMentions(suggestions.length > 0);
       setSelectedMentionIndex(0);
@@ -523,7 +538,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     
     setSubmittingComment(true);
     try {
-      const mentionStrings = mentionedUsers.map(u => `@[${u.username}](${u.id})`);
+      // For AI mentions, just use @AI (no ID needed)
+      const mentionStrings = mentionedUsers.map(u => 
+        u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
+      );
       const messageText = commentText.trim();
       const contentToSave = mentionStrings.length > 0 
         ? messageText ? `${mentionStrings.join(' ')} ${messageText}` : mentionStrings.join(' ')
@@ -546,7 +564,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       }
       
       if (newComment) {
-        // Create notifications
+        // Create notifications (skip AI and self)
         const notifications: Array<{
           user_id: string;
           type: 'mention' | 'comment';
@@ -556,7 +574,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
         }> = [];
         
         mentionedUsers
-          .filter(u => u.id !== user.id)
+          .filter(u => u.id !== user.id && !u.is_ai)
           .forEach(mentionedUser => {
             notifications.push({
               user_id: mentionedUser.id,
@@ -589,8 +607,76 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
           avatar_url: user.user_metadata?.avatar_url || null,
         }]);
+        
+        // Clear input immediately after posting (don't wait for AI)
         setCommentText('');
         setMentionedUsers([]);
+        setSubmittingComment(false);
+        
+        // Check if comment mentions @AI
+        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
+        
+        if (hasAIMention) {
+          // Show "AI is thinking..." placeholder
+          const aiPlaceholderId = `ai-thinking-${Date.now()}`;
+          setComments(prev => [...prev, {
+            id: aiPlaceholderId,
+            user_id: user.id,
+            content: '...',
+            created_at: new Date().toISOString(),
+            username: 'AI',
+            avatar_url: null,
+            is_ai: true,
+          }]);
+          
+          // Call the AI API
+          try {
+            const aiResponse = await fetch('/api/ai-comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                questionId: question.id,
+                userQuery: contentToSave,
+                userId: user.id,
+              }),
+            });
+            
+            if (aiResponse.ok) {
+              const { comment: aiComment } = await aiResponse.json();
+              // Replace placeholder with actual AI response
+              setComments(prev => prev.map(c => 
+                c.id === aiPlaceholderId 
+                  ? {
+                      id: aiComment.id,
+                      user_id: user.id,
+                      content: aiComment.content,
+                      created_at: aiComment.created_at,
+                      username: 'AI',
+                      avatar_url: null,
+                      is_ai: true,
+                    }
+                  : c
+              ));
+            } else {
+              const errorData = await aiResponse.json();
+              // Replace placeholder with error message
+              setComments(prev => prev.map(c => 
+                c.id === aiPlaceholderId 
+                  ? {
+                      ...c,
+                      content: errorData.error || 'Sorry, I couldn\'t respond right now.',
+                    }
+                  : c
+              ));
+            }
+          } catch (aiErr) {
+            console.error('AI comment error:', aiErr);
+            // Remove placeholder on error
+            setComments(prev => prev.filter(c => c.id !== aiPlaceholderId));
+          }
+        }
+        
+        return;
       }
     } catch (err) {
       console.error('Error submitting comment:', err);
@@ -1043,30 +1129,48 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             {comments.length === 0 ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="group flex gap-3">
-                  <Link href={`/profile/${comment.user_id}`}>
-                    <Avatar
-                      src={comment.avatar_url}
-                      fallback={comment.username || 'A'}
-                      size="sm"
-                    />
-                  </Link>
+              comments.map((comment) => {
+                const isAIComment = comment.is_ai === true;
+                
+                return (
+                <div key={comment.id} className={cn(
+                  "group flex gap-3",
+                  isAIComment && "rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30"
+                )}>
+                  {isAIComment ? (
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                      <Bot className="h-4 w-4 text-white" />
+                    </div>
+                  ) : (
+                    <Link href={`/profile/${comment.user_id}`}>
+                      <Avatar
+                        src={comment.avatar_url}
+                        fallback={comment.username || 'A'}
+                        size="sm"
+                      />
+                    </Link>
+                  )}
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Link 
-                        href={`/profile/${comment.user_id}`}
-                        className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100"
-                      >
-                        {comment.username || 'Anonymous'}
-                      </Link>
+                      {isAIComment ? (
+                        <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                          AI
+                        </span>
+                      ) : (
+                        <Link 
+                          href={`/profile/${comment.user_id}`}
+                          className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100"
+                        >
+                          {comment.username || 'Anonymous'}
+                        </Link>
+                      )}
                       <span className="text-xs text-zinc-400">
                         {getTimeAgo(new Date(comment.created_at))}
                       </span>
                       {comment.updated_at && new Date(comment.updated_at).getTime() > new Date(comment.created_at).getTime() + 1000 && (
                         <span className="text-xs text-zinc-400 italic">(edited)</span>
                       )}
-                      {user?.id === comment.user_id && editingCommentId !== comment.id && (
+                      {user?.id === comment.user_id && !isAIComment && editingCommentId !== comment.id && (
                         <DropdownMenu
                           trigger={<MoreHorizontal className="h-3.5 w-3.5 text-zinc-400" />}
                           align="right"
@@ -1130,7 +1234,8 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                     )}
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
 
@@ -1150,8 +1255,24 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                       )}
                       onClick={() => insertMention(suggestionUser)}
                     >
-                      <Avatar src={suggestionUser.avatar_url} fallback={suggestionUser.username} size="sm" />
-                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{suggestionUser.username}</span>
+                      {suggestionUser.is_ai ? (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                          <Bot className="h-4 w-4 text-white" />
+                        </div>
+                      ) : (
+                        <Avatar src={suggestionUser.avatar_url} fallback={suggestionUser.username} size="sm" />
+                      )}
+                      <span className={cn(
+                        "font-medium",
+                        suggestionUser.is_ai 
+                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"
+                          : "text-zinc-900 dark:text-zinc-100"
+                      )}>
+                        {suggestionUser.username}
+                      </span>
+                      {suggestionUser.is_ai && (
+                        <span className="text-xs text-zinc-500">Ask AI anything</span>
+                      )}
                     </button>
                   ))}
                 </div>

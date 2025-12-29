@@ -810,30 +810,30 @@ export function QuestionCard({
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
-    // Remove old vote count
-    if (oldVote) {
+      // Remove old vote count
+      if (oldVote) {
       if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
       else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
       else if (oldVote === 'UNSURE') { newStats.unsure_count--; newStats.total_votes--; }
-    }
+      }
 
-    // Add new vote count
-    if (newVote) {
+      // Add new vote count
+      if (newVote) {
       if (newVote === 'YES') { newStats.yes_count++; newStats.total_votes++; }
       else if (newVote === 'NO') { newStats.no_count++; newStats.total_votes++; }
       else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
-    }
+      }
 
-    // Recalculate percentages
-    if (newStats.total_votes > 0) {
-      newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
-      newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
-      newStats.unsure_percentage = 100 - newStats.yes_percentage - newStats.no_percentage;
-    } else {
-      newStats.yes_percentage = 0;
-      newStats.no_percentage = 0;
-      newStats.unsure_percentage = 0;
-    }
+      // Recalculate percentages
+      if (newStats.total_votes > 0) {
+        newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
+        newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
+        newStats.unsure_percentage = 100 - newStats.yes_percentage - newStats.no_percentage;
+      } else {
+        newStats.yes_percentage = 0;
+        newStats.no_percentage = 0;
+        newStats.unsure_percentage = 0;
+      }
 
     setLocalUserVote(newVote);
     setLocalStats(newStats);
@@ -843,7 +843,7 @@ export function QuestionCard({
   const optimisticData = {
     userVote: localUserVote,
     stats: localStats,
-  };
+      };
 
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
@@ -881,25 +881,25 @@ export function QuestionCard({
         }
       } else {
         // Perform the actual update/insert (explicitly mark as non-AI vote)
-        const { error } = await supabase
-          .from('responses')
-          .upsert(
-            {
-              user_id: user.id,
-              question_id: question.id,
-              vote,
+      const { error } = await supabase
+        .from('responses')
+        .upsert(
+          {
+            user_id: user.id,
+            question_id: question.id,
+            vote,
               is_anonymous: isPrivateMode,
               is_ai: false,
-              updated_at: new Date().toISOString(),
-            },
-            {
+            updated_at: new Date().toISOString(),
+          },
+          {
               onConflict: 'user_id,question_id,is_ai',
-            }
-          );
+          }
+        );
 
-        if (error) {
-          console.error('Error voting:', error);
-          // Revert on error - would need proper error handling in production
+      if (error) {
+        console.error('Error voting:', error);
+        // Revert on error - would need proper error handling in production
           return;
         }
         
@@ -952,9 +952,9 @@ export function QuestionCard({
                 }
               }
             });
-        }
+      }
 
-        onVote?.(question.id, vote);
+      onVote?.(question.id, vote);
       }
     });
   };
@@ -1010,7 +1010,7 @@ export function QuestionCard({
               onClick={fetchComments}
               className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
             >
-              <MessageCircle className="h-3.5 w-3.5" />
+            <MessageCircle className="h-3.5 w-3.5" />
               <span>{commentCount}<span className="hidden sm:inline"> comment{commentCount !== 1 ? 's' : ''}</span></span>
               {loadingComments ? (
                 <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
@@ -1434,7 +1434,7 @@ export function QuestionCard({
         ) : (
           <div className="group relative">
             <Link href={`/question/${question.id}`} className="block hover:opacity-80 transition-opacity">
-              <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
+        <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {localQuestionContent}
               </p>
             </Link>
