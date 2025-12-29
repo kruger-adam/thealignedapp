@@ -812,17 +812,10 @@ export function QuestionCard({
               <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 {authorName || 'Anonymous'}
               </span>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-xs text-zinc-500">
-                  <Clock className="h-3 w-3" />
-                  {timeAgo}
-                </span>
-                {question.category && (
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                    {question.category}
-                  </span>
-                )}
-              </div>
+              <span className="flex items-center gap-1 text-xs text-zinc-500">
+                <Clock className="h-3 w-3" />
+                {timeAgo}
+              </span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
