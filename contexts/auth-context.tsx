@@ -21,18 +21,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      if (user) {
-        const { data: profile } = await supabase
+  // Helper to fetch profile with retry logic
+  const fetchProfile = async (userId: string, retries = 3): Promise<Profile | null> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
-        setProfile(profile);
+        
+        if (error) {
+          console.error(`Profile fetch attempt ${i + 1} failed:`, error);
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1))); // Exponential backoff
+            continue;
+          }
+          return null;
+        }
+        
+        return profile;
+      } catch (err) {
+        console.error(`Profile fetch attempt ${i + 1} threw:`, err);
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, 500 * (i + 1)));
+        }
+      }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        
+        if (user) {
+          const profile = await fetchProfile(user.id);
+          setProfile(profile);
+        }
+      } catch (err) {
+        console.error('Error getting user:', err);
       }
       
       setLoading(false);
@@ -45,11 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          const profile = await fetchProfile(session.user.id);
           setProfile(profile);
         } else {
           setProfile(null);
