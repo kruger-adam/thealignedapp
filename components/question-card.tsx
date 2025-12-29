@@ -991,13 +991,6 @@ export function QuestionCard({
         </div>
       </CardHeader>
 
-      {/* Expandable Voters List */}
-      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
-          <VoterList voters={voters} anonymousCounts={anonymousCounts} />
-        </div>
-      )}
-
       {/* Expandable Comments Section */}
       {showComments && (
         <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
@@ -1407,6 +1400,13 @@ export function QuestionCard({
           </div>
         )}
       </CardFooter>
+
+      {/* Expandable Voters List - at bottom of card */}
+      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+          <VoterList voters={voters} anonymousCounts={anonymousCounts} />
+        </div>
+      )}
     </Card>
   );
 }
