@@ -1286,17 +1286,33 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   {mentionedUsers.map((taggedUser) => (
                     <span
                       key={taggedUser.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-2 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium",
+                        taggedUser.is_ai 
+                          ? "bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                      )}
                     >
-                      <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
-                      <span>@{taggedUser.username}</span>
+                      {taggedUser.is_ai ? (
+                        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                          <Bot className="h-2.5 w-2.5 text-white" />
+                        </div>
+                      ) : (
+                        <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
+                      )}
+                      <span>{taggedUser.is_ai ? taggedUser.username : `@${taggedUser.username}`}</span>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setMentionedUsers(prev => prev.filter(u => u.id !== taggedUser.id));
                         }}
-                        className="ml-0.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                        className={cn(
+                          "ml-0.5",
+                          taggedUser.is_ai
+                            ? "text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200"
+                            : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                        )}
                       >
                         ×
                       </button>
