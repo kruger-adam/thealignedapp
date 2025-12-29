@@ -64,15 +64,17 @@ export default async function QuestionPage({ params }: PageProps) {
 
   // Fetch user's vote if logged in
   let userVote = null;
+  let userVoteIsAnonymous = false;
   if (user) {
     const { data: userResponse } = await supabase
       .from('responses')
-      .select('vote')
+      .select('vote, is_anonymous')
       .eq('question_id', id)
       .eq('user_id', user.id)
       .single();
     
     userVote = userResponse?.vote || null;
+    userVoteIsAnonymous = userResponse?.is_anonymous || false;
   }
 
   // Fetch comments
@@ -109,6 +111,7 @@ export default async function QuestionPage({ params }: PageProps) {
         author: author || undefined,
         stats,
         user_vote: userVote,
+        user_vote_is_anonymous: userVoteIsAnonymous,
       }}
       initialComments={enrichedComments}
     />

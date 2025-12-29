@@ -671,6 +671,7 @@ export function QuestionCard({
   
   // Local state for vote (persists after voting without refetch)
   const [localUserVote, setLocalUserVote] = useState<VoteType | null>(question.user_vote ?? null);
+  const [localVoteIsAnonymous, setLocalVoteIsAnonymous] = useState(question.user_vote_is_anonymous ?? false);
   const [localStats, setLocalStats] = useState(question.stats);
   const [hasVotedLocally, setHasVotedLocally] = useState(false);
 
@@ -679,8 +680,9 @@ export function QuestionCard({
   useEffect(() => {
     if (!hasVotedLocally && question.user_vote !== undefined) {
       setLocalUserVote(question.user_vote);
+      setLocalVoteIsAnonymous(question.user_vote_is_anonymous ?? false);
     }
-  }, [question.user_vote, hasVotedLocally]);
+  }, [question.user_vote, question.user_vote_is_anonymous, hasVotedLocally]);
 
   useEffect(() => {
     if (!hasVotedLocally) {
@@ -741,8 +743,10 @@ export function QuestionCard({
     // Update local state immediately
     if (isUnvoting) {
       updateVoteState(null);
+      setLocalVoteIsAnonymous(false);
     } else {
       setHasVotedLocally(true);
+      setLocalVoteIsAnonymous(isPrivateMode);
       updateVoteState(vote);
     }
 
@@ -1280,7 +1284,7 @@ export function QuestionCard({
               isPrivateMode && 'border-dashed'
             )}
           >
-            {isPrivateMode && <Lock className="h-3 w-3" />}
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'YES')) && <Lock className="h-3 w-3" />}
             <Check className="h-4 w-4" />
             Yes
           </Button>
@@ -1295,7 +1299,7 @@ export function QuestionCard({
               isPrivateMode && 'border-dashed'
             )}
           >
-            {isPrivateMode && <Lock className="h-3 w-3" />}
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'NO')) && <Lock className="h-3 w-3" />}
             <X className="h-4 w-4" />
             No
           </Button>
@@ -1310,7 +1314,7 @@ export function QuestionCard({
               isPrivateMode && 'border-dashed'
             )}
           >
-            {isPrivateMode && <Lock className="h-3 w-3" />}
+            {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
             <HelpCircle className="h-4 w-4" />
             Not Sure
           </Button>

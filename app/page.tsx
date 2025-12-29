@@ -113,9 +113,9 @@ export default function FeedPage() {
     });
 
     // Fetch user's votes if logged in (using direct fetch)
-    let userVotes: Record<string, VoteType> = {};
+    let userVotes: Record<string, { vote: VoteType; is_anonymous: boolean }> = {};
     if (user) {
-      const votesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote&user_id=eq.${user.id}`;
+      const votesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=question_id,vote,is_anonymous&user_id=eq.${user.id}`;
       const votesRes = await fetch(votesUrl, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -126,7 +126,10 @@ export default function FeedPage() {
 
       if (votesData && Array.isArray(votesData)) {
         userVotes = Object.fromEntries(
-          votesData.map((v: { question_id: string; vote: string }) => [v.question_id, v.vote as VoteType])
+          votesData.map((v: { question_id: string; vote: string; is_anonymous: boolean }) => [
+            v.question_id, 
+            { vote: v.vote as VoteType, is_anonymous: v.is_anonymous || false }
+          ])
         );
       }
     }
@@ -170,7 +173,8 @@ export default function FeedPage() {
         unsure_percentage: q.unsure_percentage,
         controversy_score: q.controversy_score,
       },
-      user_vote: userVotes[q.question_id] || null,
+      user_vote: userVotes[q.question_id]?.vote || null,
+      user_vote_is_anonymous: userVotes[q.question_id]?.is_anonymous || false,
     }));
 
     // Sort questions

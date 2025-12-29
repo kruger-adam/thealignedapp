@@ -80,6 +80,7 @@ export interface QuestionWithStats extends Question {
     controversy_score: number;
   };
   user_vote?: VoteType | null;
+  user_vote_is_anonymous?: boolean;
 }
 
 export interface Compatibility {

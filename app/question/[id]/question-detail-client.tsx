@@ -57,6 +57,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   
   // Vote state
   const [localUserVote, setLocalUserVote] = useState<VoteType | null>(question.user_vote ?? null);
+  const [localVoteIsAnonymous, setLocalVoteIsAnonymous] = useState(question.user_vote_is_anonymous ?? false);
   const [localStats, setLocalStats] = useState(question.stats);
   
   // Voters state
@@ -147,7 +148,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     // Update local state immediately
     if (isUnvoting) {
       updateVoteState(null);
+      setLocalVoteIsAnonymous(false);
     } else {
+      setLocalVoteIsAnonymous(isPrivateMode);
       updateVoteState(vote);
     }
 
@@ -905,7 +908,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   isPrivateMode && 'border-dashed'
                 )}
               >
-                {isPrivateMode && <Lock className="h-3 w-3" />}
+                {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'YES')) && <Lock className="h-3 w-3" />}
                 <Check className="h-4 w-4" />
                 Yes
               </Button>
@@ -919,7 +922,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   isPrivateMode && 'border-dashed'
                 )}
               >
-                {isPrivateMode && <Lock className="h-3 w-3" />}
+                {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'NO')) && <Lock className="h-3 w-3" />}
                 <X className="h-4 w-4" />
                 No
               </Button>
@@ -933,7 +936,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   isPrivateMode && 'border-dashed'
                 )}
               >
-                {isPrivateMode && <Lock className="h-3 w-3" />}
+                {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
                 <HelpCircle className="h-4 w-4" />
                 Not Sure
               </Button>
