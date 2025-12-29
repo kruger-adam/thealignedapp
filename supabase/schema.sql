@@ -488,6 +488,45 @@ CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 -- ============================================
 -- REALTIME SUBSCRIPTIONS
 -- ============================================
+-- AI COMMENTS
+-- ============================================
+
+-- AI user profile (special system user for AI-generated comments)
+-- This uses a fixed UUID that we reference in the application code
+INSERT INTO profiles (id, email, username, avatar_url)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'ai@yesnonotsure.app',
+  'AI',
+  NULL
+) ON CONFLICT (id) DO NOTHING;
+
+-- Table to track AI query rate limits
+CREATE TABLE IF NOT EXISTS ai_queries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Index for efficient rate limit queries
+CREATE INDEX IF NOT EXISTS idx_ai_queries_user_date ON ai_queries(user_id, created_at);
+
+-- RLS for ai_queries
+ALTER TABLE ai_queries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own AI queries"
+    ON ai_queries FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Authenticated users can create AI queries"
+    ON ai_queries FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = user_id);
+
+-- ============================================
+-- REALTIME
+-- ============================================
 
 -- Enable realtime for responses (for live vote updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE responses;

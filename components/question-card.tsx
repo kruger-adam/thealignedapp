@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -13,6 +13,9 @@ import { QuestionWithStats, VoteType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { triggerInstallPrompt } from '@/components/install-prompt';
+
+// AI user ID for AI-generated comments
+const AI_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 interface QuestionCardProps {
   question: QuestionWithStats;
@@ -480,9 +483,75 @@ export function QuestionCard({
           avatar_url: user.user_metadata?.avatar_url || null,
         }]);
         setCommentCount(prev => prev + 1);
+        setShowComments(true);
+        
+        // Check if comment mentions @AI
+        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
+        
+        if (hasAIMention) {
+          // Show "AI is thinking..." placeholder
+          const aiPlaceholderId = `ai-thinking-${Date.now()}`;
+          setComments(prev => [...prev, {
+            id: aiPlaceholderId,
+            user_id: AI_USER_ID,
+            content: '...',
+            created_at: new Date().toISOString(),
+            username: 'AI',
+            avatar_url: null,
+            isThinking: true,
+          }]);
+          
+          // Call the AI API
+          try {
+            const aiResponse = await fetch('/api/ai-comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                questionId: question.id,
+                userQuery: contentToSave,
+                userId: user.id,
+              }),
+            });
+            
+            if (aiResponse.ok) {
+              const { comment: aiComment } = await aiResponse.json();
+              // Replace placeholder with actual AI response
+              setComments(prev => prev.map(c => 
+                c.id === aiPlaceholderId 
+                  ? {
+                      id: aiComment.id,
+                      user_id: AI_USER_ID,
+                      content: aiComment.content,
+                      created_at: aiComment.created_at,
+                      username: 'AI',
+                      avatar_url: null,
+                    }
+                  : c
+              ));
+              setCommentCount(prev => prev + 1);
+            } else {
+              const errorData = await aiResponse.json();
+              // Replace placeholder with error message
+              setComments(prev => prev.map(c => 
+                c.id === aiPlaceholderId 
+                  ? {
+                      ...c,
+                      content: errorData.error || 'Sorry, I couldn\'t respond right now.',
+                      isThinking: false,
+                      isError: true,
+                    }
+                  : c
+              ));
+            }
+          } catch (aiError) {
+            console.error('AI comment error:', aiError);
+            // Remove placeholder on error
+            setComments(prev => prev.filter(c => c.id !== aiPlaceholderId));
+          }
+        }
+        
         setCommentText('');
         setMentionedUsers([]); // Clear tracked mentions
-        setShowComments(true);
       }
     } catch (err) {
       console.error('Error submitting comment:', err);
@@ -990,23 +1059,51 @@ export function QuestionCard({
             {comments.length === 0 ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
-              comments.map(comment => (
-                <div key={comment.id} className="group flex gap-3">
-                  <Link href={`/profile/${comment.user_id}`}>
-                    <Avatar src={comment.avatar_url} fallback={comment.username || ''} size="sm" className="h-8 w-8 flex-shrink-0" />
-                  </Link>
+              comments.map(comment => {
+                const isAIComment = comment.user_id === AI_USER_ID;
+                const isThinking = (comment as { isThinking?: boolean }).isThinking;
+                const isError = (comment as { isError?: boolean }).isError;
+                
+                return (
+                <div key={comment.id} className={cn(
+                  "group flex gap-3",
+                  isAIComment && "rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30"
+                )}>
+                  {isAIComment ? (
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                      <Bot className={cn("h-4 w-4 text-white", isThinking && "animate-pulse")} />
+                    </div>
+                  ) : (
+                    <Link href={`/profile/${comment.user_id}`}>
+                      <Avatar src={comment.avatar_url} fallback={comment.username || ''} size="sm" className="h-8 w-8 flex-shrink-0" />
+                    </Link>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <Link href={`/profile/${comment.user_id}`} className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100">
-                        {comment.username}
-                      </Link>
-                      <span className="text-xs text-zinc-500">
-                        {getTimeAgo(new Date(comment.created_at))}
-                      </span>
+                      {isAIComment ? (
+                        <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                          AI
+                        </span>
+                      ) : (
+                        <Link href={`/profile/${comment.user_id}`} className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-100">
+                          {comment.username}
+                        </Link>
+                      )}
+                      {!isThinking && (
+                        <span className="text-xs text-zinc-500">
+                          {getTimeAgo(new Date(comment.created_at))}
+                        </span>
+                      )}
+                      {isThinking && (
+                        <span className="text-xs text-violet-500 animate-pulse">thinking...</span>
+                      )}
+                      {isError && (
+                        <span className="text-xs text-rose-500">error</span>
+                      )}
                       {comment.updated_at && new Date(comment.updated_at).getTime() > new Date(comment.created_at).getTime() + 1000 && (
                         <span className="text-xs text-zinc-400 italic">(edited)</span>
                       )}
-                      {user?.id === comment.user_id && editingCommentId !== comment.id && (
+                      {user?.id === comment.user_id && !isAIComment && editingCommentId !== comment.id && (
                         <DropdownMenu
                           trigger={<MoreHorizontal className="h-3.5 w-3.5 text-zinc-400" />}
                           align="right"
@@ -1064,13 +1161,17 @@ export function QuestionCard({
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">
-                        {renderCommentContent(comment.content)}
+                      <p className={cn(
+                        "text-sm break-words",
+                        isAIComment ? "text-zinc-700 dark:text-zinc-300" : "text-zinc-700 dark:text-zinc-300",
+                        isThinking && "text-zinc-400 dark:text-zinc-500"
+                      )}>
+                        {isThinking ? '...' : renderCommentContent(comment.content)}
                       </p>
                     )}
                   </div>
                 </div>
-              ))
+              );})
             )}
             
             {/* Comment Form */}
