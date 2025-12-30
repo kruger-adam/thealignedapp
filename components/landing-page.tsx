@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { Bot, Users, UserCircle, Globe } from 'lucide-react';
@@ -18,7 +19,20 @@ export function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="min-h-screen bg-zinc-950 flex flex-col">
+      {/* Header */}
+      <header className="border-b border-zinc-800 px-4 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Aligned" width={32} height={32} className="rounded-lg" />
+            <span className="text-xl font-bold text-zinc-100">Aligned</span>
+          </div>
+          <Button onClick={signInWithGoogle} variant="outline" size="sm">
+            Sign In
+          </Button>
+        </div>
+      </header>
+
       {/* Hero */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         <div className="max-w-2xl text-center">
