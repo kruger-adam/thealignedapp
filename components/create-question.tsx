@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Plus, Send, Loader2, Lock, Unlock } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Plus, Send, Loader2, Lock, Unlock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
@@ -12,6 +12,46 @@ import { triggerInstallPrompt } from '@/components/install-prompt';
 interface CreateQuestionProps {
   onQuestionCreated?: () => void;
 }
+
+const topicPrompts = {
+  '🤔 Hypothetical': [
+    'Would you move to another country for your dream job?',
+    'Would you give up social media forever for $1 million?',
+    'Would you rather know the date of your death or the cause?',
+    'Would you take a one-way trip to Mars?',
+    'Would you live in a simulation if it meant eternal happiness?',
+  ],
+  '💭 Ethics': [
+    'Is it ever okay to lie to protect someone?',
+    'Should billionaires be taxed more heavily?',
+    'Is it ethical to eat meat?',
+    'Should AI be allowed to make life-or-death decisions?',
+    'Is privacy more important than security?',
+  ],
+  '❤️ Relationships': [
+    'Is it okay to stay friends with an ex?',
+    'Should couples share passwords?',
+    'Is long-distance worth it?',
+    'Should you tell a friend if their partner is cheating?',
+    'Is it better to marry your best friend or someone you have chemistry with?',
+  ],
+  '💼 Life': [
+    'Is work-life balance actually achievable?',
+    'Should you follow your passion or the money?',
+    'Is college worth it anymore?',
+    'Would you take a 50% pay cut for a job you love?',
+    'Is it better to rent or buy a home?',
+  ],
+  '🎮 Fun': [
+    'Is a hot dog a sandwich?',
+    'Should pineapple go on pizza?',
+    'Is water wet?',
+    'Would you rather fight 100 duck-sized horses or 1 horse-sized duck?',
+    'Is cereal a soup?',
+  ],
+};
+
+type TopicKey = keyof typeof topicPrompts;
 
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
@@ -25,6 +65,12 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const maxChars = 280;
   const isOverLimit = charCount > maxChars;
   const isValid = content.trim().length > 0 && !isOverLimit;
+
+  const getRandomPrompt = useCallback((topic: TopicKey) => {
+    const prompts = topicPrompts[topic];
+    const randomIndex = Math.floor(Math.random() * prompts.length);
+    setContent(prompts[randomIndex]);
+  }, []);
 
   const handleSubmit = async () => {
     if (!user || !isValid || isLoading) return;
@@ -169,6 +215,21 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                 }
               }}
             />
+
+            {/* Topic inspiration chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pb-2">
+              <Sparkles className="h-3.5 w-3.5 text-zinc-400" />
+              {(Object.keys(topicPrompts) as TopicKey[]).map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => getRandomPrompt(topic)}
+                  className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
             
             <div className="flex items-center justify-between">
               <span
