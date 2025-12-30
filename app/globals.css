@@ -192,6 +192,20 @@ body {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background-size: 200% 100%;
+}
+
 /* Apply to view transitions */
 ::view-transition-old(root) {
   animation: fade-scale-out 0.2s ease-out forwards;

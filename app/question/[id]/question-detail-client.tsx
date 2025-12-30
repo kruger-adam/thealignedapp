@@ -909,29 +909,27 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   unsure={localStats.unsure_count}
                 />
               ) : (
-                <div className="flex h-4 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <span className="text-xs text-zinc-400">Vote to see results</span>
+                <div className="relative h-4 overflow-hidden rounded-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10 animate-shimmer" />
                 </div>
               )}
               <button
-                onClick={canSeeResults ? fetchVoters : undefined}
-                disabled={!canSeeResults}
-                className={cn(
-                  "mt-2 flex items-center gap-1.5 text-sm text-zinc-500",
-                  canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
-                  !canSeeResults && "cursor-not-allowed"
-                )}
-                title={!canSeeResults ? "Vote to see who voted" : undefined}
+                onClick={() => {
+                  if (!canSeeResults) {
+                    alert('Vote first to see who voted!');
+                    return;
+                  }
+                  fetchVoters();
+                }}
+                className="mt-2 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
               >
                 <span>{localStats.total_votes} vote{localStats.total_votes !== 1 ? 's' : ''}</span>
-                {canSeeResults && (
-                  loadingVoters ? (
-                    <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-                  ) : showVoters ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )
+                {loadingVoters ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                ) : showVoters ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
                 )}
               </button>
               

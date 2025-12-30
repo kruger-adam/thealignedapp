@@ -995,18 +995,25 @@ export function QuestionCard({
           )}
           <div className="flex items-center gap-3">
             <button
-              onClick={canSeeResults ? fetchVoters : undefined}
-              disabled={optimisticData.stats.total_votes === 0 || !canSeeResults}
+              onClick={() => {
+                if (!canSeeResults && optimisticData.stats.total_votes > 0) {
+                  // Show toast/alert that they need to vote first
+                  alert('Vote first to see who voted!');
+                  return;
+                }
+                if (optimisticData.stats.total_votes > 0) {
+                  fetchVoters();
+                }
+              }}
+              disabled={optimisticData.stats.total_votes === 0}
               className={cn(
                 "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
-                optimisticData.stats.total_votes > 0 && canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
-                !canSeeResults && optimisticData.stats.total_votes > 0 && "cursor-not-allowed"
+                optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
               )}
-              title={!canSeeResults && optimisticData.stats.total_votes > 0 ? "Vote to see who voted" : undefined}
             >
               <Vote className="h-3.5 w-3.5" />
               <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span></span>
-              {optimisticData.stats.total_votes > 0 && canSeeResults && (
+              {optimisticData.stats.total_votes > 0 && (
                 loadingVoters ? (
                   <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
                 ) : showVoters ? (
@@ -1017,25 +1024,23 @@ export function QuestionCard({
               )}
             </button>
             <button
-              onClick={canSeeResults ? fetchComments : undefined}
-              disabled={!canSeeResults}
-              className={cn(
-                "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
-                canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
-                !canSeeResults && commentCount > 0 && "cursor-not-allowed"
-              )}
-              title={!canSeeResults && commentCount > 0 ? "Vote to see comments" : undefined}
+              onClick={() => {
+                if (!canSeeResults) {
+                  alert('Vote first to see comments!');
+                  return;
+                }
+                fetchComments();
+              }}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
             >
               <MessageCircle className="h-3.5 w-3.5" />
               <span>{commentCount}<span className="hidden sm:inline"> comment{commentCount !== 1 ? 's' : ''}</span></span>
-              {canSeeResults && (
-                loadingComments ? (
-                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-                ) : showComments ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )
+              {loadingComments ? (
+                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+              ) : showComments ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
               )}
             </button>
           </div>
@@ -1206,8 +1211,9 @@ export function QuestionCard({
                 size="md"
               />
             ) : (
-              <div className="flex h-2 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                <span className="text-xs text-zinc-400">Vote to see results</span>
+              <div className="relative h-2 overflow-hidden rounded-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10 animate-shimmer" 
+                  style={{ backgroundSize: '200% 100%', animation: 'shimmer 2s infinite linear' }} />
               </div>
             )}
           </div>
