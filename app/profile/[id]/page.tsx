@@ -28,6 +28,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   // Fetch user's responses with questions
   // If viewing someone else's profile, exclude their anonymous votes
+  // Always exclude AI votes (is_ai = false)
   let responsesQuery = supabase
     .from('responses')
     .select(`
@@ -43,6 +44,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       )
     `)
     .eq('user_id', profile.id)
+    .eq('is_ai', false)
     .order('updated_at', { ascending: false });
   
   // Only filter out anonymous votes when viewing someone else's profile

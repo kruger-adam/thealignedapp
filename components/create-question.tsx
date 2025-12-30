@@ -45,15 +45,15 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       .single();
 
     if (error || !newQuestion) {
-      console.error('Error creating question:', error);
+        console.error('Error creating question:', error);
       setIsLoading(false);
-      return;
-    }
+        return;
+      }
 
     // Reset form immediately - don't wait for categorization or notifications
     const wasAnonymous = isAnonymous;
-    setContent('');
-    setIsExpanded(false);
+      setContent('');
+      setIsExpanded(false);
     setIsLoading(false);
     setIsAnonymous(false);
     onQuestionCreated?.();
@@ -94,7 +94,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     })
       .then(() => {
         // Refresh questions to show AI vote
-        onQuestionCreated?.();
+      onQuestionCreated?.();
       })
       .catch(err => console.error('Error getting AI vote:', err));
 

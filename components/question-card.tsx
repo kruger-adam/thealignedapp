@@ -970,25 +970,25 @@ export function QuestionCard({
               </div>
             </div>
           ) : (
-            <Link 
-              href={`/profile/${question.author_id}`}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            >
-              <Avatar
-                src={authorAvatar}
-                fallback={authorName || 'Anonymous'}
-                size="sm"
-              />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {authorName || 'Anonymous'}
-                </span>
-                <span className="flex items-center gap-1 text-xs text-zinc-500">
-                  <Clock className="h-3 w-3" />
-                  {timeAgo}
-                </span>
-              </div>
-            </Link>
+          <Link 
+            href={`/profile/${question.author_id}`}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <Avatar
+              src={authorAvatar}
+              fallback={authorName || 'Anonymous'}
+              size="sm"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {authorName || 'Anonymous'}
+              </span>
+              <span className="flex items-center gap-1 text-xs text-zinc-500">
+                <Clock className="h-3 w-3" />
+                {timeAgo}
+              </span>
+            </div>
+          </Link>
           )}
           <div className="flex items-center gap-3">
             <button
@@ -1028,7 +1028,7 @@ export function QuestionCard({
           </div>
         </div>
       </CardHeader>
-
+      
       <CardContent className="pb-4">
         {isEditingQuestion ? (
           <div className="space-y-2">
