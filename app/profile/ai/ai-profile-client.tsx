@@ -114,7 +114,7 @@ export function AIProfileClient({
               AI
             </h1>
             <p className="text-sm text-zinc-500">
-              Powered by GPT-4.1-mini • Votes on every question • Posts questions hourly
+              Powered by GPT-4.1-mini • Votes on every question • Posts questions daily
             </p>
           </div>
         </CardContent>
