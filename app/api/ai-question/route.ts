@@ -92,34 +92,48 @@ Respond with ONLY the question, nothing else.`
       return NextResponse.json({ error: 'Failed to insert question' }, { status: 500 });
     }
 
-    console.log('AI generated question:', questionContent);
+    console.log('AI generated question:', questionContent, 'ID:', newQuestion.id);
 
     // Get base URL from request or environment
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
+    
+    console.log('Using baseUrl:', baseUrl);
 
     // Trigger AI vote on the new question
     try {
+      console.log('Triggering AI vote...');
       const voteResponse = await fetch(`${baseUrl}/api/ai-vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: newQuestion.id }),
       });
-      if (!voteResponse.ok) {
-        console.error('AI vote failed:', await voteResponse.text());
-      }
+      const voteResult = await voteResponse.text();
+      console.log('AI vote response:', voteResponse.status, voteResult);
     } catch (voteError) {
       console.error('Error triggering AI vote:', voteError);
     }
 
     // Trigger categorization
     try {
-      await fetch(`${baseUrl}/api/categorize`, {
+      console.log('Triggering categorization...');
+      const catResponse = await fetch(`${baseUrl}/api/categorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: newQuestion.id, content: questionContent }),
+        body: JSON.stringify({ question: questionContent }),
       });
+      const catResult = await catResponse.json();
+      console.log('Categorization response:', catResponse.status, catResult);
+      
+      // Update question with category
+      if (catResult.category) {
+        await supabase
+          .from('questions')
+          .update({ category: catResult.category })
+          .eq('id', newQuestion.id);
+        console.log('Updated question category to:', catResult.category);
+      }
     } catch (catError) {
       console.error('Error triggering categorization:', catError);
     }
