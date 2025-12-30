@@ -214,7 +214,7 @@ export function AIProfileClient({
                       </p>
                       {item.ai_reasoning && (
                         <p className="mt-1 text-xs text-zinc-500 italic">
-                          AI: "{item.ai_reasoning}"
+                          AI: &ldquo;{item.ai_reasoning}&rdquo;
                         </p>
                       )}
                     </div>
@@ -262,7 +262,7 @@ export function AIProfileClient({
                       </p>
                       {item.ai_reasoning && (
                         <p className="mt-1 text-xs text-zinc-500 italic">
-                          AI: "{item.ai_reasoning}"
+                          AI: &ldquo;{item.ai_reasoning}&rdquo;
                         </p>
                       )}
                     </div>
@@ -334,7 +334,7 @@ export function AIProfileClient({
                         </p>
                         {response.ai_reasoning && (
                           <p className="mt-1 text-xs text-zinc-500 italic">
-                            "{response.ai_reasoning}"
+                            &ldquo;{response.ai_reasoning}&rdquo;
                           </p>
                         )}
                         <p className="mt-1 text-xs text-zinc-400">

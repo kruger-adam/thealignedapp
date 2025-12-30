@@ -23,12 +23,13 @@ interface CommentListProps {
 export function CommentList({
   comments,
   currentUserId,
-  questionId,
+  questionId: _questionId,
   onCommentUpdated,
   onCommentDeleted,
   renderCommentContent,
   getTimeAgo,
 }: CommentListProps) {
+  void _questionId; // Reserved for future use
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editedCommentContent, setEditedCommentContent] = useState('');
   const [savingComment, setSavingComment] = useState(false);
