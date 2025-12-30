@@ -106,17 +106,34 @@ async function backfillAIVotes() {
   let successCount = 0;
   let errorCount = 0;
 
+  // Get a fallback user_id for AI questions (which have no author)
+  let fallbackUserId: string | null = null;
+  const { data: anyUser } = await supabase
+    .from('profiles')
+    .select('id')
+    .limit(1)
+    .single();
+  fallbackUserId = anyUser?.id || null;
+
   for (const question of questionsNeedingVote) {
     try {
       console.log(`Processing: "${question.content.substring(0, 50)}..."`);
       
       const { vote, reasoning } = await getAIVote(question.content);
       
+      // Use author_id if available, otherwise use fallback
+      const userId = question.author_id || fallbackUserId;
+      if (!userId) {
+        console.error(`  ❌ No valid user_id available`);
+        errorCount++;
+        continue;
+      }
+      
       const { error: insertError } = await supabase
         .from('responses')
         .insert({
           question_id: question.id,
-          user_id: question.author_id, // Use author's ID (required by FK)
+          user_id: userId,
           vote: vote,
           is_ai: true,
           is_anonymous: false,
