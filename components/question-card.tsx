@@ -1044,6 +1044,46 @@ export function QuestionCard({
                 <ChevronDown className="h-3 w-3" />
               )}
             </button>
+            <div className="relative">
+              <DropdownMenu
+                trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer" />}
+                align="right"
+              >
+                <DropdownMenuItem onClick={shareQuestion}>
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
+                </DropdownMenuItem>
+                {user && (
+                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
+                    <Lock className="h-3.5 w-3.5" />
+                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
+                  </DropdownMenuItem>
+                )}
+                {user?.id === question.author_id && (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={deleteQuestion}
+                      variant="destructive"
+                      disabled={deletingQuestion}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingQuestion ? 'Deleting...' : 'Delete'}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenu>
+              {copied && (
+                <div className="absolute right-0 top-6 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+                    Link copied!
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -1093,46 +1133,6 @@ export function QuestionCard({
             {questionWasEdited && (
               <span className="text-xs text-zinc-400 italic">(edited)</span>
             )}
-            <div className="absolute -right-1 -top-1">
-              <DropdownMenu
-                trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
-                align="right"
-              >
-                <DropdownMenuItem onClick={shareQuestion}>
-                  <Share2 className="h-3.5 w-3.5" />
-                  Share
-                </DropdownMenuItem>
-                {user && (
-                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
-                    <Lock className="h-3.5 w-3.5" />
-                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
-                  </DropdownMenuItem>
-                )}
-                {user?.id === question.author_id && (
-                  <>
-                    <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={deleteQuestion}
-                      variant="destructive"
-                      disabled={deletingQuestion}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {deletingQuestion ? 'Deleting...' : 'Delete'}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenu>
-              {copied && (
-                <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
-                    Link copied!
-                  </span>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </CardContent>
