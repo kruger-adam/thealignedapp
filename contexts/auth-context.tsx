@@ -94,6 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    // Redirect to landing page
+    window.location.href = '/';
   };
 
   return (
