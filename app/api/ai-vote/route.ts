@@ -8,13 +8,46 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { questionId, questionContent, authorId } = await req.json();
+    const { questionId, questionContent: providedContent, authorId } = await req.json();
     
-    if (!questionId || !questionContent || !authorId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!questionId) {
+      return NextResponse.json({ error: 'Missing questionId' }, { status: 400 });
     }
 
     const supabase = await createClient();
+
+    // If content not provided, fetch question details from the database
+    let questionContent = providedContent;
+    let finalAuthorId = authorId;
+    
+    if (!questionContent || !finalAuthorId) {
+      const { data: question } = await supabase
+        .from('questions')
+        .select('content, author_id')
+        .eq('id', questionId)
+        .single();
+      
+      if (!questionContent) questionContent = question?.content;
+      if (!finalAuthorId) finalAuthorId = question?.author_id;
+    }
+
+    if (!questionContent) {
+      return NextResponse.json({ error: 'Could not get question content' }, { status: 400 });
+    }
+
+    // For AI-generated questions (no author), get any valid user_id for FK constraint
+    if (!finalAuthorId) {
+      const { data: anyUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1)
+        .single();
+      finalAuthorId = anyUser?.id;
+    }
+
+    if (!finalAuthorId) {
+      return NextResponse.json({ error: 'No valid user found for vote' }, { status: 400 });
+    }
 
     // Check if AI already voted on this question
     const { data: existingVote } = await supabase
@@ -68,7 +101,7 @@ Guidelines:
       .from('responses')
       .insert({
         question_id: questionId,
-        user_id: authorId, // Use author's ID (required by FK), but mark as AI
+        user_id: finalAuthorId, // Use author's ID (required by FK), but mark as AI
         vote: vote,
         is_ai: true,
         is_anonymous: false,
