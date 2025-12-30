@@ -27,7 +27,7 @@ export function LandingPage() {
             <Image src="/logo.png" alt="Aligned" width={32} height={32} className="rounded-lg" />
             <span className="text-xl font-bold text-zinc-100">Aligned</span>
           </div>
-          <Button onClick={signInWithGoogle} variant="outline" size="sm">
+          <Button onClick={signInWithGoogle} size="sm">
             Sign In
           </Button>
         </div>
