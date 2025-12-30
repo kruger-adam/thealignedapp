@@ -83,25 +83,21 @@ export default async function AIProfilePage() {
           const userVote = userVoteMap.get(aiVote.question.id)!;
           if (userVote === aiVote.vote) {
             agreements++;
-            if (commonGround.length < 5) {
-              commonGround.push({
-                question_id: aiVote.question.id,
-                content: aiVote.question.content,
-                shared_vote: aiVote.vote,
-                ai_reasoning: aiVote.ai_reasoning,
-              });
-            }
+            commonGround.push({
+              question_id: aiVote.question.id,
+              content: aiVote.question.content,
+              shared_vote: aiVote.vote,
+              ai_reasoning: aiVote.ai_reasoning,
+            });
           } else {
             disagreements++;
-            if (divergence.length < 5) {
-              divergence.push({
-                question_id: aiVote.question.id,
-                content: aiVote.question.content,
-                vote_user: userVote,
-                vote_ai: aiVote.vote,
-                ai_reasoning: aiVote.ai_reasoning,
-              });
-            }
+            divergence.push({
+              question_id: aiVote.question.id,
+              content: aiVote.question.content,
+              vote_user: userVote,
+              vote_ai: aiVote.vote,
+              ai_reasoning: aiVote.ai_reasoning,
+            });
           }
         }
       });

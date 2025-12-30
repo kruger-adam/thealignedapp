@@ -79,6 +79,8 @@ export function AIProfileClient({
 }: AIProfileClientProps) {
   const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all');
   const [showAllStances, setShowAllStances] = useState(false);
+  const [commonGroundVisible, setCommonGroundVisible] = useState(5);
+  const [divergenceVisible, setDivergenceVisible] = useState(5);
 
   const filteredResponses = stanceFilter === 'all' 
     ? responses 
@@ -187,11 +189,11 @@ export function AIProfileClient({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-emerald-600">
               <Heart className="h-5 w-5" />
-              Where You Agree
+              Where You Agree ({commonGround.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {commonGround.map((item) => {
+            {commonGround.slice(0, commonGroundVisible).map((item) => {
               const config = voteConfig[item.shared_vote as keyof typeof voteConfig];
               const Icon = config?.icon || HelpCircle;
               return (
@@ -222,6 +224,17 @@ export function AIProfileClient({
                 </Link>
               );
             })}
+            {commonGround.length > commonGroundVisible && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCommonGroundVisible(prev => prev + 5)}
+                className="w-full"
+              >
+                <ChevronDown className="mr-1 h-4 w-4" />
+                Show more ({commonGround.length - commonGroundVisible} remaining)
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -232,11 +245,11 @@ export function AIProfileClient({
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-rose-600">
               <Swords className="h-5 w-5" />
-              Where You Differ
+              Where You Differ ({divergence.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {divergence.map((item) => {
+            {divergence.slice(0, divergenceVisible).map((item) => {
               const userConfig = voteConfig[item.vote_user as keyof typeof voteConfig];
               const aiConfig = voteConfig[item.vote_ai as keyof typeof voteConfig];
               return (
@@ -270,6 +283,17 @@ export function AIProfileClient({
                 </Link>
               );
             })}
+            {divergence.length > divergenceVisible && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDivergenceVisible(prev => prev + 5)}
+                className="w-full"
+              >
+                <ChevronDown className="mr-1 h-4 w-4" />
+                Show more ({divergence.length - divergenceVisible} remaining)
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
