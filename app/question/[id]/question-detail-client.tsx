@@ -770,7 +770,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 <p className="flex items-center gap-1 font-medium text-zinc-600 dark:text-zinc-400">
                   Anonymous
                   {user?.id === question.author_id && (
-                    <Lock className="h-3 w-3 text-zinc-400" title="Your anonymous post" />
+                    <span title="Your anonymous post"><Lock className="h-3 w-3 text-zinc-400" /></span>
                   )}
                 </p>
                 <div className="flex items-center gap-1 text-xs text-zinc-500">

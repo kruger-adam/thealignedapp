@@ -522,7 +522,9 @@ export function ProfileClient({
                   <p className="flex items-center gap-1.5 text-sm text-zinc-900 dark:text-zinc-100">
                     {question.content}
                     {question.is_anonymous && (
-                      <Lock className="h-3 w-3 text-zinc-400" title="Posted anonymously" />
+                      <span title="Posted anonymously">
+                        <Lock className="h-3 w-3 text-zinc-400" />
+                      </span>
                     )}
                   </p>
                   <p className="text-xs text-zinc-500">
