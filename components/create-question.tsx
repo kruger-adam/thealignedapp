@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Send, Loader2 } from 'lucide-react';
+import { Plus, Send, Loader2, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
@@ -18,6 +18,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
   const charCount = content.length;
@@ -38,6 +39,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         author_id: user.id,
         content: questionContent,
         category: 'Other', // Default, will be updated async
+        is_anonymous: isAnonymous,
       })
       .select('id')
       .single();
@@ -49,9 +51,11 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     }
 
     // Reset form immediately - don't wait for categorization or notifications
+    const wasAnonymous = isAnonymous;
     setContent('');
     setIsExpanded(false);
     setIsLoading(false);
+    setIsAnonymous(false);
     onQuestionCreated?.();
 
     // Trigger install prompt after creating a question
@@ -94,25 +98,27 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       })
       .catch(err => console.error('Error getting AI vote:', err));
 
-    // Notify followers in background (fire and forget)
-    supabase
-      .from('follows')
-      .select('follower_id')
-      .eq('following_id', user.id)
-      .then(({ data: followers }) => {
-        if (followers && followers.length > 0) {
-          const notifications = followers.map(f => ({
-            user_id: f.follower_id,
-            type: 'new_question' as const,
-            actor_id: user.id,
-            question_id: newQuestion.id,
-          }));
-          
-          supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
-            if (notifError) console.error('Error creating notifications:', notifError);
-          });
-        }
-      });
+    // Notify followers in background (fire and forget) - skip for anonymous posts
+    if (!wasAnonymous) {
+      supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', user.id)
+        .then(({ data: followers }) => {
+          if (followers && followers.length > 0) {
+            const notifications = followers.map(f => ({
+              user_id: f.follower_id,
+              type: 'new_question' as const,
+              actor_id: user.id,
+              question_id: newQuestion.id,
+            }));
+            
+            supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+              if (notifError) console.error('Error creating notifications:', notifError);
+            });
+          }
+        });
+    }
   };
 
   if (!user) {
@@ -178,13 +184,32 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                 {charCount}/{maxChars}
               </span>
               
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                    isAnonymous
+                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                  )}
+                  title={isAnonymous ? "Posting anonymously" : "Post anonymously"}
+                >
+                  {isAnonymous ? (
+                    <Lock className="h-3 w-3" />
+                  ) : (
+                    <Unlock className="h-3 w-3" />
+                  )}
+                  {isAnonymous ? "Anonymous" : "Public"}
+                </button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
                     setContent('');
                     setIsExpanded(false);
+                    setIsAnonymous(false);
                   }}
                 >
                   Cancel

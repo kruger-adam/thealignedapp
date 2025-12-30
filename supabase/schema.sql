@@ -62,7 +62,8 @@ CREATE TABLE questions (
     content TEXT NOT NULL CHECK (char_length(content) <= 280),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    is_ai BOOLEAN DEFAULT false
+    is_ai BOOLEAN DEFAULT false,
+    is_anonymous BOOLEAN DEFAULT false
 );
 
 -- Create index for faster queries

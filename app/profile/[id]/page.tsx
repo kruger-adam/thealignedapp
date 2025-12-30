@@ -88,11 +88,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }));
 
   // Fetch questions created by this user
-  const { data: createdQuestions } = await supabase
+  // If viewing someone else's profile, exclude their anonymous questions
+  let questionsQuery = supabase
     .from('questions')
-    .select('id, content, created_at')
+    .select('id, content, created_at, is_anonymous')
     .eq('author_id', profile.id)
     .order('created_at', { ascending: false });
+  
+  // Only filter out anonymous questions when viewing someone else's profile
+  if (!isOwnProfile) {
+    questionsQuery = questionsQuery.eq('is_anonymous', false);
+  }
+  
+  const { data: createdQuestions } = await questionsQuery;
 
   // Calculate stats
   const totalVotes = responses.length;

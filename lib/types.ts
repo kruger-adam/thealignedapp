@@ -32,6 +32,7 @@ export interface Question {
   updated_at: string;
   author?: Partial<Profile>;
   is_ai?: boolean;
+  is_anonymous?: boolean;
 }
 
 export interface Response {

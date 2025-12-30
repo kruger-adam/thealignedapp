@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, MoreHorizontal, Trash2, Share2, Bot } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -761,6 +761,24 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 </div>
               </div>
             </Link>
+          ) : question.is_anonymous ? (
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700">
+                <User className="h-5 w-5 text-zinc-500 dark:text-zinc-400" />
+              </div>
+              <div>
+                <p className="flex items-center gap-1 font-medium text-zinc-600 dark:text-zinc-400">
+                  Anonymous
+                  {user?.id === question.author_id && (
+                    <Lock className="h-3 w-3 text-zinc-400" title="Your anonymous post" />
+                  )}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  <span>{timeAgo}</span>
+                </div>
+              </div>
+            </div>
           ) : (
             <Link 
               href={`/profile/${question.author_id}`}

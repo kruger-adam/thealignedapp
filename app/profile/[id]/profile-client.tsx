@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +58,7 @@ interface CreatedQuestion {
   id: string;
   content: string;
   created_at: string;
+  is_anonymous?: boolean;
 }
 
 interface FollowUser {
@@ -517,8 +519,11 @@ export function ProfileClient({
                   <HelpCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                  <p className="flex items-center gap-1.5 text-sm text-zinc-900 dark:text-zinc-100">
                     {question.content}
+                    {question.is_anonymous && (
+                      <Lock className="h-3 w-3 text-zinc-400" title="Posted anonymously" />
+                    )}
                   </p>
                   <p className="text-xs text-zinc-500">
                     {new Date(question.created_at).toLocaleDateString('en-US', {

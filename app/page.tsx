@@ -90,6 +90,7 @@ export default function FeedPage() {
       created_at: string;
       updated_at: string;
       is_ai: boolean;
+      is_anonymous: boolean;
     }
     
     const questionIds = (rawQuestions as RawQuestion[]).map(q => q.id);
@@ -151,6 +152,7 @@ export default function FeedPage() {
         created_at: q.created_at,
         updated_at: q.updated_at,
         is_ai: q.is_ai || false,
+        is_anonymous: q.is_anonymous || false,
         total_votes: total,
         yes_count: stats.yes,
         no_count: stats.no,

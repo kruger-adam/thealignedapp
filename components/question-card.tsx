@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -951,6 +951,24 @@ export function QuestionCard({
                 </span>
               </div>
             </Link>
+          ) : question.is_anonymous ? (
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700">
+                <User className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="flex items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Anonymous
+                  {user?.id === question.author_id && (
+                    <Lock className="h-3 w-3 text-zinc-400" title="Your anonymous post" />
+                  )}
+                </span>
+                <span className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  {timeAgo}
+                </span>
+              </div>
+            </div>
           ) : (
             <Link 
               href={`/profile/${question.author_id}`}
