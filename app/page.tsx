@@ -5,13 +5,19 @@ import { Loader2 } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
 import { FeedFilters } from '@/components/feed-filters';
+import { LandingPage } from '@/components/landing-page';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
 import { MinVotes, TimePeriod } from '@/components/feed-filters';
 
 export default function FeedPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  
+  // Show landing page for logged-out users
+  if (!authLoading && !user) {
+    return <LandingPage />;
+  }
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
