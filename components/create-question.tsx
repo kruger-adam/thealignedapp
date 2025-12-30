@@ -49,6 +49,13 @@ const topicPrompts = {
     'Would you rather fight 100 duck-sized horses or 1 horse-sized duck?',
     'Is cereal a soup?',
   ],
+  '🗳️ Politics': [
+    'Should voting be mandatory?',
+    'Is democracy the best form of government?',
+    'Should there be term limits for all politicians?',
+    'Is political correctness helping or hurting society?',
+    'Should the voting age be lowered to 16?',
+  ],
 };
 
 type TopicKey = keyof typeof topicPrompts;
