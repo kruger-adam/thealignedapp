@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   description: 'A modern polling platform to track opinions, find common ground, and understand where people stand on issues that matter.',
   keywords: ['polling', 'opinions', 'yes', 'no', 'voting', 'social'],
   manifest: '/manifest.json',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo-transparent.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
