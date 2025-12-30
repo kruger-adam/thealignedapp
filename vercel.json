@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/ai-question",
+      "schedule": "0 14 * * *"
+    }
+  ]
+}
+

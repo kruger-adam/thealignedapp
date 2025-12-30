@@ -25,12 +25,13 @@ export type Category =
 
 export interface Question {
   id: string;
-  author_id: string;
+  author_id: string | null;
   content: string;
   category?: Category;
   created_at: string;
   updated_at: string;
   author?: Partial<Profile>;
+  is_ai?: boolean;
 }
 
 export interface Response {

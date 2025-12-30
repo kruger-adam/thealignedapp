@@ -84,11 +84,12 @@ export default function FeedPage() {
     // Fetch all responses to calculate vote stats
     interface RawQuestion {
       id: string;
-      author_id: string;
+      author_id: string | null;
       content: string;
       category: string | null;
       created_at: string;
       updated_at: string;
+      is_ai: boolean;
     }
     
     const questionIds = (rawQuestions as RawQuestion[]).map(q => q.id);
@@ -149,6 +150,7 @@ export default function FeedPage() {
         category: q.category,
         created_at: q.created_at,
         updated_at: q.updated_at,
+        is_ai: q.is_ai || false,
         total_votes: total,
         yes_count: stats.yes,
         no_count: stats.no,
@@ -184,23 +186,25 @@ export default function FeedPage() {
       }
     }
 
-    // Fetch author profiles (only if there are questions)
+    // Fetch author profiles (only if there are questions with authors)
     let profilesMap: Record<string, { id: string; username: string | null; avatar_url: string | null }> = {};
     
     if (questionsData.length > 0) {
-      const authorIds = [...new Set(questionsData.map((q) => q.author_id))];
-      const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${authorIds.join(',')})`;
-      const profilesRes = await fetch(profilesUrl, {
-        headers: {
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-        },
-      });
-      const profiles = await profilesRes.json();
+      const authorIds = [...new Set(questionsData.map((q) => q.author_id).filter((id): id is string => id !== null))];
+      if (authorIds.length > 0) {
+        const profilesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&id=in.(${authorIds.join(',')})`;
+        const profilesRes = await fetch(profilesUrl, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          },
+        });
+        const profiles = await profilesRes.json();
 
-      profilesMap = Object.fromEntries(
-        (profiles || []).map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
-      );
+        profilesMap = Object.fromEntries(
+          (profiles || []).map((p: { id: string; username: string | null; avatar_url: string | null }) => [p.id, p])
+        );
+      }
     }
 
     // Transform data
@@ -211,7 +215,8 @@ export default function FeedPage() {
       category: q.category as import('@/lib/types').Category | undefined,
       created_at: q.created_at,
       updated_at: q.updated_at,
-      author: profilesMap[q.author_id],
+      is_ai: q.is_ai,
+      author: q.author_id ? profilesMap[q.author_id] : undefined,
       stats: {
         total_votes: q.total_votes,
         yes_count: q.yes_count,

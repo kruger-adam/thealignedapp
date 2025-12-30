@@ -24,12 +24,16 @@ export default async function QuestionPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch author profile
-  const { data: author } = await supabase
-    .from('profiles')
-    .select('id, username, avatar_url')
-    .eq('id', question.author_id)
-    .single();
+  // Fetch author profile (only if not an AI question)
+  let author = null;
+  if (question.author_id) {
+    const { data: authorData } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url')
+      .eq('id', question.author_id)
+      .single();
+    author = authorData;
+  }
 
   // Fetch vote stats
   const { data: votes } = await supabase

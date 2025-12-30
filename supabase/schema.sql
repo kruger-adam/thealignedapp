@@ -58,10 +58,11 @@ CREATE POLICY "Users can update their own profile"
 
 CREATE TABLE questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    author_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     content TEXT NOT NULL CHECK (char_length(content) <= 280),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    is_ai BOOLEAN DEFAULT false
 );
 
 -- Create index for faster queries
@@ -78,7 +79,7 @@ CREATE POLICY "Questions are viewable by everyone"
 
 CREATE POLICY "Authenticated users can create questions"
     ON questions FOR INSERT
-    WITH CHECK (auth.uid() = author_id);
+    WITH CHECK (auth.uid() = author_id OR is_ai = true);
 
 CREATE POLICY "Users can update their own questions"
     ON questions FOR UPDATE

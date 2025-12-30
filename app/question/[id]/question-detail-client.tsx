@@ -742,25 +742,45 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       <Card className="mb-6">
         <CardContent className="pt-6">
           {/* Author */}
-          <Link 
-            href={`/profile/${question.author_id}`}
-            className="mb-4 flex items-center gap-3 hover:opacity-80 transition-opacity"
-          >
-            <Avatar
-              src={question.author?.avatar_url}
-              fallback={question.author?.username || 'A'}
-              size="md"
-            />
-            <div>
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                {question.author?.username || 'Anonymous'}
-              </p>
-              <div className="flex items-center gap-1 text-xs text-zinc-500">
-                <Clock className="h-3 w-3" />
-                <span>{timeAgo}</span>
+          {question.is_ai ? (
+            <Link 
+              href="/profile/ai"
+              className="mb-4 flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-5 w-5 text-white" />
               </div>
-            </div>
-          </Link>
+              <div>
+                <p className="font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                  AI
+                </p>
+                <div className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  <span>{timeAgo}</span>
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <Link 
+              href={`/profile/${question.author_id}`}
+              className="mb-4 flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
+              <Avatar
+                src={question.author?.avatar_url}
+                fallback={question.author?.username || 'A'}
+                size="md"
+              />
+              <div>
+                <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {question.author?.username || 'Anonymous'}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  <span>{timeAgo}</span>
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Question content */}
           {isEditingQuestion ? (

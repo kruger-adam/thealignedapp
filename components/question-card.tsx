@@ -933,25 +933,45 @@ export function QuestionCard({
     <Card className="transition-all duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
-          <Link 
-            href={`/profile/${question.author_id}`}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          >
-            <Avatar
-              src={authorAvatar}
-              fallback={authorName || 'Anonymous'}
-              size="sm"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                {authorName || 'Anonymous'}
-              </span>
-              <span className="flex items-center gap-1 text-xs text-zinc-500">
-                <Clock className="h-3 w-3" />
-                {timeAgo}
-              </span>
-            </div>
-          </Link>
+          {question.is_ai ? (
+            <Link 
+              href="/profile/ai"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                  AI
+                </span>
+                <span className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  {timeAgo}
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <Link 
+              href={`/profile/${question.author_id}`}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
+              <Avatar
+                src={authorAvatar}
+                fallback={authorName || 'Anonymous'}
+                size="sm"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  {authorName || 'Anonymous'}
+                </span>
+                <span className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" />
+                  {timeAgo}
+                </span>
+              </div>
+            </Link>
+          )}
           <div className="flex items-center gap-3">
             <button
               onClick={fetchVoters}
