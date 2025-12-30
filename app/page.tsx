@@ -218,7 +218,8 @@ export default function FeedPage() {
       created_at: q.created_at,
       updated_at: q.updated_at,
       is_ai: q.is_ai,
-      author: q.author_id ? profilesMap[q.author_id] : undefined,
+      is_anonymous: q.is_anonymous,
+      author: (q.author_id && !q.is_anonymous) ? profilesMap[q.author_id] : undefined,
       stats: {
         total_votes: q.total_votes,
         yes_count: q.yes_count,
