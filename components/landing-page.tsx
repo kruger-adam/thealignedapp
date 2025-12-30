@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { Bot, Users, UserCircle, Globe } from 'lucide-react';
@@ -19,20 +18,7 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      {/* Header */}
-      <header className="border-b border-zinc-800 px-4 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Aligned" width={32} height={32} className="rounded-lg" />
-            <span className="text-xl font-bold text-zinc-100">Aligned</span>
-          </div>
-          <Button onClick={signInWithGoogle} variant="outline" size="sm">
-            Sign In
-          </Button>
-        </div>
-      </header>
-
+    <div className="flex flex-col">
       {/* Hero */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-16">
         <div className="max-w-2xl text-center">
@@ -92,7 +78,7 @@ export function LandingPage() {
         <div className="mt-16 max-w-xl text-center px-4">
           <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-2 mb-4">
             <Bot className="w-4 h-4 text-purple-400" />
-            <span className="text-sm text-purple-300">Powered by GPT-4.1</span>
+            <span className="text-sm text-purple-300">Powered by GPT-4.1-mini</span>
           </div>
           <p className="text-zinc-400">
             Our AI votes on every question with reasoning. Compare your alignment 
