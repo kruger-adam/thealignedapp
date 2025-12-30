@@ -44,7 +44,7 @@ export function Header() {
         <Link href="/" className="flex items-center">
           <Image 
             src="/logo-transparent.png" 
-            alt="YesNoNotSure" 
+            alt="Aligned" 
             width={36} 
             height={36}
             className="h-9 w-9"

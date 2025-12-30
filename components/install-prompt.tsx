@@ -89,7 +89,7 @@ export function InstallPrompt() {
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium text-zinc-100 dark:text-zinc-900">
-                Install YesNoNotSure
+                Install Aligned
               </p>
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
                 {isIOS 

@@ -19,14 +19,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'YesNoNotSure - Discover What People Think',
+  title: 'Aligned - Discover What People Think',
   description: 'A modern polling platform to track opinions, find common ground, and understand where people stand on issues that matter.',
   keywords: ['polling', 'opinions', 'yes', 'no', 'voting', 'social'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'YesNoNotSure',
+    title: 'Aligned',
   },
   formatDetection: {
     telephone: false,

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }).reverse().join('\n') || 'No comments yet.';
 
     // Build the prompt
-    const systemPrompt = `You are a thoughtful AI assistant on a polling app called YesNoNotSure. Users ask yes/no questions and vote on them.
+    const systemPrompt = `You are a thoughtful AI assistant on a polling app called Aligned. Users ask yes/no questions and vote on them.
 
 Your style:
 - Be conversational and engaging, like a thoughtful friend
