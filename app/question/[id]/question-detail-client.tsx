@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, VoteType, Comment, MentionSuggestion, Voter, AI_MENTION } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { VoterList } from '@/components/voter-list';
+import { useToast } from '@/components/ui/toast';
 
 interface QuestionDetailClientProps {
   question: QuestionWithStats;
@@ -30,6 +31,7 @@ function getTimeAgo(date: Date): string {
 
 export function QuestionDetailClient({ question, initialComments }: QuestionDetailClientProps) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
   
@@ -919,7 +921,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               <button
                 onClick={() => {
                   if (!canSeeResults) {
-                    alert('Vote first to see who voted!');
+                    showToast('Vote first to see who voted!');
                     return;
                   }
                   fetchVoters();

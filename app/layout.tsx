@@ -3,6 +3,7 @@ import { Instrument_Sans, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/auth-context';
 import { Header } from '@/components/header';
 import { InstallPrompt } from '@/components/install-prompt';
+import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
 
 const instrumentSans = Instrument_Sans({
@@ -47,9 +48,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <AuthProvider>
-          <Header />
-          <main>{children}</main>
-          <InstallPrompt />
+          <ToastProvider>
+            <Header />
+            <main>{children}</main>
+            <InstallPrompt />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 import { VoterList } from '@/components/voter-list';
+import { useToast } from '@/components/ui/toast';
 
 interface QuestionCardProps {
   question: QuestionWithStats;
@@ -29,6 +30,7 @@ export function QuestionCard({
   onVote,
 }: QuestionCardProps) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
   const [showVoters, setShowVoters] = useState(false);
@@ -997,8 +999,7 @@ export function QuestionCard({
             <button
               onClick={() => {
                 if (!canSeeResults && optimisticData.stats.total_votes > 0) {
-                  // Show toast/alert that they need to vote first
-                  alert('Vote first to see who voted!');
+                  showToast('Vote first to see who voted!');
                   return;
                 }
                 if (optimisticData.stats.total_votes > 0) {
@@ -1026,7 +1027,7 @@ export function QuestionCard({
             <button
               onClick={() => {
                 if (!canSeeResults) {
-                  alert('Vote first to see comments!');
+                  showToast('Vote first to see comments!');
                   return;
                 }
                 fetchComments();
