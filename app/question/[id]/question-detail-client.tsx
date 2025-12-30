@@ -78,6 +78,11 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   // Private voting mode
   const [isPrivateMode, setIsPrivateMode] = useState(false);
 
+  const hasVoted = !!localUserVote;
+  const isAuthor = user?.id === question.author_id;
+  // Can see results if: voted, is the author, or not logged in (guests can't comment anyway)
+  const canSeeResults = hasVoted || isAuthor;
+
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
   // Vote handling
@@ -897,27 +902,41 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           {/* Vote stats */}
           {localStats.total_votes > 0 && (
             <div className="mb-4">
-              <ProgressBar
-                yes={localStats.yes_count}
-                no={localStats.no_count}
-                unsure={localStats.unsure_count}
-              />
+              {canSeeResults ? (
+                <ProgressBar
+                  yes={localStats.yes_count}
+                  no={localStats.no_count}
+                  unsure={localStats.unsure_count}
+                />
+              ) : (
+                <div className="flex h-4 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  <span className="text-xs text-zinc-400">Vote to see results</span>
+                </div>
+              )}
               <button
-                onClick={fetchVoters}
-                className="mt-2 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                onClick={canSeeResults ? fetchVoters : undefined}
+                disabled={!canSeeResults}
+                className={cn(
+                  "mt-2 flex items-center gap-1.5 text-sm text-zinc-500",
+                  canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
+                  !canSeeResults && "cursor-not-allowed"
+                )}
+                title={!canSeeResults ? "Vote to see who voted" : undefined}
               >
                 <span>{localStats.total_votes} vote{localStats.total_votes !== 1 ? 's' : ''}</span>
-                {loadingVoters ? (
-                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-                ) : showVoters ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
+                {canSeeResults && (
+                  loadingVoters ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                  ) : showVoters ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )
                 )}
               </button>
               
               {/* Voters List */}
-              {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
+              {showVoters && canSeeResults && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
                 <div className="mt-3">
                   <VoterList voters={voters} anonymousCounts={anonymousCounts} />
                 </div>
@@ -1005,7 +1024,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
 
           {/* Comments list */}
           <div className="space-y-4">
-            {comments.length === 0 ? (
+            {!canSeeResults ? (
+              <p className="text-sm text-zinc-500">Vote to see comments</p>
+            ) : comments.length === 0 ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
               comments.map((comment) => {
@@ -1121,7 +1142,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           </div>
 
           {/* Comment form */}
-          {user ? (
+          {user && canSeeResults ? (
             <div className="relative mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-700">
               {/* Mention suggestions */}
               {showMentions && mentionSuggestions.length > 0 && (

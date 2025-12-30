@@ -927,6 +927,9 @@ export function QuestionCard({
   };
 
   const hasVoted = !!optimisticData.userVote;
+  const isAuthor = user?.id === question.author_id;
+  // Can see results if: voted, is the author, or not logged in (guests can't expand anyway)
+  const canSeeResults = hasVoted || isAuthor;
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
   return (
@@ -992,16 +995,18 @@ export function QuestionCard({
           )}
           <div className="flex items-center gap-3">
             <button
-              onClick={fetchVoters}
-              disabled={optimisticData.stats.total_votes === 0}
+              onClick={canSeeResults ? fetchVoters : undefined}
+              disabled={optimisticData.stats.total_votes === 0 || !canSeeResults}
               className={cn(
                 "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
-                optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+                optimisticData.stats.total_votes > 0 && canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
+                !canSeeResults && optimisticData.stats.total_votes > 0 && "cursor-not-allowed"
               )}
+              title={!canSeeResults && optimisticData.stats.total_votes > 0 ? "Vote to see who voted" : undefined}
             >
               <Vote className="h-3.5 w-3.5" />
               <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span></span>
-              {optimisticData.stats.total_votes > 0 && (
+              {optimisticData.stats.total_votes > 0 && canSeeResults && (
                 loadingVoters ? (
                   <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
                 ) : showVoters ? (
@@ -1012,17 +1017,25 @@ export function QuestionCard({
               )}
             </button>
             <button
-              onClick={fetchComments}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+              onClick={canSeeResults ? fetchComments : undefined}
+              disabled={!canSeeResults}
+              className={cn(
+                "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
+                canSeeResults && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer",
+                !canSeeResults && commentCount > 0 && "cursor-not-allowed"
+              )}
+              title={!canSeeResults && commentCount > 0 ? "Vote to see comments" : undefined}
             >
-            <MessageCircle className="h-3.5 w-3.5" />
+              <MessageCircle className="h-3.5 w-3.5" />
               <span>{commentCount}<span className="hidden sm:inline"> comment{commentCount !== 1 ? 's' : ''}</span></span>
-              {loadingComments ? (
-                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-              ) : showComments ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
+              {canSeeResults && (
+                loadingComments ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+                ) : showComments ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )
               )}
             </button>
           </div>
@@ -1182,15 +1195,21 @@ export function QuestionCard({
           </Button>
         </div>
 
-        {/* Results - Show after voting or if has votes */}
-        {(hasVoted || optimisticData.stats.total_votes > 0) && (
+        {/* Results - Show after voting or if author */}
+        {optimisticData.stats.total_votes > 0 && (
           <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
-            <ProgressBar
-              yes={optimisticData.stats.yes_count}
-              no={optimisticData.stats.no_count}
-              unsure={optimisticData.stats.unsure_count}
-              size="md"
-            />
+            {canSeeResults ? (
+              <ProgressBar
+                yes={optimisticData.stats.yes_count}
+                no={optimisticData.stats.no_count}
+                unsure={optimisticData.stats.unsure_count}
+                size="md"
+              />
+            ) : (
+              <div className="flex h-2 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <span className="text-xs text-zinc-400">Vote to see results</span>
+              </div>
+            )}
           </div>
         )}
       </CardFooter>
