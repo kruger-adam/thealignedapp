@@ -11,6 +11,8 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,8 +81,10 @@ export function AIProfileClient({
 }: AIProfileClientProps) {
   const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all');
   const [showAllStances, setShowAllStances] = useState(false);
-  const [commonGroundVisible, setCommonGroundVisible] = useState(5);
-  const [divergenceVisible, setDivergenceVisible] = useState(5);
+  const [commonGroundPage, setCommonGroundPage] = useState(0);
+  const [divergencePage, setDivergencePage] = useState(0);
+
+  const PAGE_SIZE = 5;
 
   const filteredResponses = stanceFilter === 'all' 
     ? responses 
@@ -184,119 +188,165 @@ export function AIProfileClient({
       )}
 
       {/* Common Ground */}
-      {isLoggedIn && commonGround.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold text-emerald-600">
-              <Heart className="h-5 w-5" />
-              Where You Agree ({commonGround.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {commonGround.slice(0, commonGroundVisible).map((item) => {
-              const config = voteConfig[item.shared_vote as keyof typeof voteConfig];
-              const Icon = config?.icon || HelpCircle;
-              return (
-                <Link
-                  key={item.question_id}
-                  href={`/question/${item.question_id}`}
-                  className={cn(
-                    'block rounded-lg p-3 transition-colors',
-                    config?.bg || 'bg-zinc-100 dark:bg-zinc-800',
-                    'hover:opacity-80'
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={cn('mt-0.5 rounded-full p-1', config?.bg)}>
-                      <Icon className={cn('h-4 w-4', config?.color)} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {item.content}
-                      </p>
-                      {item.ai_reasoning && (
-                        <p className="mt-1 text-xs text-zinc-500 italic">
-                          AI: &ldquo;{item.ai_reasoning}&rdquo;
-                        </p>
-                      )}
+      {isLoggedIn && commonGround.length > 0 && (() => {
+        const startIdx = commonGroundPage * PAGE_SIZE;
+        const endIdx = Math.min(startIdx + PAGE_SIZE, commonGround.length);
+        const pageItems = commonGround.slice(startIdx, endIdx);
+        const totalPages = Math.ceil(commonGround.length / PAGE_SIZE);
+        
+        return (
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-emerald-600">
+                  <Heart className="h-5 w-5" />
+                  Where You Agree
+                </CardTitle>
+                {commonGround.length > PAGE_SIZE && (
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span>{startIdx + 1}-{endIdx} of {commonGround.length}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCommonGroundPage(p => p - 1)}
+                        disabled={commonGroundPage === 0}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCommonGroundPage(p => p + 1)}
+                        disabled={commonGroundPage >= totalPages - 1}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </Link>
-              );
-            })}
-            {commonGround.length > commonGroundVisible && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCommonGroundVisible(prev => prev + 5)}
-                className="w-full"
-              >
-                <ChevronDown className="mr-1 h-4 w-4" />
-                Show more ({commonGround.length - commonGroundVisible} remaining)
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pageItems.map((item) => {
+                const config = voteConfig[item.shared_vote as keyof typeof voteConfig];
+                const Icon = config?.icon || HelpCircle;
+                return (
+                  <Link
+                    key={item.question_id}
+                    href={`/question/${item.question_id}`}
+                    className={cn(
+                      'block rounded-lg p-3 transition-colors',
+                      config?.bg || 'bg-zinc-100 dark:bg-zinc-800',
+                      'hover:opacity-80'
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={cn('mt-0.5 rounded-full p-1', config?.bg)}>
+                        <Icon className={cn('h-4 w-4', config?.color)} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {item.content}
+                        </p>
+                        {item.ai_reasoning && (
+                          <p className="mt-1 text-xs text-zinc-500 italic">
+                            AI: &ldquo;{item.ai_reasoning}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Divergence */}
-      {isLoggedIn && divergence.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold text-rose-600">
-              <Swords className="h-5 w-5" />
-              Where You Differ ({divergence.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {divergence.slice(0, divergenceVisible).map((item) => {
-              const userConfig = voteConfig[item.vote_user as keyof typeof voteConfig];
-              const aiConfig = voteConfig[item.vote_ai as keyof typeof voteConfig];
-              return (
-                <Link
-                  key={item.question_id}
-                  href={`/question/${item.question_id}`}
-                  className="block rounded-lg bg-rose-50 p-3 transition-colors hover:opacity-80 dark:bg-rose-950/20"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex items-center gap-1">
-                        <span className="text-zinc-500">You:</span>
-                        <span className={userConfig?.color}>{userConfig?.label}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-zinc-500">AI:</span>
-                        <span className={aiConfig?.color}>{aiConfig?.label}</span>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {item.content}
-                      </p>
-                      {item.ai_reasoning && (
-                        <p className="mt-1 text-xs text-zinc-500 italic">
-                          AI: &ldquo;{item.ai_reasoning}&rdquo;
-                        </p>
-                      )}
+      {isLoggedIn && divergence.length > 0 && (() => {
+        const startIdx = divergencePage * PAGE_SIZE;
+        const endIdx = Math.min(startIdx + PAGE_SIZE, divergence.length);
+        const pageItems = divergence.slice(startIdx, endIdx);
+        const totalPages = Math.ceil(divergence.length / PAGE_SIZE);
+        
+        return (
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-rose-600">
+                  <Swords className="h-5 w-5" />
+                  Where You Differ
+                </CardTitle>
+                {divergence.length > PAGE_SIZE && (
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span>{startIdx + 1}-{endIdx} of {divergence.length}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDivergencePage(p => p - 1)}
+                        disabled={divergencePage === 0}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDivergencePage(p => p + 1)}
+                        disabled={divergencePage >= totalPages - 1}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </Link>
-              );
-            })}
-            {divergence.length > divergenceVisible && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDivergenceVisible(prev => prev + 5)}
-                className="w-full"
-              >
-                <ChevronDown className="mr-1 h-4 w-4" />
-                Show more ({divergence.length - divergenceVisible} remaining)
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pageItems.map((item) => {
+                const userConfig = voteConfig[item.vote_user as keyof typeof voteConfig];
+                const aiConfig = voteConfig[item.vote_ai as keyof typeof voteConfig];
+                return (
+                  <Link
+                    key={item.question_id}
+                    href={`/question/${item.question_id}`}
+                    className="block rounded-lg bg-rose-50 p-3 transition-colors hover:opacity-80 dark:bg-rose-950/20"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-1">
+                          <span className="text-zinc-500">You:</span>
+                          <span className={userConfig?.color}>{userConfig?.label}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-zinc-500">AI:</span>
+                          <span className={aiConfig?.color}>{aiConfig?.label}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          {item.content}
+                        </p>
+                        {item.ai_reasoning && (
+                          <p className="mt-1 text-xs text-zinc-500 italic">
+                            AI: &ldquo;{item.ai_reasoning}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Not logged in message */}
       {!isLoggedIn && (
