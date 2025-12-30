@@ -909,8 +909,11 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   unsure={localStats.unsure_count}
                 />
               ) : (
-                <div className="relative h-4 overflow-hidden rounded-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10 animate-shimmer" />
+                <div className="relative h-10 overflow-hidden rounded-lg bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 dark:from-zinc-700 dark:via-zinc-600 dark:to-zinc-700">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/20 animate-shimmer" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Vote to see results</span>
+                  </div>
                 </div>
               )}
               <button

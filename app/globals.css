@@ -202,7 +202,7 @@ body {
 }
 
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
+  animation: shimmer 1.5s infinite ease-in-out;
   background-size: 200% 100%;
 }
 

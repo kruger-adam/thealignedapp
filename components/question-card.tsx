@@ -1211,9 +1211,11 @@ export function QuestionCard({
                 size="md"
               />
             ) : (
-              <div className="relative h-2 overflow-hidden rounded-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-800 dark:via-zinc-700 dark:to-zinc-800">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10 animate-shimmer" 
-                  style={{ backgroundSize: '200% 100%', animation: 'shimmer 2s infinite linear' }} />
+              <div className="relative h-8 overflow-hidden rounded-lg bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 dark:from-zinc-700 dark:via-zinc-600 dark:to-zinc-700">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/20 animate-shimmer" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Vote to see results</span>
+                </div>
               </div>
             )}
           </div>
