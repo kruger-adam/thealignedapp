@@ -12,7 +12,7 @@ export default function TermsPage() {
         
         <div className="prose prose-invert prose-zinc">
           <p className="text-zinc-400 mb-6">
-            <strong>Last updated:</strong> December 30, 2024
+            <strong>Last updated:</strong> December 30, 2025
           </p>
 
           <section className="mb-8">
