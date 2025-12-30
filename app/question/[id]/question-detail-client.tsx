@@ -978,9 +978,11 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   isAIComment && "rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30"
                 )}>
                   {isAIComment ? (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                      <Bot className="h-4 w-4 text-white" />
-                    </div>
+                    <Link href="/profile/ai">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 transition-opacity hover:opacity-80">
+                        <Bot className="h-4 w-4 text-white" />
+                      </div>
+                    </Link>
                   ) : (
                     <Link href={`/profile/${comment.user_id}`}>
                       <Avatar
@@ -993,9 +995,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       {isAIComment ? (
-                        <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                        <Link href="/profile/ai" className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent hover:opacity-80">
                           AI
-                        </span>
+                        </Link>
                       ) : (
                         <Link 
                           href={`/profile/${comment.user_id}`}

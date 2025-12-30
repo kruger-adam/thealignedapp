@@ -106,9 +106,11 @@ export function CommentList({
             )}
           >
             {isAIComment ? (
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                <Bot className={cn('h-4 w-4 text-white', isThinking && 'animate-pulse')} />
-              </div>
+              <Link href="/profile/ai">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 transition-opacity hover:opacity-80">
+                  <Bot className={cn('h-4 w-4 text-white', isThinking && 'animate-pulse')} />
+                </div>
+              </Link>
             ) : (
               <Link href={`/profile/${comment.user_id}`}>
                 <Avatar
@@ -122,9 +124,9 @@ export function CommentList({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 {isAIComment ? (
-                  <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-sm font-medium text-transparent">
+                  <Link href="/profile/ai" className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-sm font-medium text-transparent hover:opacity-80">
                     AI
-                  </span>
+                  </Link>
                 ) : (
                   <Link
                     href={`/profile/${comment.user_id}`}

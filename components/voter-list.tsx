@@ -43,17 +43,18 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
 
     if (voter.is_ai) {
       return (
-        <div
-          key={`ai-${voteType.toLowerCase()}-${idx}`}
-          className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 dark:from-violet-950/40 dark:to-indigo-950/40"
-        >
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-            <Bot className="h-3 w-3 text-white" />
+        <Link key={`ai-${voteType.toLowerCase()}-${idx}`} href="/profile/ai">
+          <div
+            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-1 pl-1 pr-2.5 transition-opacity hover:opacity-80 dark:from-violet-950/40 dark:to-indigo-950/40"
+          >
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+              <Bot className="h-3 w-3 text-white" />
+            </div>
+            <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+              AI
+            </span>
           </div>
-          <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-            AI
-          </span>
-        </div>
+        </Link>
       );
     }
 
