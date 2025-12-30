@@ -94,28 +94,27 @@ Respond with ONLY the question, nothing else.`
 
     console.log('AI generated question:', questionContent);
 
+    // Get base URL from request or environment
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
+
     // Trigger AI vote on the new question
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : 'http://localhost:3000';
-      
-      await fetch(`${baseUrl}/api/ai-vote`, {
+      const voteResponse = await fetch(`${baseUrl}/api/ai-vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: newQuestion.id }),
       });
+      if (!voteResponse.ok) {
+        console.error('AI vote failed:', await voteResponse.text());
+      }
     } catch (voteError) {
       console.error('Error triggering AI vote:', voteError);
-      // Don't fail the whole request if voting fails
     }
 
     // Trigger categorization
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : 'http://localhost:3000';
-      
       await fetch(`${baseUrl}/api/categorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
