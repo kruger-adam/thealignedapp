@@ -13,11 +13,6 @@ import { MinVotes, TimePeriod } from '@/components/feed-filters';
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
-  
-  // Show landing page for logged-out users
-  if (!authLoading && !user) {
-    return <LandingPage />;
-  }
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -326,6 +321,11 @@ export default function FeedPage() {
       supabase.removeChannel(channel);
     };
   }, [supabase, fetchQuestions]);
+
+  // Show landing page for logged-out users
+  if (!authLoading && !user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
