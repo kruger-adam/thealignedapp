@@ -16,6 +16,8 @@ import {
   UserMinus,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   EyeOff,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -125,6 +127,11 @@ export function ProfileClient({
   const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
   const [followList, setFollowList] = useState<FollowUser[]>([]);
   const [loadingFollowList, setLoadingFollowList] = useState(false);
+  
+  // Pagination for comparison lists
+  const [commonGroundPage, setCommonGroundPage] = useState(0);
+  const [divergencePage, setDivergencePage] = useState(0);
+  const PAGE_SIZE = 5;
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
     if (showFollowList === type) {
@@ -540,81 +547,155 @@ export function ProfileClient({
       {activeTab === 'comparison' && (
         <div className="space-y-6">
           {/* Common Ground */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-emerald-600">
-                <Heart className="h-5 w-5" />
-                Common Ground
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {commonGround && commonGround.filter(item => item.shared_vote !== 'SKIP').length > 0 ? (
-                <div className="space-y-2">
-                  {commonGround.filter(item => item.shared_vote !== 'SKIP').map((item) => (
-                    <Link
-                      key={item.question_id}
-                      href={`/question/${item.question_id}`}
-                      className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
-                    >
-                      <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
-                        {(() => {
-                          const Icon = voteConfig[item.shared_vote].icon;
-                          return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
-                        })()}
+          {(() => {
+            const filteredCommon = commonGround?.filter(item => item.shared_vote !== 'SKIP') || [];
+            const startIdx = commonGroundPage * PAGE_SIZE;
+            const endIdx = Math.min(startIdx + PAGE_SIZE, filteredCommon.length);
+            const pageItems = filteredCommon.slice(startIdx, endIdx);
+            const totalPages = Math.ceil(filteredCommon.length / PAGE_SIZE);
+            
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-emerald-600">
+                      <Heart className="h-5 w-5" />
+                      Common Ground
+                    </CardTitle>
+                    {filteredCommon.length > PAGE_SIZE && (
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <span>{startIdx + 1}-{endIdx} of {filteredCommon.length}</span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCommonGroundPage(p => p - 1)}
+                            disabled={commonGroundPage === 0}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCommonGroundPage(p => p + 1)}
+                            disabled={commonGroundPage >= totalPages - 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="flex-1 text-sm">{item.content}</p>
-                      <span className="text-xs text-zinc-500">
-                        {Math.round(item.controversy_score)}% split
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-zinc-500">No common ground found yet.</p>
-              )}
-            </CardContent>
-          </Card>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {pageItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {pageItems.map((item) => (
+                        <Link
+                          key={item.question_id}
+                          href={`/question/${item.question_id}`}
+                          className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
+                        >
+                          <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
+                            {(() => {
+                              const Icon = voteConfig[item.shared_vote].icon;
+                              return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
+                            })()}
+                          </div>
+                          <p className="flex-1 text-sm">{item.content}</p>
+                          <span className="text-xs text-zinc-500">
+                            {Math.round(item.controversy_score)}% split
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500">No common ground found yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Divergence */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-rose-600">
-                <Swords className="h-5 w-5" />
-                Where You Differ
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {divergence && divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').length > 0 ? (
-                <div className="space-y-2">
-                  {divergence.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP').map((item) => (
-                    <Link
-                      key={item.question_id}
-                      href={`/question/${item.question_id}`}
-                      className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
-                    >
-                      <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
-                        <span className="flex items-center gap-1 text-xs">
-                          <span className="w-8 font-medium">You:</span>
-                          <span className={voteConfig[item.vote_a].color}>
-                            {voteConfig[item.vote_a].label}
-                          </span>
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <span className="w-8 font-medium">They:</span>
-                          <span className={voteConfig[item.vote_b].color}>
-                            {voteConfig[item.vote_b].label}
-                          </span>
-                        </span>
+          {(() => {
+            const filteredDiverge = divergence?.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP') || [];
+            const startIdx = divergencePage * PAGE_SIZE;
+            const endIdx = Math.min(startIdx + PAGE_SIZE, filteredDiverge.length);
+            const pageItems = filteredDiverge.slice(startIdx, endIdx);
+            const totalPages = Math.ceil(filteredDiverge.length / PAGE_SIZE);
+            
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-rose-600">
+                      <Swords className="h-5 w-5" />
+                      Where You Differ
+                    </CardTitle>
+                    {filteredDiverge.length > PAGE_SIZE && (
+                      <div className="flex items-center gap-2 text-xs text-zinc-500">
+                        <span>{startIdx + 1}-{endIdx} of {filteredDiverge.length}</span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDivergencePage(p => p - 1)}
+                            disabled={divergencePage === 0}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDivergencePage(p => p + 1)}
+                            disabled={divergencePage >= totalPages - 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="flex-1 text-sm">{item.content}</p>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-zinc-500">No disagreements found!</p>
-              )}
-            </CardContent>
-          </Card>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {pageItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {pageItems.map((item) => (
+                        <Link
+                          key={item.question_id}
+                          href={`/question/${item.question_id}`}
+                          className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
+                        >
+                          <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
+                            <span className="flex items-center gap-1 text-xs">
+                              <span className="w-8 font-medium">You:</span>
+                              <span className={voteConfig[item.vote_a].color}>
+                                {voteConfig[item.vote_a].label}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1 text-xs">
+                              <span className="w-8 font-medium">They:</span>
+                              <span className={voteConfig[item.vote_b].color}>
+                                {voteConfig[item.vote_b].label}
+                              </span>
+                            </span>
+                          </div>
+                          <p className="flex-1 text-sm">{item.content}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500">No disagreements found!</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
       )}
     </div>
