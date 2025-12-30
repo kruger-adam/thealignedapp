@@ -552,7 +552,8 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             });
           });
         
-        if (question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
+        // Notify question author (skip for AI questions which have no author)
+        if (question.author_id && question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
           notifications.push({
             user_id: question.author_id,
             type: 'comment',

@@ -436,8 +436,8 @@ export function QuestionCard({
             });
         }
         
-        // Notify question author (if not the commenter and not already mentioned)
-        if (question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
+        // Notify question author (if not the commenter, not already mentioned, and not AI question)
+        if (question.author_id && question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
           notifications.push({
             user_id: question.author_id,
             type: 'comment',
@@ -885,8 +885,8 @@ export function QuestionCard({
         }
 
         // Notify question author (only on first vote, not vote changes)
-        // Don't notify yourself, and don't notify for anonymous votes
-        if (isFirstVote && question.author_id !== user.id && !isPrivateMode) {
+        // Don't notify yourself, don't notify for anonymous votes, skip AI questions
+        if (isFirstVote && question.author_id && question.author_id !== user.id && !isPrivateMode) {
           supabase.from('notifications').insert({
             user_id: question.author_id,
             type: 'vote',
