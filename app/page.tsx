@@ -15,7 +15,7 @@ export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<SortOption>('popular');
   const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
