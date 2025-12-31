@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const CATEGORIES = [
-  'Politics & Society',
-  'Relationships & Dating',
-  'Health & Wellness',
-  'Technology',
-  'Entertainment & Pop Culture',
-  'Food & Lifestyle',
-  'Sports',
+  'Hypothetical',
+  'Ethics',
+  'Relationships',
   'Work & Career',
-  'Philosophy & Ethics',
+  'Fun & Silly',
+  'Society',
+  'Technology',
+  'Health & Wellness',
+  'Entertainment',
+  'Environment',
+  'Sports',
+  'Food & Lifestyle',
   'Other',
 ] as const;
 
