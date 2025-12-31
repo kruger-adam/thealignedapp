@@ -1514,10 +1514,10 @@ export function QuestionCard({
                     type="button"
                     onClick={() => setShowGifPicker(!showGifPicker)}
                     className={cn(
-                      "h-[38px] px-2 rounded-lg transition-colors flex items-center gap-0.5",
+                      "h-[38px] px-3 rounded-lg transition-colors flex items-center justify-center",
                       showGifPicker 
-                        ? "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
-                        : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                        ? "bg-violet-500 text-white dark:bg-violet-600"
+                        : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
                     )}
                     title="Add GIF"
                   >
