@@ -89,17 +89,19 @@ Guidelines:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Question: "${questionContent}"\n\nReturn vote + reason in the specified format.` },
       ],
-      max_tokens: 80,
+      max_tokens: 150,
       temperature: 0.7,
     });
 
     const responseText = completion.choices[0].message?.content?.trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
+    console.log('AI vote raw response:', responseText);
     
     // Parse the vote and reason
     let vote: 'YES' | 'NO' | 'UNSURE' = 'UNSURE';
     let aiReasoning = 'No reason provided.';
     const voteMatch = responseText.match(/VOTE:\s*(YES|NO|UNSURE)/i);
-    const reasonMatch = responseText.match(/REASON:\s*(.+)/i);
+    // More flexible regex: match REASON: followed by anything (handles markdown, newlines)
+    const reasonMatch = responseText.match(/REASON:\s*\*?\*?(.+?)(?:\*?\*?\s*$|\n|$)/i);
     if (voteMatch) {
       const v = voteMatch[1].toUpperCase();
       if (v === 'YES' || v === 'NO' || v === 'UNSURE') vote = v;
