@@ -131,6 +131,17 @@ const defaultTopicPrompts = topicPrompts;
 
 type TopicKey = keyof typeof topicPrompts;
 
+// Sample questions for typewriter animation
+const typewriterQuestions = [
+  "Should pineapple go on pizza?",
+  "Is a hot dog a sandwich?",
+  "Would you travel to space?",
+  "Is remote work better?",
+  "Should voting be mandatory?",
+  "Would you give up social media?",
+  "Is college worth it anymore?",
+];
+
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
   const [content, setContent] = useState('');
@@ -139,6 +150,46 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
   const supabase = useMemo(() => createClient(), []);
+  
+  // Typewriter animation state
+  const [displayedText, setDisplayedText] = useState('');
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  
+  // Typewriter effect
+  useEffect(() => {
+    if (isExpanded) return; // Don't animate when expanded
+    
+    const currentQuestion = typewriterQuestions[questionIndex];
+    let timeout: NodeJS.Timeout;
+    
+    if (isTyping) {
+      // Typing forward
+      if (displayedText.length < currentQuestion.length) {
+        timeout = setTimeout(() => {
+          setDisplayedText(currentQuestion.slice(0, displayedText.length + 1));
+        }, 50 + Math.random() * 30); // Variable speed for natural feel
+      } else {
+        // Pause at end of word
+        timeout = setTimeout(() => {
+          setIsTyping(false);
+        }, 2000);
+      }
+    } else {
+      // Backspacing
+      if (displayedText.length > 0) {
+        timeout = setTimeout(() => {
+          setDisplayedText(displayedText.slice(0, -1));
+        }, 25);
+      } else {
+        // Move to next question
+        setQuestionIndex((prev) => (prev + 1) % typewriterQuestions.length);
+        setIsTyping(true);
+      }
+    }
+    
+    return () => clearTimeout(timeout);
+  }, [displayedText, isTyping, questionIndex, isExpanded]);
 
   const charCount = content.length;
   const maxChars = 280;
@@ -340,7 +391,8 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
               <Plus className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
             </div>
             <span className="text-zinc-500">
-              Ask a yes/no question...
+              {displayedText || 'Ask a yes/no question...'}
+              <span className="ml-0.5 inline-block w-0.5 h-4 bg-zinc-400 animate-pulse" />
             </span>
           </button>
         ) : (
