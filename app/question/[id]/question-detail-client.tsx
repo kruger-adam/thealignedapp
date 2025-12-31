@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, Unlock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
@@ -961,16 +961,26 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             </div>
           )}
 
-          {/* Private Mode Indicator */}
-          {isPrivateMode && user && (
-            <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              <Lock className="h-4 w-4" />
-              <span>Private mode: your vote won&apos;t be visible to others</span>
-              <button 
-                onClick={() => setIsPrivateMode(false)}
-                className="ml-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          {/* Vote Mode Toggle + Vote Buttons */}
+          {user && (
+            <div className="mb-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsPrivateMode(!isPrivateMode)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                  isPrivateMode
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                )}
+                title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
               >
-                <X className="h-4 w-4" />
+                {isPrivateMode ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  <Unlock className="h-3 w-3" />
+                )}
+                {isPrivateMode ? "Anonymous" : "Public"}
               </button>
             </div>
           )}
