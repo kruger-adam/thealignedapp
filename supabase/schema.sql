@@ -524,6 +524,30 @@ CREATE POLICY "Authenticated users can create AI queries"
     WITH CHECK (auth.uid() = user_id);
 
 -- ============================================
+-- QUESTION PROMPTS TABLE
+-- ============================================
+-- Stores example question prompts that rotate as they get used
+
+CREATE TABLE IF NOT EXISTS question_prompts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_used BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Index for efficient queries
+CREATE INDEX IF NOT EXISTS idx_question_prompts_category ON question_prompts(category);
+CREATE INDEX IF NOT EXISTS idx_question_prompts_unused ON question_prompts(category, is_used) WHERE is_used = false;
+
+-- RLS for question_prompts (public read, system write)
+ALTER TABLE question_prompts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view prompts"
+    ON question_prompts FOR SELECT
+    USING (true);
+
+-- ============================================
 -- REALTIME
 -- ============================================
 

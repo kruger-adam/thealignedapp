@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Send, Loader2, Lock, Unlock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -126,6 +126,9 @@ const topicPrompts = {
   ],
 };
 
+// Default/fallback prompts (used if DB fetch fails)
+const defaultTopicPrompts = topicPrompts;
+
 type TopicKey = keyof typeof topicPrompts;
 
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
@@ -134,6 +137,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
   const supabase = useMemo(() => createClient(), []);
 
   const charCount = content.length;
@@ -141,11 +145,38 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const isOverLimit = charCount > maxChars;
   const isValid = content.trim().length > 0 && !isOverLimit;
 
+  // Fetch dynamic prompts from DB on mount
+  useEffect(() => {
+    fetch('/api/prompts')
+      .then(res => res.json())
+      .then(data => {
+        if (data.prompts && Object.keys(data.prompts).length > 0) {
+          setDynamicPrompts(data.prompts);
+        }
+      })
+      .catch(err => console.error('Error fetching prompts:', err));
+  }, []);
+
+  // Use dynamic prompts if available, otherwise fall back to defaults
+  const activePrompts = useMemo(() => {
+    if (!dynamicPrompts) return defaultTopicPrompts;
+    
+    // Merge dynamic prompts with defaults (dynamic takes priority)
+    const merged: Record<string, string[]> = { ...defaultTopicPrompts };
+    for (const [category, prompts] of Object.entries(dynamicPrompts)) {
+      if (prompts.length > 0) {
+        merged[category] = prompts;
+      }
+    }
+    return merged;
+  }, [dynamicPrompts]);
+
   const getRandomPrompt = useCallback((topic: TopicKey) => {
-    const prompts = topicPrompts[topic];
+    const prompts = activePrompts[topic] || defaultTopicPrompts[topic];
+    if (!prompts || prompts.length === 0) return;
     const randomIndex = Math.floor(Math.random() * prompts.length);
     setContent(prompts[randomIndex]);
-  }, []);
+  }, [activePrompts]);
 
   const handleSubmit = async () => {
     if (!user || !isValid || isLoading) return;
@@ -202,6 +233,27 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         }
       })
       .catch(err => console.error('Error categorizing question:', err));
+
+    // Check if question matches a prompt and regenerate if needed (fire and forget)
+    fetch('/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionContent }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.matched) {
+          // Refetch prompts to get the updated list
+          fetch('/api/prompts')
+            .then(res => res.json())
+            .then(promptsData => {
+              if (promptsData.prompts) {
+                setDynamicPrompts(promptsData.prompts);
+              }
+            });
+        }
+      })
+      .catch(err => console.error('Error checking prompts:', err));
 
     // AI votes on the question in background, then refresh to show the vote
     fetch('/api/ai-vote', {
