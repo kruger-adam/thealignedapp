@@ -381,7 +381,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
             onClick={() => setIsExpanded(true)}
             className="flex w-full items-center gap-3 text-left"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
               <Plus className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
             </div>
             <span className="text-zinc-500">
