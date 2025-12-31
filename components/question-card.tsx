@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot, User, ImageIcon } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -1452,7 +1452,7 @@ export function QuestionCard({
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {/* Input container with inline chips */}
                   <div 
                     className="flex flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
@@ -1503,8 +1503,8 @@ export function QuestionCard({
                       ref={inputRef}
                       value={commentText}
                       onChange={handleCommentChange}
-                      placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
-                      className="min-w-[120px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+                      placeholder={mentionedUsers.length > 0 ? "Add message..." : "Add a comment..."}
+                      className="min-w-[80px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
                       onKeyDown={handleMentionKeyDown}
                       rows={1}
                       style={{ height: 'auto', maxHeight: '120px' }}
@@ -1514,14 +1514,14 @@ export function QuestionCard({
                     type="button"
                     onClick={() => setShowGifPicker(!showGifPicker)}
                     className={cn(
-                      "h-[38px] px-2 rounded-lg transition-colors",
+                      "h-[38px] px-2 rounded-lg transition-colors flex items-center gap-0.5",
                       showGifPicker 
                         ? "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
                         : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
                     )}
                     title="Add GIF"
                   >
-                    <ImageIcon className="h-5 w-5" />
+                    <span className="text-xs font-bold">GIF</span>
                   </button>
                   <Button
                     onClick={submitComment}
