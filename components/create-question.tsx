@@ -220,7 +220,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       if (displayedText.length < currentQuestion.length) {
         timeout = setTimeout(() => {
           setDisplayedText(currentQuestion.slice(0, displayedText.length + 1));
-        }, 50 + Math.random() * 30); // Variable speed for natural feel
+        }, 30 + Math.random() * 20); // Faster typing: 30-50ms per char
       } else {
         // Pause at end of word (0.5 seconds)
         timeout = setTimeout(() => {
@@ -232,7 +232,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       if (displayedText.length > 0) {
         timeout = setTimeout(() => {
           setDisplayedText(displayedText.slice(0, -1));
-        }, 25);
+        }, 15); // Faster backspace
       } else {
         // Move to next question immediately (no flash)
         const nextIndex = (questionIndex + 1) % allPrompts.length;
