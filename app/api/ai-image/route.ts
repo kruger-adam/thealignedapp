@@ -116,11 +116,14 @@ Style: Modern, minimal aesthetic. Suitable as a social media post thumbnail. No 
 
     const imageUrl = urlData.publicUrl;
 
-    // If questionId provided, update the question with the image URL
+    // If questionId provided, update the question with the image URL and model used
     if (questionId) {
       const { error: updateError } = await supabase
         .from('questions')
-        .update({ image_url: imageUrl })
+        .update({ 
+          image_url: imageUrl,
+          image_model: usedModel,
+        })
         .eq('id', questionId);
 
       if (updateError) {
