@@ -142,7 +142,7 @@ export function GifPicker({ onSelect, onClose }: GifPickerProps) {
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search GIFs..."
-            className="w-full rounded-lg bg-zinc-100 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-700 dark:focus:ring-zinc-600"
+            className="w-full rounded-lg bg-zinc-100 py-2 pl-9 pr-3 text-base focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-700 dark:focus:ring-zinc-600"
             autoFocus
           />
         </div>
