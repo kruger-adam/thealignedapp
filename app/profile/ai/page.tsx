@@ -2,113 +2,137 @@ import { createClient } from '@/lib/supabase/server';
 import { AIProfileClient } from './ai-profile-client';
 import { VoteType } from '@/lib/types';
 
+// AI profile metadata
+const AI_PROFILE = {
+  id: 'ai',
+  username: 'Consensus AI',
+  email: 'ai@consensus.app',
+  avatar_url: null, // We'll use a special AI avatar
+  created_at: '2024-01-01T00:00:00Z', // App launch date
+};
+
+export const metadata = {
+  title: 'Consensus AI - Profile',
+  description: 'See how our AI votes on questions and compare your views',
+};
+
 export default async function AIProfilePage() {
   const supabase = await createClient();
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch all AI votes with question details
+  // Fetch AI's votes (responses where is_ai = true)
   const { data: rawResponses } = await supabase
     .from('responses')
     .select(`
       id,
       vote,
+      updated_at,
       ai_reasoning,
-      created_at,
       question:questions (
         id,
         content,
-        created_at
+        created_at,
+        author_id
       )
     `)
     .eq('is_ai', true)
-    .order('created_at', { ascending: false });
+    .order('updated_at', { ascending: false });
 
   // Transform responses
   const responses = (rawResponses || []).map((r) => ({
     id: r.id as string,
     vote: r.vote as VoteType,
+    updated_at: r.updated_at as string,
     ai_reasoning: r.ai_reasoning as string | null,
-    created_at: r.created_at as string,
     question: Array.isArray(r.question) ? r.question[0] : r.question,
   }));
 
-  // Calculate AI's voting stats
+  // Fetch AI-created questions
+  const { data: createdQuestions } = await supabase
+    .from('questions')
+    .select('id, content, created_at, image_url')
+    .eq('is_ai', true)
+    .order('created_at', { ascending: false });
+
+  // Calculate stats from AI responses
   const totalVotes = responses.length;
   const yesCount = responses.filter(r => r.vote === 'YES').length;
   const noCount = responses.filter(r => r.vote === 'NO').length;
   const unsureCount = responses.filter(r => r.vote === 'UNSURE').length;
 
-  // If user is logged in, calculate compatibility with AI
+  // Calculate compatibility with AI if user is logged in
   let compatibility = null;
-  const commonGround: Array<{
+  let commonGround: Array<{
     question_id: string;
     content: string;
     shared_vote: VoteType;
-    ai_reasoning: string | null;
   }> = [];
-  const divergence: Array<{
+  let divergence: Array<{
     question_id: string;
     content: string;
-    vote_user: VoteType;
-    vote_ai: VoteType;
-    ai_reasoning: string | null;
+    user_vote: VoteType;
+    ai_vote: VoteType;
   }> = [];
 
   if (user) {
     // Get user's votes
-    const { data: userVotes } = await supabase
+    const { data: userResponses } = await supabase
       .from('responses')
       .select('question_id, vote')
       .eq('user_id', user.id)
-      .eq('is_ai', false)
-      .eq('is_anonymous', false);
+      .eq('is_ai', false);
 
-    if (userVotes && userVotes.length > 0) {
-      // Create a map of user votes by question_id
-      const userVoteMap = new Map<string, VoteType>();
-      userVotes.forEach(v => {
-        if (v.vote !== 'SKIP') {
-          userVoteMap.set(v.question_id, v.vote as VoteType);
+    if (userResponses && userResponses.length > 0) {
+      // Create a map of AI votes by question_id
+      const aiVoteMap = new Map<string, { vote: VoteType; content: string }>();
+      for (const r of responses) {
+        if (r.question) {
+          aiVoteMap.set(r.question.id, {
+            vote: r.vote,
+            content: r.question.content,
+          });
         }
-      });
+      }
 
-      // Compare with AI votes
+      // Find overlapping questions
       let agreements = 0;
       let disagreements = 0;
-
-      responses.forEach(aiVote => {
-        if (aiVote.question && userVoteMap.has(aiVote.question.id)) {
-          const userVote = userVoteMap.get(aiVote.question.id)!;
-          if (userVote === aiVote.vote) {
+      
+      for (const userVote of userResponses) {
+        const aiData = aiVoteMap.get(userVote.question_id);
+        if (aiData && userVote.vote !== 'SKIP' && aiData.vote !== 'SKIP') {
+          if (userVote.vote === aiData.vote) {
             agreements++;
-            commonGround.push({
-              question_id: aiVote.question.id,
-              content: aiVote.question.content,
-              shared_vote: aiVote.vote,
-              ai_reasoning: aiVote.ai_reasoning,
-            });
+            if (commonGround.length < 10) {
+              commonGround.push({
+                question_id: userVote.question_id,
+                content: aiData.content,
+                shared_vote: userVote.vote as VoteType,
+              });
+            }
           } else {
             disagreements++;
-            divergence.push({
-              question_id: aiVote.question.id,
-              content: aiVote.question.content,
-              vote_user: userVote,
-              vote_ai: aiVote.vote,
-              ai_reasoning: aiVote.ai_reasoning,
-            });
+            if (divergence.length < 10) {
+              divergence.push({
+                question_id: userVote.question_id,
+                content: aiData.content,
+                user_vote: userVote.vote as VoteType,
+                ai_vote: aiData.vote,
+              });
+            }
           }
         }
-      });
+      }
 
-      const totalComparisons = agreements + disagreements;
-      if (totalComparisons > 0) {
+      const total = agreements + disagreements;
+      if (total > 0) {
         compatibility = {
-          compatibility_score: Math.round((agreements / totalComparisons) * 100 * 10) / 10,
-          common_questions: totalComparisons,
+          compatibility_score: (agreements / total) * 100,
           agreements,
           disagreements,
+          total_compared: total,
         };
       }
     }
@@ -116,18 +140,20 @@ export default async function AIProfilePage() {
 
   return (
     <AIProfileClient
+      profile={AI_PROFILE}
       responses={responses}
       stats={{
         totalVotes,
         yesCount,
         noCount,
         unsureCount,
+        questionsCreated: createdQuestions?.length || 0,
       }}
       compatibility={compatibility}
       commonGround={commonGround}
       divergence={divergence}
-      isLoggedIn={!!user}
+      currentUserId={user?.id}
+      createdQuestions={createdQuestions || []}
     />
   );
 }
-
