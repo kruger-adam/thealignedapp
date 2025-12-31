@@ -936,7 +936,7 @@ export function QuestionCard({
   const timeAgo = getTimeAgo(new Date(question.created_at));
 
   return (
-    <Card className="transition-all duration-200 hover:shadow-md">
+    <Card className="group transition-all duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           {question.is_ai ? (
@@ -996,55 +996,7 @@ export function QuestionCard({
             </div>
           </Link>
           )}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                if (!canSeeResults && optimisticData.stats.total_votes > 0) {
-                  showToast('Vote first to see who voted!');
-                  return;
-                }
-                if (optimisticData.stats.total_votes > 0) {
-                  fetchVoters();
-                }
-              }}
-              disabled={optimisticData.stats.total_votes === 0}
-              className={cn(
-                "flex items-center gap-1.5 text-xs text-zinc-500 transition-colors",
-                optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
-              )}
-            >
-              <Vote className="h-3.5 w-3.5" />
-              <span>{optimisticData.stats.total_votes}<span className="hidden sm:inline"> vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span></span>
-              {optimisticData.stats.total_votes > 0 && (
-                loadingVoters ? (
-                  <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-                ) : showVoters ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )
-              )}
-            </button>
-            <button
-              onClick={() => {
-                if (!canSeeResults) {
-                  showToast('Vote first to see comments!');
-                  return;
-                }
-                fetchComments();
-              }}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span>{commentCount}<span className="hidden sm:inline"> comment{commentCount !== 1 ? 's' : ''}</span></span>
-              {loadingComments ? (
-                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-              ) : showComments ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </button>
+          <div className="flex items-center">
             <div className="relative">
               <DropdownMenu
                 trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer" />}
@@ -1236,6 +1188,58 @@ export function QuestionCard({
             )}
           </div>
         )}
+
+        {/* Stats Row - votes and comments */}
+        <div className="flex w-full items-center justify-center gap-6 pt-2">
+          <button
+            onClick={() => {
+              if (!canSeeResults && optimisticData.stats.total_votes > 0) {
+                showToast('Vote first to see who voted!');
+                return;
+              }
+              if (optimisticData.stats.total_votes > 0) {
+                fetchVoters();
+              }
+            }}
+            disabled={optimisticData.stats.total_votes === 0}
+            className={cn(
+              "flex items-center gap-1.5 text-sm text-zinc-500 transition-colors",
+              optimisticData.stats.total_votes > 0 && "hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+            )}
+          >
+            <Vote className="h-4 w-4" />
+            <span>{optimisticData.stats.total_votes} vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span>
+            {optimisticData.stats.total_votes > 0 && (
+              loadingVoters ? (
+                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+              ) : showVoters ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )
+            )}
+          </button>
+          <button
+            onClick={() => {
+              if (!canSeeResults) {
+                showToast('Vote first to see comments!');
+                return;
+              }
+              fetchComments();
+            }}
+            className="flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
+            {loadingComments ? (
+              <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
+            ) : showComments ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
+        </div>
       </CardFooter>
 
       {/* Expandable Voters List - at bottom of card */}
