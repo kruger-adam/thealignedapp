@@ -11,6 +11,7 @@ const CATEGORIES = [
   'Health & Wellness',
   'Entertainment',
   'Environment',
+  'Politics',
   'Sports',
   'Food & Lifestyle',
   'Other',

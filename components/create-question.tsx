@@ -114,6 +114,16 @@ const topicPrompts = {
     'Should flying be heavily taxed to reduce emissions?',
     'Would you live without air conditioning to reduce energy use?',
   ],
+  '🏛️ Politics': [
+    'Should voting be mandatory?',
+    'Is democracy the best form of government?',
+    'Should there be term limits for all politicians?',
+    'Should the voting age be lowered to 16?',
+    'Is a two-party system fundamentally broken?',
+    'Should corporations be allowed to donate to political campaigns?',
+    'Is nationalism ever a good thing?',
+    'Should politicians be required to pass a competency test?',
+  ],
 };
 
 type TopicKey = keyof typeof topicPrompts;
