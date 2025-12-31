@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, VoteType, Voter, Comment, MentionSuggestion, AI_MENTION } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 import { VoterList } from '@/components/voter-list';
 import { useToast } from '@/components/ui/toast';
@@ -1087,6 +1088,19 @@ export function QuestionCard({
           </div>
         </div>
       </CardHeader>
+
+      {/* Question Image */}
+      {question.image_url && (
+        <div className="relative w-full aspect-video overflow-hidden">
+          <Image
+            src={question.image_url}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 600px"
+          />
+        </div>
+      )}
       
       <CardContent className="pb-4">
         {isEditingQuestion ? (

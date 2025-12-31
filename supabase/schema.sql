@@ -60,6 +60,7 @@ CREATE TABLE questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     author_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     content TEXT NOT NULL CHECK (char_length(content) <= 280),
+    image_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     is_ai BOOLEAN DEFAULT false,

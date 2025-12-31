@@ -28,6 +28,7 @@ export interface Question {
   author_id: string | null;
   content: string;
   category?: Category;
+  image_url?: string | null;
   created_at: string;
   updated_at: string;
   author?: Partial<Profile>;

@@ -5,6 +5,16 @@ const nextConfig: NextConfig = {
   experimental: {
     viewTransition: true,
   },
+  // Allow images from Supabase Storage
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
   // Reduce CPU usage during compilation
   webpack: (config, { dev }) => {
     if (dev) {

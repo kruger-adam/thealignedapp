@@ -138,6 +138,25 @@ Respond with ONLY the question, nothing else.`
       console.error('Error triggering categorization:', catError);
     }
 
+    // Trigger AI image generation (only if GEMINI_API_KEY is configured)
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        console.log('Triggering image generation...');
+        const imageResponse = await fetch(`${baseUrl}/api/ai-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            questionId: newQuestion.id,
+            questionContent: questionContent,
+          }),
+        });
+        const imageResult = await imageResponse.json();
+        console.log('Image generation response:', imageResponse.status, imageResult);
+      } catch (imageError) {
+        console.error('Error triggering image generation:', imageError);
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
       question: {

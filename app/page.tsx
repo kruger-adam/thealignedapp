@@ -88,6 +88,7 @@ export default function FeedPage() {
       author_id: string | null;
       content: string;
       category: string | null;
+      image_url: string | null;
       created_at: string;
       updated_at: string;
       is_ai: boolean;
@@ -150,6 +151,7 @@ export default function FeedPage() {
         author_id: q.author_id,
         content: q.content,
         category: q.category,
+        image_url: q.image_url,
         created_at: q.created_at,
         updated_at: q.updated_at,
         is_ai: q.is_ai || false,
@@ -216,6 +218,7 @@ export default function FeedPage() {
       author_id: q.author_id,
       content: q.content,
       category: q.category as import('@/lib/types').Category | undefined,
+      image_url: q.image_url,
       created_at: q.created_at,
       updated_at: q.updated_at,
       is_ai: q.is_ai,
