@@ -31,8 +31,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
-    // Simpler prompt = potentially smaller/simpler image output
-    const prompt = `Simple flat illustration for: "${questionContent}". Minimal style, 2-3 colors, no text, clean icon-like design.`;
+    const prompt = `Create a visually appealing illustration for this yes/no question: "${questionContent}".
+
+Style guidelines:
+- Modern flat illustration style with clean lines
+- Include recognizable objects or scenes that relate to the question's topic
+- Vibrant but harmonious color palette (2-4 colors)
+- Simple composition, not cluttered
+- No text or words in the image
+- Suitable as a social media thumbnail
+
+Make it immediately clear what topic the question is about.`;
 
     console.log('Generating image for question:', questionContent);
 
@@ -53,13 +62,6 @@ export async function POST(request: Request) {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               responseModalities: ['IMAGE', 'TEXT'],
-              // Request smaller image to reduce token usage
-              // Square aspect ratio typically produces smaller files
-            },
-            // Image generation config
-            imageGenerationConfig: {
-              aspectRatio: '1:1', // Square (smaller than 16:9)
-              numberOfImages: 1,
             },
           }),
         }
