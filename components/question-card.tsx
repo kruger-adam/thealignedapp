@@ -52,21 +52,14 @@ export function QuestionCard({
   // Vote animation state
   const [animatingVote, setAnimatingVote] = useState<VoteType | null>(null);
   const [confettiParticles, setConfettiParticles] = useState<Array<{ id: number; x: number; y: number; color: string }>>([]);
-  const voteButtonRefs = useRef<Record<VoteType, HTMLButtonElement | null>>({ YES: null, NO: null, UNSURE: null });
   
   // Spawn confetti particles
-  const spawnConfetti = useCallback((voteType: VoteType, buttonElement: HTMLButtonElement | null) => {
-    if (!buttonElement) return;
-    
+  const spawnConfetti = useCallback((voteType: VoteType) => {
     const colors = {
       YES: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
       NO: ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3'],
       UNSURE: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a'],
     };
-    
-    const rect = buttonElement.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
     
     const particles = Array.from({ length: 12 }, (_, i) => {
       const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
@@ -907,7 +900,7 @@ export function QuestionCard({
     if (!isUnvoting) {
       triggerHaptic();
       setAnimatingVote(vote);
-      spawnConfetti(vote, voteButtonRefs.current[vote]);
+      spawnConfetti(vote);
       setTimeout(() => setAnimatingVote(null), 400);
     }
 
@@ -1213,7 +1206,6 @@ export function QuestionCard({
         {/* Vote Buttons */}
         <div className="relative grid w-full grid-cols-3 gap-2">
           <Button
-            ref={(el) => { voteButtonRefs.current.YES = el; }}
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
             onClick={() => handleVote('YES')}
@@ -1247,7 +1239,6 @@ export function QuestionCard({
             ))}
           </Button>
           <Button
-            ref={(el) => { voteButtonRefs.current.NO = el; }}
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
             size="sm"
             onClick={() => handleVote('NO')}
@@ -1281,7 +1272,6 @@ export function QuestionCard({
             ))}
           </Button>
           <Button
-            ref={(el) => { voteButtonRefs.current.UNSURE = el; }}
             variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
             size="sm"
             onClick={() => handleVote('UNSURE')}
