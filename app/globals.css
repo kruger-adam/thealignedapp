@@ -240,3 +240,55 @@ body {
 .tap-effect:active {
   transform: scale(0.98);
 }
+
+/* Vote button pop & bounce animation */
+@keyframes vote-pop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-vote-pop {
+  animation: vote-pop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Confetti particle animation */
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) rotate(720deg) scale(0);
+  }
+}
+
+@keyframes confetti-spread {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--confetti-x), var(--confetti-y)) scale(0);
+  }
+}
+
+.confetti-particle {
+  position: absolute;
+  pointer-events: none;
+  animation: confetti-spread 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}

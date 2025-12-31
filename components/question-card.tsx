@@ -48,6 +48,49 @@ export function QuestionCard({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  
+  // Vote animation state
+  const [animatingVote, setAnimatingVote] = useState<VoteType | null>(null);
+  const [confettiParticles, setConfettiParticles] = useState<Array<{ id: number; x: number; y: number; color: string }>>([]);
+  const voteButtonRefs = useRef<Record<VoteType, HTMLButtonElement | null>>({ YES: null, NO: null, UNSURE: null });
+  
+  // Spawn confetti particles
+  const spawnConfetti = useCallback((voteType: VoteType, buttonElement: HTMLButtonElement | null) => {
+    if (!buttonElement) return;
+    
+    const colors = {
+      YES: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+      NO: ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3'],
+      UNSURE: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a'],
+    };
+    
+    const rect = buttonElement.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const particles = Array.from({ length: 12 }, (_, i) => {
+      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
+      const distance = 30 + Math.random() * 40;
+      return {
+        id: Date.now() + i,
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance - 20, // Bias upward
+        color: colors[voteType][Math.floor(Math.random() * colors[voteType].length)],
+      };
+    });
+    
+    setConfettiParticles(particles);
+    
+    // Clear particles after animation
+    setTimeout(() => setConfettiParticles([]), 600);
+  }, []);
+  
+  // Trigger haptic feedback
+  const triggerHaptic = useCallback(() => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+  }, []);
   const [selectedGif, setSelectedGif] = useState<string | null>(null);
   
   // Mention autocomplete state
@@ -860,6 +903,14 @@ export function QuestionCard({
     // Check if this is the user's first vote on this question
     const isFirstVote = !localUserVote;
 
+    // Trigger animations and haptic feedback (only for new votes, not unvotes)
+    if (!isUnvoting) {
+      triggerHaptic();
+      setAnimatingVote(vote);
+      spawnConfetti(vote, voteButtonRefs.current[vote]);
+      setTimeout(() => setAnimatingVote(null), 400);
+    }
+
     // Update local state immediately
     if (isUnvoting) {
       updateVoteState(null);
@@ -1160,51 +1211,108 @@ export function QuestionCard({
         )}
         
         {/* Vote Buttons */}
-        <div className="grid w-full grid-cols-3 gap-2">
+        <div className="relative grid w-full grid-cols-3 gap-2">
           <Button
+            ref={(el) => { voteButtonRefs.current.YES = el; }}
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
             onClick={() => handleVote('YES')}
             disabled={isPending || !user}
             className={cn(
-              'flex-1 gap-1.5',
+              'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
-              isPrivateMode && 'border-dashed'
+              isPrivateMode && 'border-dashed',
+              animatingVote === 'YES' && 'animate-vote-pop'
             )}
           >
             {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'YES')) && <Lock className="h-3 w-3" />}
             <Check className="h-4 w-4" />
             Yes
+            {/* Confetti particles for YES */}
+            {animatingVote === 'YES' && confettiParticles.map((particle) => (
+              <span
+                key={particle.id}
+                className="confetti-particle"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: particle.color,
+                  '--confetti-x': `${particle.x}px`,
+                  '--confetti-y': `${particle.y}px`,
+                } as React.CSSProperties}
+              />
+            ))}
           </Button>
           <Button
+            ref={(el) => { voteButtonRefs.current.NO = el; }}
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
             size="sm"
             onClick={() => handleVote('NO')}
             disabled={isPending || !user}
             className={cn(
-              'flex-1 gap-1.5',
+              'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
-              isPrivateMode && 'border-dashed'
+              isPrivateMode && 'border-dashed',
+              animatingVote === 'NO' && 'animate-vote-pop'
             )}
           >
             {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'NO')) && <Lock className="h-3 w-3" />}
             <X className="h-4 w-4" />
             No
+            {/* Confetti particles for NO */}
+            {animatingVote === 'NO' && confettiParticles.map((particle) => (
+              <span
+                key={particle.id}
+                className="confetti-particle"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: particle.color,
+                  '--confetti-x': `${particle.x}px`,
+                  '--confetti-y': `${particle.y}px`,
+                } as React.CSSProperties}
+              />
+            ))}
           </Button>
           <Button
+            ref={(el) => { voteButtonRefs.current.UNSURE = el; }}
             variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
             size="sm"
             onClick={() => handleVote('UNSURE')}
             disabled={isPending || !user}
             className={cn(
-              'flex-1 gap-1.5',
+              'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
-              isPrivateMode && 'border-dashed'
+              isPrivateMode && 'border-dashed',
+              animatingVote === 'UNSURE' && 'animate-vote-pop'
             )}
           >
             {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
             <HelpCircle className="h-4 w-4" />
             Not Sure
+            {/* Confetti particles for UNSURE */}
+            {animatingVote === 'UNSURE' && confettiParticles.map((particle) => (
+              <span
+                key={particle.id}
+                className="confetti-particle"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: particle.color,
+                  '--confetti-x': `${particle.x}px`,
+                  '--confetti-y': `${particle.y}px`,
+                } as React.CSSProperties}
+              />
+            ))}
           </Button>
         </div>
 
