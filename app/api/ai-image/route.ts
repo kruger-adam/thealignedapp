@@ -31,8 +31,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
-    const prompt = `Create a simple, abstract, visually appealing illustration that represents this question: "${questionContent}". 
-Style: Modern, minimal aesthetic. Suitable as a social media post thumbnail. No text in the image. Use vibrant but harmonious colors. Abstract or symbolic representation, not literal.`;
+    const prompt = `Create a visually appealing illustration for this yes/no question: "${questionContent}".
+
+Style guidelines:
+- Modern flat illustration style with clean lines
+- Include recognizable objects or scenes that relate to the question's topic
+- Vibrant but harmonious color palette (2-4 colors)
+- Simple composition, not cluttered
+- No text or words in the image
+- Suitable as a social media thumbnail
+
+Make it immediately clear what topic the question is about.`;
 
     console.log('Generating image for question:', questionContent);
 
