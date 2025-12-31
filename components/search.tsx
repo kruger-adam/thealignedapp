@@ -195,7 +195,7 @@ export function Search() {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {result.content}
                         </p>
                         <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
