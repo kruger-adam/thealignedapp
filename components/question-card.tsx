@@ -54,7 +54,7 @@ export function QuestionCard({
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [mentionedUsers, setMentionedUsers] = useState<MentionSuggestion[]>([]); // Track mentioned users for submission
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   
   // Question editing state
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
@@ -233,10 +233,14 @@ export function QuestionCard({
   }, []);
 
   // Handle comment input change - detect @mentions
-  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPos = e.target.selectionStart || 0;
     setCommentText(value);
+    
+    // Auto-resize textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
     
     // Find the @ symbol before cursor
     const textBeforeCursor = value.substring(0, cursorPos);
@@ -285,7 +289,7 @@ export function QuestionCard({
   };
 
   // Handle keyboard navigation in mention dropdown
-  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!showMentions) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -502,6 +506,10 @@ export function QuestionCard({
         setCommentText('');
         setMentionedUsers([]);
         setSubmittingComment(false);
+        // Reset textarea height
+        if (inputRef.current) {
+          inputRef.current.style.height = 'auto';
+        }
         
         // Check if comment mentions @AI
         const hasAIMention = contentToSave.toLowerCase().includes('@ai');
@@ -1462,15 +1470,16 @@ export function QuestionCard({
                         </button>
                       </span>
                     ))}
-                    {/* Text input */}
-                    <input
+                    {/* Text input - auto-expanding textarea */}
+                    <textarea
                       ref={inputRef}
-                      type="text"
                       value={commentText}
                       onChange={handleCommentChange}
                       placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
-                      className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+                      className="min-w-[120px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
                       onKeyDown={handleMentionKeyDown}
+                      rows={1}
+                      style={{ height: 'auto', maxHeight: '120px' }}
                     />
                   </div>
                   <Button
