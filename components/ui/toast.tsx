@@ -65,20 +65,36 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
+  const typeStyles = {
+    info: "bg-zinc-900 dark:bg-zinc-100",
+    success: "bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-500 dark:to-teal-500",
+    warning: "bg-amber-500 dark:bg-amber-500",
+    error: "bg-rose-500 dark:bg-rose-500",
+  };
+
+  const isColoredType = toast.type && toast.type !== 'info';
+
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white shadow-lg transition-all duration-200 dark:bg-zinc-100 dark:text-zinc-900",
-        isVisible && !isLeaving ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        "flex items-center gap-3 rounded-xl px-4 py-3 text-sm shadow-lg transition-all duration-200",
+        typeStyles[toast.type || 'info'],
+        isColoredType ? "text-white dark:text-white" : "text-white dark:text-zinc-900",
+        isVisible && !isLeaving ? "translate-y-0 opacity-100 scale-100" : "translate-y-2 opacity-0 scale-95",
+        toast.type === 'success' && isVisible && !isLeaving && "animate-bounce-once"
       )}
     >
-      <span>{toast.message}</span>
+      {toast.type === 'success' && <span className="text-lg">🎉</span>}
+      <span className="font-medium">{toast.message}</span>
       <button
         onClick={() => {
           setIsLeaving(true);
           setTimeout(onDismiss, 200);
         }}
-        className="text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-900"
+        className={cn(
+          "transition-opacity hover:opacity-80",
+          isColoredType ? "text-white/70" : "text-zinc-400 hover:text-white dark:text-zinc-500 dark:hover:text-zinc-900"
+        )}
       >
         <X className="h-4 w-4" />
       </button>

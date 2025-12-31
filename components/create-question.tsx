@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Plus, Send, Loader2, Lock, Unlock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { triggerInstallPrompt } from '@/components/install-prompt';
+import { useToast } from '@/components/ui/toast';
+
+// Confetti colors for celebration
+const CONFETTI_COLORS = [
+  '#10b981', '#34d399', '#6ee7b7', // Emerald
+  '#14b8a6', '#2dd4bf', '#5eead4', // Teal
+  '#f59e0b', '#fbbf24', '#fcd34d', // Amber
+  '#ec4899', '#f472b6', '#f9a8d4', // Pink
+  '#8b5cf6', '#a78bfa', '#c4b5fd', // Violet
+];
 
 interface CreateQuestionProps {
   onQuestionCreated?: () => void;
@@ -136,12 +146,62 @@ const allPrompts = Object.values(topicPrompts).flat();
 
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
   const supabase = useMemo(() => createClient(), []);
+  
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [confettiParticles, setConfettiParticles] = useState<Array<{
+    id: number;
+    x: number;
+    y: number;
+    rotation: number;
+    color: string;
+    size: number;
+    shape: 'circle' | 'square' | 'triangle';
+  }>>([]);
+  const postButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Trigger haptic feedback
+  const triggerHaptic = useCallback((duration: number = 10) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(duration);
+    }
+  }, []);
+  
+  // Spawn celebration confetti
+  const spawnCelebrationConfetti = useCallback(() => {
+    const buttonRect = postButtonRef.current?.getBoundingClientRect();
+    if (!buttonRect) return;
+    
+    const centerX = buttonRect.left + buttonRect.width / 2;
+    const centerY = buttonRect.top + buttonRect.height / 2;
+    
+    const particles = Array.from({ length: 30 }, (_, i) => {
+      const angle = (i / 30) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const distance = 80 + Math.random() * 120;
+      const shapes: Array<'circle' | 'square' | 'triangle'> = ['circle', 'square', 'triangle'];
+      return {
+        id: Date.now() + i,
+        x: centerX + Math.cos(angle) * distance,
+        y: centerY + Math.sin(angle) * distance - 60, // Bias upward
+        rotation: Math.random() * 720,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        size: 6 + Math.random() * 6,
+        shape: shapes[Math.floor(Math.random() * shapes.length)],
+      };
+    });
+    
+    setConfettiParticles(particles);
+    
+    // Clear particles after animation
+    setTimeout(() => setConfettiParticles([]), 1000);
+  }, []);
   
   // Typewriter animation state
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -226,6 +286,11 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const handleSubmit = async () => {
     if (!user || !isValid || isLoading) return;
 
+    // Trigger animations immediately for responsiveness
+    triggerHaptic(15);
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 400);
+
     setIsLoading(true);
     const questionContent = content.trim();
     
@@ -244,8 +309,13 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     if (error || !newQuestion) {
         console.error('Error creating question:', error);
       setIsLoading(false);
+      setIsAnimating(false);
         return;
       }
+
+    // Success! Spawn confetti celebration
+    spawnCelebrationConfetti();
+    triggerHaptic(30); // Longer haptic for success
 
     // Reset form immediately - don't wait for categorization or notifications
     const wasAnonymous = isAnonymous;
@@ -253,6 +323,10 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       setIsExpanded(false);
     setIsLoading(false);
     setIsAnonymous(false);
+    
+    // Show celebratory toast
+    showToast('Question posted!', 'success');
+    
     onQuestionCreated?.();
 
     // Trigger install prompt after creating a question
@@ -464,10 +538,14 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                   Cancel
                 </Button>
                 <Button
+                  ref={postButtonRef}
                   size="sm"
                   onClick={handleSubmit}
                   disabled={!isValid || isLoading}
-                  className="gap-1.5"
+                  className={cn(
+                    "gap-1.5",
+                    isAnimating && "animate-vote-pop"
+                  )}
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -481,6 +559,26 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
           </div>
         )}
       </CardContent>
+      
+      {/* Celebration confetti particles */}
+      {confettiParticles.map((particle) => (
+        <span
+          key={particle.id}
+          className="confetti-burst-particle"
+          style={{
+            left: postButtonRef.current?.getBoundingClientRect().left ?? 0,
+            top: postButtonRef.current?.getBoundingClientRect().top ?? 0,
+            width: particle.size,
+            height: particle.size,
+            backgroundColor: particle.color,
+            borderRadius: particle.shape === 'circle' ? '50%' : particle.shape === 'triangle' ? '0' : '2px',
+            clipPath: particle.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+            '--confetti-x': `${particle.x - (postButtonRef.current?.getBoundingClientRect().left ?? 0)}px`,
+            '--confetti-y': `${particle.y - (postButtonRef.current?.getBoundingClientRect().top ?? 0)}px`,
+            '--confetti-rotation': `${particle.rotation}deg`,
+          } as React.CSSProperties}
+        />
+      ))}
     </Card>
   );
 }
