@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Send, Pencil, Lock, Vote, MoreHorizontal, Trash2, Share2, Bot, User, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -16,6 +16,7 @@ import Image from 'next/image';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 import { VoterList } from '@/components/voter-list';
 import { useToast } from '@/components/ui/toast';
+import { GifPicker } from '@/components/gif-picker';
 
 interface QuestionCardProps {
   question: QuestionWithStats;
@@ -46,6 +47,8 @@ export function QuestionCard({
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<string | null>(null);
   
   // Mention autocomplete state
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
@@ -385,7 +388,7 @@ export function QuestionCard({
   };
 
   const submitComment = async () => {
-    if (!user || (!commentText.trim() && mentionedUsers.length === 0)) return;
+    if (!user || (!commentText.trim() && mentionedUsers.length === 0 && !selectedGif)) return;
     
     setSubmittingComment(true);
     try {
@@ -395,11 +398,18 @@ export function QuestionCard({
         u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
       );
       const messageText = commentText.trim();
-      const contentToSave = mentionStrings.length > 0 
+      let contentToSave = mentionStrings.length > 0 
         ? messageText 
           ? `${mentionStrings.join(' ')} ${messageText}`
           : mentionStrings.join(' ')
         : messageText;
+      
+      // Append GIF if selected
+      if (selectedGif) {
+        contentToSave = contentToSave 
+          ? `${contentToSave} [gif:${selectedGif}]`
+          : `[gif:${selectedGif}]`;
+      }
       
       // Use Supabase client for authenticated insert
       const { data: newComment, error } = await supabase
@@ -505,6 +515,7 @@ export function QuestionCard({
         // Clear input immediately after posting (don't wait for AI)
         setCommentText('');
         setMentionedUsers([]);
+        setSelectedGif(null);
         setSubmittingComment(false);
         // Reset textarea height
         if (inputRef.current) {
@@ -712,19 +723,21 @@ export function QuestionCard({
   // Render comment content with clickable @mentions
   // Supports both @[username](id) format and plain @username format
   const renderCommentContent = (content: string) => {
-    // Match @[username](id) format first, then fall back to simple @username
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
+    // Match @[username](id), @username, and [gif:url] formats
+    const combinedRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)|\[gif:(https?:\/\/[^\]]+)\]/g;
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
     let match;
     
-    while ((match = mentionRegex.exec(content)) !== null) {
-      // Add text before the mention
+    while ((match = combinedRegex.exec(content)) !== null) {
+      // Add text before the match
       if (match.index > lastIndex) {
-        parts.push(content.substring(lastIndex, match.index));
+        const textBefore = content.substring(lastIndex, match.index).trim();
+        if (textBefore) {
+          parts.push(textBefore + ' ');
+        }
       }
       
-      // Check which format matched
       if (match[1] && match[2]) {
         // @[username](id) format - we have the user ID
         const username = match[1];
@@ -750,6 +763,18 @@ export function QuestionCard({
             @{username}
           </span>
         );
+      } else if (match[4]) {
+        // GIF format [gif:url]
+        const gifUrl = match[4];
+        parts.push(
+          <img
+            key={`gif-${match.index}`}
+            src={gifUrl}
+            alt="GIF"
+            className="mt-2 max-w-full rounded-lg"
+            style={{ maxHeight: '200px' }}
+          />
+        );
       }
       
       lastIndex = match.index + match[0].length;
@@ -757,7 +782,10 @@ export function QuestionCard({
     
     // Add remaining text
     if (lastIndex < content.length) {
-      parts.push(content.substring(lastIndex));
+      const remaining = content.substring(lastIndex).trim();
+      if (remaining) {
+        parts.push(remaining);
+      }
     }
     
     return parts.length > 0 ? parts : content;
@@ -1482,9 +1510,22 @@ export function QuestionCard({
                       style={{ height: 'auto', maxHeight: '120px' }}
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGifPicker(!showGifPicker)}
+                    className={cn(
+                      "h-[38px] px-2 rounded-lg transition-colors",
+                      showGifPicker 
+                        ? "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
+                        : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                    )}
+                    title="Add GIF"
+                  >
+                    <ImageIcon className="h-5 w-5" />
+                  </button>
                   <Button
                     onClick={submitComment}
-                    disabled={(!commentText.trim() && mentionedUsers.length === 0) || submittingComment}
+                    disabled={(!commentText.trim() && mentionedUsers.length === 0 && !selectedGif) || submittingComment}
                     className="h-[38px] px-3"
                   >
                     {submittingComment ? (
@@ -1494,6 +1535,35 @@ export function QuestionCard({
                     )}
                   </Button>
                 </div>
+
+                {/* Selected GIF Preview */}
+                {selectedGif && (
+                  <div className="relative mt-2 inline-block">
+                    <img
+                      src={selectedGif}
+                      alt="Selected GIF"
+                      className="max-h-32 rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGif(null)}
+                      className="absolute -right-2 -top-2 rounded-full bg-zinc-900 p-1 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* GIF Picker */}
+                {showGifPicker && (
+                  <GifPicker
+                    onSelect={(gifUrl) => {
+                      setSelectedGif(gifUrl);
+                      setShowGifPicker(false);
+                    }}
+                    onClose={() => setShowGifPicker(false)}
+                  />
+                )}
               </div>
             ) : (
               <p className="text-sm text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800">
