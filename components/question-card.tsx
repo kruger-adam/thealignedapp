@@ -1088,21 +1088,9 @@ export function QuestionCard({
           </div>
         </div>
       </CardHeader>
-
-      {/* Question Image */}
-      {question.image_url && (
-        <div className="relative w-full aspect-video overflow-hidden">
-          <Image
-            src={question.image_url}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 600px"
-          />
-        </div>
-      )}
       
-      <CardContent className="pb-4">
+      {/* Question Text - above image for context first */}
+      <CardContent className="pb-3">
         {isEditingQuestion ? (
           <div className="space-y-2">
             <textarea
@@ -1140,7 +1128,7 @@ export function QuestionCard({
         ) : (
           <div className="group relative">
             <Link href={`/question/${question.id}`} className="block hover:opacity-80 transition-opacity">
-        <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
+              <p className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {localQuestionContent}
               </p>
             </Link>
@@ -1150,6 +1138,19 @@ export function QuestionCard({
           </div>
         )}
       </CardContent>
+
+      {/* Question Image - with rounded corners */}
+      {question.image_url && (
+        <div className="relative w-full aspect-video overflow-hidden mx-4 mb-4 rounded-xl" style={{ width: 'calc(100% - 2rem)' }}>
+          <Image
+            src={question.image_url}
+            alt=""
+            fill
+            className="object-cover rounded-xl"
+            sizes="(max-width: 768px) 100vw, 600px"
+          />
+        </div>
+      )}
 
       <CardFooter className="flex-col gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
         {/* Private Mode Indicator */}
