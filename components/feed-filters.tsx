@@ -47,15 +47,19 @@ const timePeriodOptions: { value: TimePeriod; label: string }[] = [
 ];
 
 const categories: Category[] = [
-  'Politics & Society',
-  'Relationships & Dating',
-  'Health & Wellness',
-  'Technology',
-  'Entertainment & Pop Culture',
-  'Food & Lifestyle',
-  'Sports',
+  'Hypothetical',
+  'Ethics',
+  'Relationships',
   'Work & Career',
-  'Philosophy & Ethics',
+  'Fun & Silly',
+  'Society',
+  'Technology',
+  'Health & Wellness',
+  'Entertainment',
+  'Environment',
+  'Politics',
+  'Sports',
+  'Food & Lifestyle',
   'Other',
 ];
 
