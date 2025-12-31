@@ -151,6 +151,21 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       })
       .catch(err => console.error('Error getting AI vote:', err));
 
+    // Generate AI image in background (fire and forget)
+    fetch('/api/ai-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId: newQuestion.id,
+        questionContent: questionContent,
+      }),
+    })
+      .then(() => {
+        // Refresh questions to show image
+        onQuestionCreated?.();
+      })
+      .catch(err => console.error('Error generating image:', err));
+
     // Notify followers in background (fire and forget) - skip for anonymous posts
     if (!wasAnonymous) {
       supabase
