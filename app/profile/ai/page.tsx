@@ -64,12 +64,12 @@ export default async function AIProfilePage() {
 
   // Calculate compatibility with AI if user is logged in
   let compatibility = null;
-  let commonGround: Array<{
+  const commonGround: Array<{
     question_id: string;
     content: string;
     shared_vote: VoteType;
   }> = [];
-  let divergence: Array<{
+  const divergence: Array<{
     question_id: string;
     content: string;
     user_vote: VoteType;
