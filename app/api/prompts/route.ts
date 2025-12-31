@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function generateNewPrompt(category: string, supabase: ReturnType<typeof createClient>) {
+async function generateNewPrompt(category: string, supabase: ReturnType<typeof getSupabase>) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.warn('OPENAI_API_KEY not set, cannot generate new prompt');
