@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
 import { FeedFilters } from '@/components/feed-filters';
+import { Search } from '@/components/search';
 import { LandingPage } from '@/components/landing-page';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -355,19 +356,22 @@ export default function FeedPage() {
               )}
             </p>
           </div>
-          <FeedFilters 
-            currentSort={sortBy} 
-            onSortChange={setSortBy} 
-            currentCategory={categoryFilter}
-            onCategoryChange={setCategoryFilter}
-            minVotes={minVotes}
-            onMinVotesChange={setMinVotes}
-            timePeriod={timePeriod}
-            onTimePeriodChange={setTimePeriod}
-            unansweredOnly={unansweredOnly}
-            onUnansweredChange={setUnansweredOnly}
-            isLoggedIn={!!user}
-          />
+          <div className="flex items-center gap-2">
+            <Search />
+            <FeedFilters 
+              currentSort={sortBy} 
+              onSortChange={setSortBy} 
+              currentCategory={categoryFilter}
+              onCategoryChange={setCategoryFilter}
+              minVotes={minVotes}
+              onMinVotesChange={setMinVotes}
+              timePeriod={timePeriod}
+              onTimePeriodChange={setTimePeriod}
+              unansweredOnly={unansweredOnly}
+              onUnansweredChange={setUnansweredOnly}
+              isLoggedIn={!!user}
+            />
+          </div>
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />
       </div>

@@ -109,16 +109,13 @@ export function Search() {
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Search trigger button */}
+      {/* Search trigger button - compact icon style to match sort/filter */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-700"
+        title="Search (⌘K)"
       >
         <SearchIcon className="h-4 w-4" />
-        <span className="hidden sm:inline">Search...</span>
-        <kbd className="hidden rounded bg-zinc-200 px-1.5 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400 sm:inline">
-          ⌘K
-        </kbd>
       </button>
 
       {/* Search modal/dropdown */}
