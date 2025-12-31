@@ -3,6 +3,7 @@
 import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -806,6 +807,19 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 </div>
               </div>
             </Link>
+          )}
+
+          {/* Question Image */}
+          {question.image_url && (
+            <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
+              <Image
+                src={question.image_url}
+                alt=""
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           )}
 
           {/* Question content */}
