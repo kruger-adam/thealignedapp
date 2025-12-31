@@ -1042,12 +1042,6 @@ export function QuestionCard({
                   <Share2 className="h-3.5 w-3.5" />
                   Share
                 </DropdownMenuItem>
-                {user && (
-                  <DropdownMenuItem onClick={() => setIsPrivateMode(!isPrivateMode)}>
-                    <Lock className="h-3.5 w-3.5" />
-                    {isPrivateMode ? 'Cancel private vote' : 'Vote privately'}
-                  </DropdownMenuItem>
-                )}
                 {user?.id === question.author_id && (
                   <>
                     <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
