@@ -1,6 +1,6 @@
 // Database types for Consensus app
 
-export type VoteType = 'YES' | 'NO' | 'UNSURE' | 'SKIP';
+export type VoteType = 'YES' | 'NO' | 'UNSURE';
 
 export interface Profile {
   id: string;
