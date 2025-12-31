@@ -105,23 +105,19 @@ export default async function AIProfilePage() {
         if (aiData && userVote.vote !== 'SKIP' && aiData.vote !== 'SKIP') {
           if (userVote.vote === aiData.vote) {
             agreements++;
-            if (commonGround.length < 10) {
-              commonGround.push({
-                question_id: userVote.question_id,
-                content: aiData.content,
-                shared_vote: userVote.vote as VoteType,
-              });
-            }
+            commonGround.push({
+              question_id: userVote.question_id,
+              content: aiData.content,
+              shared_vote: userVote.vote as VoteType,
+            });
           } else {
             disagreements++;
-            if (divergence.length < 10) {
-              divergence.push({
-                question_id: userVote.question_id,
-                content: aiData.content,
-                user_vote: userVote.vote as VoteType,
-                ai_vote: aiData.vote,
-              });
-            }
+            divergence.push({
+              question_id: userVote.question_id,
+              content: aiData.content,
+              user_vote: userVote.vote as VoteType,
+              ai_vote: aiData.vote,
+            });
           }
         }
       }
