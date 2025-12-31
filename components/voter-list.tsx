@@ -32,11 +32,6 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
         hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-900/40',
         text: 'text-amber-700 dark:text-amber-300',
       },
-      SKIP: {
-        bg: 'bg-zinc-50 dark:bg-zinc-800',
-        hoverBg: 'hover:bg-zinc-100 dark:hover:bg-zinc-700',
-        text: 'text-zinc-700 dark:text-zinc-300',
-      },
     };
 
     const colors = colorClasses[voteType];
@@ -88,11 +83,6 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
         bg: 'bg-amber-50/50 dark:bg-amber-950/20',
         icon: 'text-amber-400',
         text: 'text-amber-500 dark:text-amber-400',
-      },
-      SKIP: {
-        bg: 'bg-zinc-50/50 dark:bg-zinc-800/50',
-        icon: 'text-zinc-400',
-        text: 'text-zinc-500 dark:text-zinc-400',
       },
     };
 

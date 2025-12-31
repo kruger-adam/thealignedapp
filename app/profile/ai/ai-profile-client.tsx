@@ -89,7 +89,6 @@ const voteConfig = {
   YES: { icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Yes' },
   NO: { icon: XIcon, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
   UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure' },
-  SKIP: { icon: HelpCircle, color: 'text-zinc-500', bg: 'bg-zinc-100 dark:bg-zinc-800/30', label: 'Skip' },
 };
 
 export function AIProfileClient({

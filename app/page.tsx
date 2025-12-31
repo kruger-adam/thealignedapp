@@ -130,22 +130,20 @@ export default function FeedPage() {
     }
     
     // Calculate vote stats per question
-    const voteStats: Record<string, { yes: number; no: number; unsure: number; skip: number; anonymous: number }> = {};
+    const voteStats: Record<string, { yes: number; no: number; unsure: number; anonymous: number }> = {};
     for (const r of allResponses) {
       if (!voteStats[r.question_id]) {
-        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0, skip: 0, anonymous: 0 };
+        voteStats[r.question_id] = { yes: 0, no: 0, unsure: 0, anonymous: 0 };
       }
       if (r.vote === 'YES') voteStats[r.question_id].yes++;
       else if (r.vote === 'NO') voteStats[r.question_id].no++;
       else if (r.vote === 'UNSURE') voteStats[r.question_id].unsure++;
-      else if (r.vote === 'SKIP') voteStats[r.question_id].skip++;
       if (r.is_anonymous) voteStats[r.question_id].anonymous++;
     }
     
     // Transform to match expected format
     const questionsData = (rawQuestions as RawQuestion[]).map((q) => {
-      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0, skip: 0, anonymous: 0 };
-      // Total for percentages excludes SKIP votes
+      const stats = voteStats[q.id] || { yes: 0, no: 0, unsure: 0, anonymous: 0 };
       const total = stats.yes + stats.no + stats.unsure;
       return {
         question_id: q.id,

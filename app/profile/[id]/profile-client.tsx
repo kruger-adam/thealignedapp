@@ -18,7 +18,6 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
-  EyeOff,
   Lock,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -98,7 +97,6 @@ const voteConfig = {
   YES: { icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Yes' },
   NO: { icon: XIcon, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
   UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure' },
-  SKIP: { icon: EyeOff, color: 'text-zinc-500', bg: 'bg-zinc-100 dark:bg-zinc-800/30', label: 'Skip' },
 };
 
 export function ProfileClient({
@@ -250,13 +248,9 @@ export function ProfileClient({
     setFollowLoading(false);
   };
 
-  // Filter out SKIP votes when viewing someone else's profile (SKIP is anonymous)
+  // Filter responses by stance
   const filteredResponses = responses.filter(
-    (r) => {
-      // Hide SKIP votes on other people's profiles
-      if (!isOwnProfile && r.vote === 'SKIP') return false;
-      return stanceFilter === 'all' || r.vote === stanceFilter;
-    }
+    (r) => stanceFilter === 'all' || r.vote === stanceFilter
   );
 
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
@@ -555,7 +549,7 @@ export function ProfileClient({
         <div className="space-y-6">
           {/* Common Ground */}
           {(() => {
-            const filteredCommon = commonGround?.filter(item => item.shared_vote !== 'SKIP') || [];
+            const filteredCommon = commonGround || [];
             const startIdx = commonGroundPage * PAGE_SIZE;
             const endIdx = Math.min(startIdx + PAGE_SIZE, filteredCommon.length);
             const pageItems = filteredCommon.slice(startIdx, endIdx);
@@ -628,7 +622,7 @@ export function ProfileClient({
 
           {/* Divergence */}
           {(() => {
-            const filteredDiverge = divergence?.filter(item => item.vote_a !== 'SKIP' && item.vote_b !== 'SKIP') || [];
+            const filteredDiverge = divergence || [];
             const startIdx = divergencePage * PAGE_SIZE;
             const endIdx = Math.min(startIdx + PAGE_SIZE, filteredDiverge.length);
             const pageItems = filteredDiverge.slice(startIdx, endIdx);

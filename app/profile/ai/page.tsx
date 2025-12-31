@@ -102,7 +102,7 @@ export default async function AIProfilePage() {
       
       for (const userVote of userResponses) {
         const aiData = aiVoteMap.get(userVote.question_id);
-        if (aiData && userVote.vote !== 'SKIP' && aiData.vote !== 'SKIP') {
+        if (aiData) {
           if (userVote.vote === aiData.vote) {
             agreements++;
             commonGround.push({
