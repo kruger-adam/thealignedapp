@@ -133,7 +133,7 @@ export function AIProfileClient({
               <Sparkles className="h-5 w-5 text-violet-500" />
             </div>
             <p className="text-sm text-zinc-500">
-              I vote on every question and share my reasoning. Compare your views with mine!
+              I vote on every question and share my reasoning. I also post questions from time to time. Compare your views with mine!
             </p>
           </div>
 
@@ -172,7 +172,7 @@ export function AIProfileClient({
                 </div>
                 <div>
                   <p className="text-sm text-violet-700 dark:text-violet-300">
-                    Your Agreement with AI
+                    Agreement Rate
                   </p>
                   <p className="text-2xl font-bold text-violet-900 dark:text-violet-100">
                     {Math.round(compatibility.compatibility_score)}%

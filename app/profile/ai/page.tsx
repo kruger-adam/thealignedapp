@@ -5,14 +5,14 @@ import { VoteType } from '@/lib/types';
 // AI profile metadata
 const AI_PROFILE = {
   id: 'ai',
-  username: 'Consensus AI',
+  username: 'AI',
   email: 'ai@consensus.app',
   avatar_url: null, // We'll use a special AI avatar
   created_at: '2024-01-01T00:00:00Z', // App launch date
 };
 
 export const metadata = {
-  title: 'Consensus AI - Profile',
+  title: 'AI - Profile',
   description: 'See how our AI votes on questions and compare your views',
 };
 
