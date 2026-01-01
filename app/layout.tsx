@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 import { Header } from '@/components/header';
 import { InstallPrompt } from '@/components/install-prompt';
 import { ToastProvider } from '@/components/ui/toast';
+import { AIAssistantProvider, AIAssistantFAB, AIAssistantPanel } from '@/components/ai-assistant';
 import './globals.css';
 
 const instrumentSans = Instrument_Sans({
@@ -53,11 +54,15 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <AuthProvider>
-          <ToastProvider>
-            <Header />
-            <main>{children}</main>
-            <InstallPrompt />
-          </ToastProvider>
+          <AIAssistantProvider>
+            <ToastProvider>
+              <Header />
+              <main>{children}</main>
+              <InstallPrompt />
+              <AIAssistantFAB />
+              <AIAssistantPanel />
+            </ToastProvider>
+          </AIAssistantProvider>
         </AuthProvider>
       </body>
     </html>
