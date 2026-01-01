@@ -93,6 +93,13 @@ export async function POST(request: NextRequest) {
       stream: true,
     });
 
+    // Collect full response for logging while streaming
+    let fullResponse = '';
+    const userId = user.id;
+    const userMessage = message;
+    const contextPage = context.page;
+    const contextId = context.questionId || context.profileId || null;
+
     // Create a readable stream for the response
     const encoder = new TextEncoder();
     const readable = new ReadableStream({
@@ -101,10 +108,22 @@ export async function POST(request: NextRequest) {
           for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content;
             if (content) {
+              fullResponse += content;
               controller.enqueue(encoder.encode(content));
             }
           }
           controller.close();
+          
+          // Log the conversation after stream completes (fire and forget)
+          supabase.from('ai_assistant_logs').insert({
+            user_id: userId,
+            message: userMessage,
+            response: fullResponse,
+            context_page: contextPage,
+            context_id: contextId,
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Error logging AI conversation:', logError);
+          });
         } catch (error) {
           controller.error(error);
         }
