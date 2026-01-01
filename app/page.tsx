@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
@@ -12,10 +12,15 @@ import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
 import { MinVotes, TimePeriod, PollStatus } from '@/components/feed-filters';
 
+const PAGE_SIZE = 15;
+
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
@@ -23,6 +28,7 @@ export default function FeedPage() {
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [pollStatus, setPollStatus] = useState<PollStatus>('all');
   const supabase = useMemo(() => createClient(), []);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Filter questions by category, min votes, time period, and unanswered
   const filteredQuestions = useMemo(() => {
@@ -67,12 +73,20 @@ export default function FeedPage() {
     return filtered;
   }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
 
-  const fetchQuestions = useCallback(async () => {
-    setLoading(true);
+  const fetchQuestions = useCallback(async (append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setOffset(0);
+      setHasMore(true);
+    }
+
+    const currentOffset = append ? offset : 0;
 
     try {
       // Fetch questions using direct fetch (Supabase client has issues)
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc`;
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc&limit=${PAGE_SIZE}&offset=${currentOffset}`;
       const response = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -86,13 +100,22 @@ export default function FeedPage() {
       if (questionsError) {
         console.error('Error fetching questions:', questionsError);
         setLoading(false);
+        setLoadingMore(false);
         return;
       }
 
-    // If no questions, show empty state
+    // Check if we got fewer results than requested (no more pages)
+    if (!rawQuestions || rawQuestions.length < PAGE_SIZE) {
+      setHasMore(false);
+    }
+
+    // If no questions and not appending, show empty state
     if (!rawQuestions || rawQuestions.length === 0) {
-      setQuestions([]);
+      if (!append) {
+        setQuestions([]);
+      }
       setLoading(false);
+      setLoadingMore(false);
       return;
     }
 
@@ -308,17 +331,57 @@ export default function FeedPage() {
       }
     });
 
-    setQuestions(sorted);
+    if (append) {
+      setQuestions(prev => [...prev, ...sorted]);
+      setOffset(currentOffset + rawQuestions.length);
+    } else {
+      setQuestions(sorted);
+      setOffset(rawQuestions.length);
+    }
     setLoading(false);
+    setLoadingMore(false);
     } catch (err) {
       console.error('Fetch error:', err);
       setLoading(false);
+      setLoadingMore(false);
     }
+  }, [user, sortBy, offset]);
+
+  // Reset and fetch when sort/filters change
+  useEffect(() => {
+    fetchQuestions(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, sortBy]);
 
+  // Load more when user scrolls to bottom
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
+      fetchQuestions(true);
+    }
+  }, [loadingMore, hasMore, loading, fetchQuestions]);
+
+  // Intersection observer for infinite scroll
   useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [loadMore]);
 
   // Realtime subscription for new questions and votes
   // Realtime subscription for new questions only
@@ -411,7 +474,7 @@ export default function FeedPage() {
             <div
               key={question.id}
               className="animate-in fade-in slide-in-from-bottom-2"
-              style={{ animationDelay: `${index * 50}ms` }}
+              style={{ animationDelay: `${Math.min(index, 10) * 50}ms` }}
             >
               <QuestionCard
                 question={question}
@@ -420,6 +483,20 @@ export default function FeedPage() {
               />
             </div>
           ))}
+          
+          {/* Infinite scroll trigger */}
+          <div ref={loadMoreRef} className="py-4">
+            {loadingMore && (
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+              </div>
+            )}
+            {!hasMore && filteredQuestions.length > 0 && (
+              <p className="text-center text-sm text-zinc-400">
+                You&apos;ve seen all the questions
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
