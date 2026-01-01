@@ -305,27 +305,24 @@ async function gatherContextData(
   // Find recommended questions (unanswered, in user's top categories)
   const recommendedQuestions: RecommendedQuestion[] = [];
   
-  // Get questions the user hasn't voted on
+  // Get questions the user HAS voted on (to exclude)
   const { data: votedQuestionIds } = await supabase
     .from('responses')
     .select('question_id')
     .eq('user_id', userId)
     .eq('is_ai', false);
   
-  const excludeIds = votedQuestionIds?.map(r => r.question_id) || [];
+  const excludeIdsSet = new Set(votedQuestionIds?.map(r => r.question_id) || []);
   
-  // Get unanswered questions, prefer user's top categories
-  let query = supabase
+  // Get recent questions
+  const { data: allCandidateQuestions } = await supabase
     .from('questions')
     .select('id, content, category')
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(100);
   
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-  }
-  
-  const { data: candidateQuestions } = await query;
+  // Filter client-side to only include questions the user HASN'T voted on
+  const candidateQuestions = allCandidateQuestions?.filter(q => !excludeIdsSet.has(q.id)) || [];
   
   if (candidateQuestions) {
     // Get vote stats for these questions
@@ -475,15 +472,15 @@ About the current user (${data.userName}):
 - Voting pattern: ${data.userStats.yesPercent}% Yes, ${data.userStats.noPercent}% No, ${data.userStats.unsurePercent}% Not Sure
 - Top categories they engage with: ${data.topCategories.join(', ') || 'Not enough data yet'}
 
-Recent questions they've voted on:
+QUESTIONS USER HAS ALREADY VOTED ON (do NOT recommend these - they already answered them):
 ${data.recentQuestions.slice(0, 5).map(q => `- "${q}"`).join('\n') || 'No recent votes'}
 
-SIMILAR USERS (users who think like ${data.userName}):
+SIMILAR USERS (real users from the database who think like ${data.userName}):
 ${data.similarUsers.length > 0 
   ? data.similarUsers.map(u => `- @${u.username}: ${u.compatibility}% compatible (${u.agreements} agreements, ${u.disagreements} disagreements)`).join('\n')
   : 'Not enough shared votes with other users yet to find matches.'}
 
-RECOMMENDED QUESTIONS (unanswered questions ${data.userName} might like):
+RECOMMENDED QUESTIONS TO SUGGEST (questions user has NOT voted on yet - ONLY suggest from this list):
 ${data.recommendedQuestions.length > 0
   ? data.recommendedQuestions.map(q => `- "${q.content}" [${q.category}] - ${q.totalVotes} votes, ${q.yesPercent}% Yes / ${q.noPercent}% No`).join('\n')
   : 'No unanswered questions found.'}
@@ -525,7 +522,7 @@ Help them discover interesting questions, understand their voting patterns, or f
 
 REMEMBER - CRITICAL:
 - When asked "who thinks like me" or about similar users, ONLY mention users from SIMILAR USERS above. If the list is empty, say you need more shared votes to find matches.
-- When asked to recommend questions, ONLY suggest from RECOMMENDED QUESTIONS above. If empty, say there are no unanswered questions.
+- When asked to recommend questions, ONLY suggest from "RECOMMENDED QUESTIONS TO SUGGEST" above. NEVER recommend questions from "QUESTIONS USER HAS ALREADY VOTED ON" - they've already answered those!
 - Use EXACT usernames with @ prefix (e.g., @username) when mentioning users.
 - If asked about something not in this prompt, say "I don't have that data yet" rather than making it up.
 - If they ask to argue the other side, take the opposite position playfully.
