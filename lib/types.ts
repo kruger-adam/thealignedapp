@@ -35,6 +35,7 @@ export interface Question {
   image_url?: string | null;
   created_at: string;
   updated_at: string;
+  expires_at?: string | null; // ISO timestamp, null = never expires
   author?: Partial<Profile>;
   is_ai?: boolean;
   is_anonymous?: boolean;
@@ -76,6 +77,7 @@ export interface QuestionStats {
 }
 
 export interface QuestionWithStats extends Question {
+  expires_at?: string | null;
   stats: {
     total_votes: number;
     yes_count: number;

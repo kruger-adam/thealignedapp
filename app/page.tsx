@@ -10,7 +10,7 @@ import { LandingPage } from '@/components/landing-page';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
-import { MinVotes, TimePeriod } from '@/components/feed-filters';
+import { MinVotes, TimePeriod, PollStatus } from '@/components/feed-filters';
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
@@ -21,6 +21,7 @@ export default function FeedPage() {
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [unansweredOnly, setUnansweredOnly] = useState(false);
+  const [pollStatus, setPollStatus] = useState<PollStatus>('all');
   const supabase = useMemo(() => createClient(), []);
 
   // Filter questions by category, min votes, time period, and unanswered
@@ -51,8 +52,20 @@ export default function FeedPage() {
     if (unansweredOnly) {
       filtered = filtered.filter(q => !q.user_vote);
     }
+    if (pollStatus !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(q => {
+        if (!q.expires_at) {
+          // No expiration = always active
+          return pollStatus === 'active';
+        }
+        const expiresAt = new Date(q.expires_at);
+        const isExpired = expiresAt <= now;
+        return pollStatus === 'expired' ? isExpired : !isExpired;
+      });
+    }
     return filtered;
-  }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly]);
+  }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -92,6 +105,7 @@ export default function FeedPage() {
       image_url: string | null;
       created_at: string;
       updated_at: string;
+      expires_at: string | null;
       is_ai: boolean;
       is_anonymous: boolean;
     }
@@ -153,6 +167,7 @@ export default function FeedPage() {
         image_url: q.image_url,
         created_at: q.created_at,
         updated_at: q.updated_at,
+        expires_at: q.expires_at,
         is_ai: q.is_ai || false,
         is_anonymous: q.is_anonymous || false,
         total_votes: total,
@@ -220,6 +235,7 @@ export default function FeedPage() {
       image_url: q.image_url,
       created_at: q.created_at,
       updated_at: q.updated_at,
+      expires_at: q.expires_at,
       is_ai: q.is_ai,
       is_anonymous: q.is_anonymous,
       author: (q.author_id && !q.is_anonymous) ? profilesMap[q.author_id] : undefined,
@@ -367,6 +383,8 @@ export default function FeedPage() {
               onTimePeriodChange={setTimePeriod}
               unansweredOnly={unansweredOnly}
               onUnansweredChange={setUnansweredOnly}
+              pollStatus={pollStatus}
+              onPollStatusChange={setPollStatus}
               isLoggedIn={!!user}
             />
           </div>

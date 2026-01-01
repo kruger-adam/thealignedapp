@@ -929,6 +929,12 @@ export function QuestionCard({
 
   const handleVote = async (vote: VoteType) => {
     if (!user) return;
+    
+    // Check if poll is expired
+    if (isExpired) {
+      showToast('This poll has closed', 'error');
+      return;
+    }
 
     // Check if user is clicking the same vote to unvote
     const isUnvoting = localUserVote === vote;
@@ -1051,9 +1057,46 @@ export function QuestionCard({
 
   const hasVoted = !!optimisticData.userVote;
   const isAuthor = user?.id === question.author_id;
-  // Can see results if: voted, is the author, or not logged in (guests can't expand anyway)
-  const canSeeResults = hasVoted || isAuthor;
+  // Expiration logic
+  const expiresAt = useMemo(() => 
+    question.expires_at ? new Date(question.expires_at) : null,
+    [question.expires_at]
+  );
+  const [now, setNow] = useState(new Date());
+  const isExpired = expiresAt ? now >= expiresAt : false;
+  const timeUntilExpiry = expiresAt ? expiresAt.getTime() - now.getTime() : null;
+  
+  // Can see results if: voted, is the author, poll is expired, or not logged in
+  const canSeeResults = hasVoted || isAuthor || isExpired;
   const timeAgo = getTimeAgo(new Date(question.created_at));
+  
+  // Update "now" every minute for countdown
+  useEffect(() => {
+    if (!expiresAt || isExpired) return;
+    
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, [expiresAt, isExpired]);
+  
+  // Format countdown string
+  const getCountdownText = () => {
+    if (!timeUntilExpiry || timeUntilExpiry <= 0) return null;
+    
+    const hours = Math.floor(timeUntilExpiry / (1000 * 60 * 60));
+    const minutes = Math.floor((timeUntilExpiry % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d left`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m left`;
+    } else {
+      return `${minutes}m left`;
+    }
+  };
   
   // Fetch AI vote when user can see results
   useEffect(() => {
@@ -1227,13 +1270,32 @@ export function QuestionCard({
       */}
 
       <CardFooter className="flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        {/* Expiration Badge */}
+        {expiresAt && (
+          <div className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
+            isExpired 
+              ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+              : timeUntilExpiry && timeUntilExpiry < 3600000 // Less than 1 hour
+                ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400"
+                : "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+          )}>
+            <Clock className="h-4 w-4" />
+            {isExpired ? (
+              <span>🔒 Voting closed · Final results</span>
+            ) : (
+              <span>⏱ {getCountdownText()}</span>
+            )}
+          </div>
+        )}
+
         {/* Vote Buttons */}
         <div className="relative grid w-full grid-cols-3 gap-2">
           <Button
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
             onClick={() => handleVote('YES')}
-            disabled={isPending || !user}
+            disabled={isPending || !user || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
@@ -1266,7 +1328,7 @@ export function QuestionCard({
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
             size="sm"
             onClick={() => handleVote('NO')}
-            disabled={isPending || !user}
+            disabled={isPending || !user || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
@@ -1299,7 +1361,7 @@ export function QuestionCard({
             variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
             size="sm"
             onClick={() => handleVote('UNSURE')}
-            disabled={isPending || !user}
+            disabled={isPending || !user || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',

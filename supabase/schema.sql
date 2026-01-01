@@ -64,8 +64,13 @@ CREATE TABLE questions (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     is_ai BOOLEAN DEFAULT false,
-    is_anonymous BOOLEAN DEFAULT false
+    is_anonymous BOOLEAN DEFAULT false,
+    expires_at TIMESTAMPTZ DEFAULT NULL -- NULL = never expires
 );
+
+-- Index for filtering active/expired polls
+CREATE INDEX idx_questions_expires_at ON questions(expires_at) 
+    WHERE expires_at IS NOT NULL;
 
 -- Create index for faster queries
 CREATE INDEX idx_questions_author_id ON questions(author_id);
@@ -275,6 +280,30 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_response_change
     AFTER INSERT OR UPDATE ON responses
     FOR EACH ROW EXECUTE FUNCTION log_vote_change();
+
+-- Function to prevent voting on expired polls
+CREATE OR REPLACE FUNCTION check_poll_not_expired()
+RETURNS TRIGGER AS $$
+DECLARE
+    poll_expires_at TIMESTAMPTZ;
+BEGIN
+    SELECT expires_at INTO poll_expires_at
+    FROM questions
+    WHERE id = NEW.question_id;
+    
+    -- If poll has an expiration and it's passed, reject the vote
+    IF poll_expires_at IS NOT NULL AND poll_expires_at < NOW() THEN
+        RAISE EXCEPTION 'Cannot vote on expired poll';
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to check poll expiration before inserting/updating votes
+CREATE TRIGGER check_poll_expiration
+    BEFORE INSERT OR UPDATE ON responses
+    FOR EACH ROW EXECUTE FUNCTION check_poll_not_expired();
 
 -- ============================================
 -- VIEWS & ANALYTICS FUNCTIONS

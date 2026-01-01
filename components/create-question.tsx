@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Plus, Send, Loader2, Lock, Unlock, Sparkles } from 'lucide-react';
+import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
@@ -151,6 +151,8 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [hasExpiration, setHasExpiration] = useState(false);
+  const [expirationHours, setExpirationHours] = useState<number | null>(null); // null = no expiration
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
   const supabase = useMemo(() => createClient(), []);
   
@@ -294,6 +296,14 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     setIsLoading(true);
     const questionContent = content.trim();
     
+    // Calculate expires_at if expiration is set
+    let expiresAt: string | null = null;
+    if (hasExpiration && expirationHours) {
+      const expireDate = new Date();
+      expireDate.setHours(expireDate.getHours() + expirationHours);
+      expiresAt = expireDate.toISOString();
+    }
+    
     // Insert question immediately with default category
     const { data: newQuestion, error } = await supabase
       .from('questions')
@@ -302,6 +312,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         content: questionContent,
         category: 'Other', // Default, will be updated async
         is_anonymous: isAnonymous,
+        expires_at: expiresAt,
       })
       .select('id')
       .single();
@@ -323,6 +334,8 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       setIsExpanded(false);
     setIsLoading(false);
     setIsAnonymous(false);
+    setHasExpiration(false);
+    setExpirationHours(null);
     
     // Show celebratory toast
     showToast('Question posted!', 'success');
@@ -507,7 +520,61 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                 {charCount}/{maxChars}
               </span>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Expiration toggle and options */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasExpiration) {
+                        setHasExpiration(false);
+                        setExpirationHours(null);
+                      } else {
+                        setHasExpiration(true);
+                        setExpirationHours(24); // Default to 24h
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                      hasExpiration
+                        ? "bg-amber-500 text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    )}
+                    title={hasExpiration ? "Poll has time limit" : "Add time limit"}
+                  >
+                    <Clock className="h-3 w-3" />
+                    {hasExpiration ? (
+                      expirationHours === 1 ? '1h' : 
+                      expirationHours === 24 ? '24h' : 
+                      expirationHours === 168 ? '1 week' : 
+                      `${expirationHours}h`
+                    ) : 'No limit'}
+                  </button>
+                  {hasExpiration && (
+                    <div className="flex gap-0.5">
+                      {[
+                        { label: '1h', hours: 1 },
+                        { label: '24h', hours: 24 },
+                        { label: '1w', hours: 168 },
+                      ].map(({ label, hours }) => (
+                        <button
+                          key={hours}
+                          type="button"
+                          onClick={() => setExpirationHours(hours)}
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-xs transition-colors",
+                            expirationHours === hours
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
                 <button
                   type="button"
                   onClick={() => setIsAnonymous(!isAnonymous)}
@@ -533,6 +600,8 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                     setContent('');
                     setIsExpanded(false);
                     setIsAnonymous(false);
+                    setHasExpiration(false);
+                    setExpirationHours(null);
                   }}
                 >
                   Cancel

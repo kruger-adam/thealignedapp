@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 export type MinVotes = 0 | 5 | 10 | 25;
 export type TimePeriod = 'all' | 'day' | 'week' | 'month';
+export type PollStatus = 'all' | 'active' | 'expired';
 
 interface FeedFiltersProps {
   currentSort: SortOption;
@@ -19,6 +20,8 @@ interface FeedFiltersProps {
   onTimePeriodChange: (period: TimePeriod) => void;
   unansweredOnly: boolean;
   onUnansweredChange: (value: boolean) => void;
+  pollStatus: PollStatus;
+  onPollStatusChange: (status: PollStatus) => void;
   isLoggedIn: boolean;
 }
 
@@ -44,6 +47,12 @@ const timePeriodOptions: { value: TimePeriod; label: string }[] = [
   { value: 'day', label: '24h' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
+];
+
+const pollStatusOptions: { value: PollStatus; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'expired', label: 'Closed' },
 ];
 
 const categories: Category[] = [
@@ -74,13 +83,15 @@ export function FeedFilters({
   onTimePeriodChange,
   unansweredOnly,
   onUnansweredChange,
+  pollStatus,
+  onPollStatusChange,
   isLoggedIn,
 }: FeedFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   
   // Count active filters
-  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0);
+  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0) + (pollStatus !== 'all' ? 1 : 0);
   
   // Close on click outside
   useEffect(() => {
@@ -141,6 +152,7 @@ export function FeedFilters({
                     onMinVotesChange(0);
                     onTimePeriodChange('all');
                     onUnansweredChange(false);
+                    onPollStatusChange('all');
                   }}
                   className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 >
@@ -204,6 +216,29 @@ export function FeedFilters({
                     className={cn(
                       'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors',
                       timePeriod === value
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Poll status filter */}
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Poll Status
+              </label>
+              <div className="flex gap-2">
+                {pollStatusOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => onPollStatusChange(value)}
+                    className={cn(
+                      'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors',
+                      pollStatus === value
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                         : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
                     )}
