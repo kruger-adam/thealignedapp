@@ -96,17 +96,6 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
     );
   };
 
-  const renderAIReasoning = (voteType: VoteType) => {
-    const aiVoter = voters.find(v => v.vote === voteType && v.is_ai && v.ai_reasoning);
-    if (!aiVoter?.ai_reasoning) return null;
-
-    return (
-      <p className="text-xs italic text-violet-600 dark:text-violet-400 pl-1">
-        &ldquo;{aiVoter.ai_reasoning}&rdquo;
-      </p>
-    );
-  };
-
   const renderVoteSection = (
     voteType: VoteType,
     votersList: Voter[],
@@ -119,12 +108,9 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
     return (
       <div>
         <p className={`mb-1.5 text-xs font-medium ${labelColor}`}>{label}</p>
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {votersList.map((voter, idx) => renderVoterChip(voter, voteType, idx))}
-            {renderAnonymousChip(anonCount, voteType)}
-          </div>
-          {renderAIReasoning(voteType)}
+        <div className="flex flex-wrap gap-2">
+          {votersList.map((voter, idx) => renderVoterChip(voter, voteType, idx))}
+          {renderAnonymousChip(anonCount, voteType)}
         </div>
       </div>
     );

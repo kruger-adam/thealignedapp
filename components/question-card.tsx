@@ -1357,7 +1357,7 @@ export function QuestionCard({
                   </span>
                 </div>
                 {aiVote.reasoning && (
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                     &ldquo;{aiVote.reasoning}&rdquo;
                   </p>
                 )}
