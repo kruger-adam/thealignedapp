@@ -53,6 +53,10 @@ export function QuestionCard({
   const [animatingVote, setAnimatingVote] = useState<VoteType | null>(null);
   const [confettiParticles, setConfettiParticles] = useState<Array<{ id: number; x: number; y: number; color: string }>>([]);
   
+  // AI vote insight state
+  const [aiVote, setAiVote] = useState<{ vote: VoteType; reasoning: string | null } | null>(null);
+  const [loadingAiVote, setLoadingAiVote] = useState(false);
+  
   // Spawn confetti particles
   const spawnConfetti = useCallback((voteType: VoteType) => {
     const colors = {
@@ -114,6 +118,34 @@ export function QuestionCard({
   
   // Private voting mode
   const [isPrivateMode, setIsPrivateMode] = useState(false);
+
+  // Fetch AI vote for this question
+  const fetchAiVote = useCallback(async () => {
+    if (aiVote || loadingAiVote) return; // Already fetched or loading
+    
+    setLoadingAiVote(true);
+    try {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/responses?select=vote,ai_reasoning&question_id=eq.${question.id}&is_ai=eq.true&limit=1`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const data = await res.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        setAiVote({
+          vote: data[0].vote as VoteType,
+          reasoning: data[0].ai_reasoning,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching AI vote:', err);
+    } finally {
+      setLoadingAiVote(false);
+    }
+  }, [question.id, aiVote, loadingAiVote]);
 
   const fetchVoters = async () => {
     if (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) {
@@ -1014,6 +1046,13 @@ export function QuestionCard({
   // Can see results if: voted, is the author, or not logged in (guests can't expand anyway)
   const canSeeResults = hasVoted || isAuthor;
   const timeAgo = getTimeAgo(new Date(question.created_at));
+  
+  // Fetch AI vote when user can see results
+  useEffect(() => {
+    if (canSeeResults && !aiVote && !loadingAiVote) {
+      fetchAiVote();
+    }
+  }, [canSeeResults, aiVote, loadingAiVote, fetchAiVote]);
 
   return (
     <Card className="group transition-all duration-200 hover:shadow-md">
@@ -1301,6 +1340,29 @@ export function QuestionCard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* AI Insight - Show after voting or if author */}
+        {canSeeResults && aiVote && (
+          <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-3.5 w-3.5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                    AI voted {aiVote.vote === 'YES' ? 'Yes' : aiVote.vote === 'NO' ? 'No' : 'Not Sure'}
+                  </span>
+                </div>
+                {aiVote.reasoning && (
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                    &ldquo;{aiVote.reasoning}&rdquo;
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
