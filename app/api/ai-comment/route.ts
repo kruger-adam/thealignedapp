@@ -111,61 +111,78 @@ User asks: "${userQuery.replace('@AI', '').trim()}"
 
 Respond thoughtfully in 1-2 sentences.`;
 
-    // Call OpenAI
-    console.log('Calling OpenAI with prompt:', userPrompt.substring(0, 200) + '...');
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini', // Using GPT-4.1-mini for cost-effective responses
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      max_tokens: 150,
-      temperature: 0.8,
-    });
-    console.log('OpenAI response received');
-
-    const aiResponse = completion.choices[0]?.message?.content?.trim();
-
-    if (!aiResponse) {
-      return NextResponse.json(
-        { error: 'Failed to generate AI response' },
-        { status: 500 }
-      );
-    }
-
     // Log the query for rate limiting
     await supabase.from('ai_queries').insert({
       user_id: userId,
       question_id: questionId,
     });
 
-    // Insert the AI comment (use the requesting user's ID but mark as AI)
-    const { data: aiComment, error: insertError } = await supabase
-      .from('comments')
-      .insert({
-        question_id: questionId,
-        user_id: userId,
-        content: aiResponse,
-        is_ai: true,
-      })
-      .select('id, content, created_at, is_ai')
-      .single();
+    // Stream the response from OpenAI
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 150,
+      temperature: 0.8,
+      stream: true,
+    });
 
-    if (insertError) {
-      console.error('Error inserting AI comment:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to save AI response' },
-        { status: 500 }
-      );
-    }
+    // Collect full response for saving to database
+    let fullResponse = '';
+    const qId = questionId;
+    const uId = userId;
 
-    return NextResponse.json({
-      success: true,
-      comment: {
-        ...aiComment,
-        is_ai: true,
+    // Create a readable stream for the response
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+              fullResponse += content;
+              controller.enqueue(encoder.encode(content));
+            }
+          }
+          
+          // Save the AI comment to database after stream completes
+          const { data: aiComment, error: insertError } = await supabase
+            .from('comments')
+            .insert({
+              question_id: qId,
+              user_id: uId,
+              content: fullResponse,
+              is_ai: true,
+            })
+            .select('id, created_at')
+            .single();
+
+          if (insertError) {
+            console.error('Error inserting AI comment:', insertError);
+          } else {
+            // Send the comment metadata as the last chunk so client can update
+            // Format: \n\n__COMMENT_DATA__:{json}
+            controller.enqueue(encoder.encode(`\n\n__COMMENT_DATA__:${JSON.stringify({ id: aiComment.id, created_at: aiComment.created_at })}`));
+          }
+          
+          controller.close();
+        } catch (error) {
+          console.error('Stream error:', error);
+          controller.error(error);
+        }
       },
     });
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
+
   } catch (error: unknown) {
     console.error('AI comment error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

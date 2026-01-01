@@ -607,7 +607,7 @@ export function QuestionCard({
           setComments(prev => [...prev, {
             id: aiPlaceholderId,
             user_id: user.id,
-            content: '...',
+            content: '',
             created_at: new Date().toISOString(),
             username: 'AI',
             avatar_url: null,
@@ -615,7 +615,7 @@ export function QuestionCard({
             is_ai: true,
           }]);
           
-          // Call the AI API
+          // Call the AI API with streaming
           try {
             const aiResponse = await fetch('/api/ai-comment', {
               method: 'POST',
@@ -627,31 +627,65 @@ export function QuestionCard({
               }),
             });
             
-            if (aiResponse.ok) {
-              const { comment: aiComment } = await aiResponse.json();
-              // Replace placeholder with actual AI response
-              setComments(prev => prev.map(c => 
-                c.id === aiPlaceholderId 
-                  ? {
-                      id: aiComment.id,
-                      user_id: user.id,
-                      content: aiComment.content,
-                      created_at: aiComment.created_at,
-                      username: 'AI',
-                      avatar_url: null,
-                      is_ai: true,
-                    }
-                  : c
-              ));
+            if (aiResponse.ok && aiResponse.body) {
+              // Handle streaming response
+              const reader = aiResponse.body.getReader();
+              const decoder = new TextDecoder();
+              let streamedContent = '';
+              
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                streamedContent += chunk;
+                
+                // Check if we received the comment metadata at the end
+                const metadataMatch = streamedContent.match(/\n\n__COMMENT_DATA__:(.+)$/);
+                let displayContent = streamedContent;
+                let commentData: { id: string; created_at: string } | null = null;
+                
+                if (metadataMatch) {
+                  // Extract and parse the metadata
+                  displayContent = streamedContent.replace(/\n\n__COMMENT_DATA__:.+$/, '');
+                  try {
+                    commentData = JSON.parse(metadataMatch[1]);
+                  } catch {
+                    // Ignore parse errors
+                  }
+                }
+                
+                // Update the placeholder with streamed content
+                setComments(prev => prev.map(c => 
+                  c.id === aiPlaceholderId 
+                    ? {
+                        ...c,
+                        id: commentData?.id || aiPlaceholderId,
+                        content: displayContent,
+                        created_at: commentData?.created_at || c.created_at,
+                        isThinking: !commentData, // Stop thinking animation once we have final data
+                      }
+                    : c
+                ));
+              }
+              
               setCommentCount(prev => prev + 1);
             } else {
-              const errorData = await aiResponse.json();
+              // Handle error response
+              let errorMessage = 'Sorry, I couldn\'t respond right now.';
+              try {
+                const errorData = await aiResponse.json();
+                errorMessage = errorData.error || errorMessage;
+              } catch {
+                // Ignore parse errors
+              }
+              
               // Replace placeholder with error message
               setComments(prev => prev.map(c => 
                 c.id === aiPlaceholderId 
                   ? {
                       ...c,
-                      content: errorData.error || 'Sorry, I couldn\'t respond right now.',
+                      content: errorMessage,
                       isThinking: false,
                       isError: true,
                     }
