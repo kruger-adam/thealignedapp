@@ -506,6 +506,83 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
               ))}
             </div>
             
+            {/* Options row: time limit and visibility */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Expiration toggle and options */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasExpiration) {
+                      setHasExpiration(false);
+                      setExpirationHours(null);
+                    } else {
+                      setHasExpiration(true);
+                      setExpirationHours(24); // Default to 24h
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                    hasExpiration
+                      ? "bg-amber-500 text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                  )}
+                  title={hasExpiration ? "Poll has time limit" : "Add time limit"}
+                >
+                  <Clock className="h-3 w-3" />
+                  {hasExpiration ? (
+                    expirationHours === 1 ? '1h' : 
+                    expirationHours === 24 ? '24h' : 
+                    expirationHours === 168 ? '1 week' : 
+                    `${expirationHours}h`
+                  ) : 'No limit'}
+                </button>
+                {hasExpiration && (
+                  <div className="flex gap-0.5">
+                    {[
+                      { label: '1h', hours: 1 },
+                      { label: '24h', hours: 24 },
+                      { label: '1w', hours: 168 },
+                    ].map(({ label, hours }) => (
+                      <button
+                        key={hours}
+                        type="button"
+                        onClick={() => setExpirationHours(hours)}
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-xs transition-colors",
+                          expirationHours === hours
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setIsAnonymous(!isAnonymous)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                  isAnonymous
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                )}
+                title={isAnonymous ? "Posting anonymously" : "Post anonymously"}
+              >
+                {isAnonymous ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  <Unlock className="h-3 w-3" />
+                )}
+                {isAnonymous ? "Anonymous" : "Public"}
+              </button>
+            </div>
+            
+            {/* Actions row: character count, cancel, post */}
             <div className="flex items-center justify-between">
               <span
                 className={cn(
@@ -520,79 +597,7 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                 {charCount}/{maxChars}
               </span>
               
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Expiration toggle and options */}
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (hasExpiration) {
-                        setHasExpiration(false);
-                        setExpirationHours(null);
-                      } else {
-                        setHasExpiration(true);
-                        setExpirationHours(24); // Default to 24h
-                      }
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
-                      hasExpiration
-                        ? "bg-amber-500 text-white"
-                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                    )}
-                    title={hasExpiration ? "Poll has time limit" : "Add time limit"}
-                  >
-                    <Clock className="h-3 w-3" />
-                    {hasExpiration ? (
-                      expirationHours === 1 ? '1h' : 
-                      expirationHours === 24 ? '24h' : 
-                      expirationHours === 168 ? '1 week' : 
-                      `${expirationHours}h`
-                    ) : 'No limit'}
-                  </button>
-                  {hasExpiration && (
-                    <div className="flex gap-0.5">
-                      {[
-                        { label: '1h', hours: 1 },
-                        { label: '24h', hours: 24 },
-                        { label: '1w', hours: 168 },
-                      ].map(({ label, hours }) => (
-                        <button
-                          key={hours}
-                          type="button"
-                          onClick={() => setExpirationHours(hours)}
-                          className={cn(
-                            "rounded px-1.5 py-0.5 text-xs transition-colors",
-                            expirationHours === hours
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                              : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={() => setIsAnonymous(!isAnonymous)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
-                    isAnonymous
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                  )}
-                  title={isAnonymous ? "Posting anonymously" : "Post anonymously"}
-                >
-                  {isAnonymous ? (
-                    <Lock className="h-3 w-3" />
-                  ) : (
-                    <Unlock className="h-3 w-3" />
-                  )}
-                  {isAnonymous ? "Anonymous" : "Public"}
-                </button>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
