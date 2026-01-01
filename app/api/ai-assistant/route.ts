@@ -125,6 +125,22 @@ export async function POST(request: NextRequest) {
   }
 }
 
+interface SimilarUser {
+  username: string;
+  compatibility: number;
+  agreements: number;
+  disagreements: number;
+}
+
+interface RecommendedQuestion {
+  id: string;
+  content: string;
+  category: string;
+  totalVotes: number;
+  yesPercent: number;
+  noPercent: number;
+}
+
 interface ContextData {
   userName: string;
   userStats: {
@@ -155,6 +171,8 @@ interface ContextData {
   };
   recentQuestions: string[];
   topCategories: string[];
+  similarUsers: SimilarUser[];
+  recommendedQuestions: RecommendedQuestion[];
 }
 
 async function gatherContextData(
@@ -228,12 +246,132 @@ async function gatherContextData(
     .slice(0, 5)
     .map(([cat]) => cat);
 
+  // Find similar users by calculating compatibility with other users who voted on same questions
+  const similarUsers: SimilarUser[] = [];
+  
+  // Get all users who voted on questions the current user also voted on
+  const { data: userQuestionIds } = await supabase
+    .from('responses')
+    .select('question_id')
+    .eq('user_id', userId)
+    .eq('is_ai', false);
+  
+  if (userQuestionIds && userQuestionIds.length > 0) {
+    const questionIds = userQuestionIds.map(r => r.question_id);
+    
+    // Find other users who voted on these questions
+    const { data: otherVoters } = await supabase
+      .from('responses')
+      .select('user_id')
+      .in('question_id', questionIds)
+      .neq('user_id', userId)
+      .eq('is_ai', false);
+    
+    if (otherVoters) {
+      // Get unique user IDs
+      const otherUserIds = [...new Set(otherVoters.map(v => v.user_id))].slice(0, 20);
+      
+      // Calculate compatibility for each
+      for (const otherUserId of otherUserIds.slice(0, 10)) {
+        const { data: compat } = await supabase.rpc('calculate_compatibility', {
+          user_a: userId,
+          user_b: otherUserId,
+        });
+        
+        if (compat && compat.common_questions >= 3) {
+          const { data: otherProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', otherUserId)
+            .single();
+          
+          if (otherProfile?.username) {
+            similarUsers.push({
+              username: otherProfile.username,
+              compatibility: compat.compatibility_score,
+              agreements: compat.agreements,
+              disagreements: compat.disagreements,
+            });
+          }
+        }
+      }
+      
+      // Sort by compatibility and take top 5
+      similarUsers.sort((a, b) => b.compatibility - a.compatibility);
+      similarUsers.splice(5);
+    }
+  }
+
+  // Find recommended questions (unanswered, in user's top categories)
+  const recommendedQuestions: RecommendedQuestion[] = [];
+  
+  // Get questions the user hasn't voted on
+  const { data: votedQuestionIds } = await supabase
+    .from('responses')
+    .select('question_id')
+    .eq('user_id', userId)
+    .eq('is_ai', false);
+  
+  const excludeIds = votedQuestionIds?.map(r => r.question_id) || [];
+  
+  // Get unanswered questions, prefer user's top categories
+  let query = supabase
+    .from('questions')
+    .select('id, content, category')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  if (excludeIds.length > 0) {
+    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+  }
+  
+  const { data: candidateQuestions } = await query;
+  
+  if (candidateQuestions) {
+    // Get vote stats for these questions
+    for (const q of candidateQuestions.slice(0, 20)) {
+      const { data: qVotes } = await supabase
+        .from('responses')
+        .select('vote')
+        .eq('question_id', q.id);
+      
+      const yesCount = qVotes?.filter(v => v.vote === 'YES').length || 0;
+      const noCount = qVotes?.filter(v => v.vote === 'NO').length || 0;
+      const unsureCount = qVotes?.filter(v => v.vote === 'UNSURE').length || 0;
+      const total = yesCount + noCount + unsureCount;
+      
+      if (total >= 1) {
+        recommendedQuestions.push({
+          id: q.id,
+          content: q.content,
+          category: q.category || 'Other',
+          totalVotes: total,
+          yesPercent: Math.round((yesCount / total) * 100),
+          noPercent: Math.round((noCount / total) * 100),
+        });
+      }
+    }
+    
+    // Sort: prioritize user's top categories, then by vote count
+    recommendedQuestions.sort((a, b) => {
+      const aInTopCat = topCategories.includes(a.category) ? 1 : 0;
+      const bInTopCat = topCategories.includes(b.category) ? 1 : 0;
+      if (aInTopCat !== bInTopCat) return bInTopCat - aInTopCat;
+      return b.totalVotes - a.totalVotes;
+    });
+    
+    // Take top 5
+    recommendedQuestions.splice(5);
+  }
+
   const contextData: ContextData = {
     userName: profile?.username || 'User',
     userStats,
     currentPage: context,
     recentQuestions,
     topCategories,
+    similarUsers,
+    recommendedQuestions,
   };
 
   // Add question-specific data if on a question page
@@ -316,6 +454,14 @@ async function gatherContextData(
 function buildSystemPrompt(data: ContextData): string {
   let prompt = `You are the AI Assistant for Aligned, a polling app where users vote Yes, No, or Not Sure on questions to discover opinions and find common ground with others.
 
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. NEVER invent or make up usernames. Only mention users listed in "SIMILAR USERS" below.
+2. NEVER fabricate statistics, percentages, or vote counts. Only use numbers provided in this prompt.
+3. NEVER invent question content. Only reference questions listed in this prompt.
+4. If asked about something you don't have data for, honestly say "I don't have that information" and suggest what you CAN help with.
+5. When recommending questions, ONLY suggest questions from "RECOMMENDED QUESTIONS" below.
+6. When discussing similar users, ONLY mention users from "SIMILAR USERS" below.
+
 Your personality:
 - Friendly, casual, and slightly witty
 - Insightful but not preachy
@@ -331,6 +477,16 @@ About the current user (${data.userName}):
 
 Recent questions they've voted on:
 ${data.recentQuestions.slice(0, 5).map(q => `- "${q}"`).join('\n') || 'No recent votes'}
+
+SIMILAR USERS (users who think like ${data.userName}):
+${data.similarUsers.length > 0 
+  ? data.similarUsers.map(u => `- @${u.username}: ${u.compatibility}% compatible (${u.agreements} agreements, ${u.disagreements} disagreements)`).join('\n')
+  : 'Not enough shared votes with other users yet to find matches.'}
+
+RECOMMENDED QUESTIONS (unanswered questions ${data.userName} might like):
+${data.recommendedQuestions.length > 0
+  ? data.recommendedQuestions.map(q => `- "${q.content}" [${q.category}] - ${q.totalVotes} votes, ${q.yesPercent}% Yes / ${q.noPercent}% No`).join('\n')
+  : 'No unanswered questions found.'}
 `;
 
   // Add context-specific information
@@ -367,11 +523,12 @@ Help them discover interesting questions, understand their voting patterns, or f
 
   prompt += `
 
-Remember:
-- If the user asks about their patterns, voting habits, or stats, use the data provided above.
-- If they ask for recommendations, suggest based on their interests.
+REMEMBER - CRITICAL:
+- When asked "who thinks like me" or about similar users, ONLY mention users from SIMILAR USERS above. If the list is empty, say you need more shared votes to find matches.
+- When asked to recommend questions, ONLY suggest from RECOMMENDED QUESTIONS above. If empty, say there are no unanswered questions.
+- Use EXACT usernames with @ prefix (e.g., @username) when mentioning users.
+- If asked about something not in this prompt, say "I don't have that data yet" rather than making it up.
 - If they ask to argue the other side, take the opposite position playfully.
-- Don't make up specific data you don't have.
 - Keep it fun and engaging!`;
 
   return prompt;
