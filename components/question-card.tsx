@@ -148,9 +148,17 @@ export function QuestionCard({
   }, [question.id, aiVote, loadingAiVote]);
 
   const fetchVoters = async () => {
+    // Toggle immediately for animation
+    if (showVoters) {
+      setShowVoters(false);
+      return;
+    }
+    
+    // Show section immediately, then load data
+    setShowVoters(true);
+    
+    // If already fetched, no need to reload
     if (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) {
-      // Already fetched, just toggle
-      setShowVoters(!showVoters);
       return;
     }
     
@@ -170,7 +178,6 @@ export function QuestionCard({
       if (!Array.isArray(data)) {
         console.error('Error fetching voters:', data);
         setLoadingVoters(false);
-        setShowVoters(true);
         return;
       }
       
@@ -228,7 +235,6 @@ export function QuestionCard({
       
       // AI voters go first, then human voters
       setVoters([...aiVotersList, ...humanVotersList]);
-      setShowVoters(true);
     } catch (err) {
       console.error('Error fetching voters:', err);
     }
@@ -397,15 +403,17 @@ export function QuestionCard({
   };
 
   const fetchComments = async () => {
-    // If already showing, just collapse
+    // Toggle immediately for animation
     if (showComments) {
       setShowComments(false);
       return;
     }
     
-    // If already fetched, just show
+    // Show section immediately, then load data
+    setShowComments(true);
+    
+    // If already fetched, no need to reload
     if (comments.length > 0) {
-      setShowComments(true);
       return;
     }
     
@@ -1441,17 +1449,29 @@ export function QuestionCard({
       </CardFooter>
 
       {/* Expandable Voters List - at bottom of card */}
-      {showVoters && (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
-          <VoterList voters={voters} anonymousCounts={anonymousCounts} />
+      {showVoters && (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-200">
+          {loadingVoters ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-300" />
+            </div>
+          ) : voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0 ? (
+            <VoterList voters={voters} anonymousCounts={anonymousCounts} />
+          ) : (
+            <p className="text-sm text-zinc-500 text-center py-2">No votes yet</p>
+          )}
         </div>
       )}
 
       {/* Expandable Comments Section - at bottom of card */}
       {showComments && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="space-y-3">
-            {comments.length === 0 ? (
+            {loadingComments ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-300" />
+              </div>
+            ) : comments.length === 0 ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
               comments.map(comment => {
