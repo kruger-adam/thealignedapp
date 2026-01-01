@@ -14,6 +14,8 @@ export interface AIAssistantContextType {
   isOpen: boolean;
   messages: Message[];
   isLoading: boolean;
+  proactiveInsight: string | null;
+  isLoadingInsight: boolean;
   currentContext: AssistantContext;
   openAssistant: () => void;
   closeAssistant: () => void;
@@ -36,6 +38,9 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [proactiveInsight, setProactiveInsight] = useState<string | null>(null);
+  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
+  const [insightFetched, setInsightFetched] = useState(false);
   const pathname = usePathname();
 
   // Derive context from current route
@@ -83,18 +88,46 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
     }
   }, [messages]);
 
-  const openAssistant = useCallback(() => setIsOpen(true), []);
-  const closeAssistant = useCallback(() => setIsOpen(false), []);
-  const toggleAssistant = useCallback(() => setIsOpen(prev => !prev), []);
+  // Fetch proactive insight when panel opens (if no messages yet)
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && !insightFetched && !isLoadingInsight) {
+      setIsLoadingInsight(true);
+      fetch('/api/ai-assistant/insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: currentContext }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.insight) {
+            setProactiveInsight(data.insight);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch insight:', err);
+        })
+        .finally(() => {
+          setIsLoadingInsight(false);
+          setInsightFetched(true);
+        });
+    }
+  }, [isOpen, messages.length, insightFetched, isLoadingInsight, currentContext]);
 
+  // Reset insight when messages are cleared
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setProactiveInsight(null);
+    setInsightFetched(false);
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
     } catch {
       // Ignore storage errors
     }
   }, []);
+
+  const openAssistant = useCallback(() => setIsOpen(true), []);
+  const closeAssistant = useCallback(() => setIsOpen(false), []);
+  const toggleAssistant = useCallback(() => setIsOpen(prev => !prev), []);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -181,6 +214,8 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
         isOpen,
         messages,
         isLoading,
+        proactiveInsight,
+        isLoadingInsight,
         currentContext,
         openAssistant,
         closeAssistant,

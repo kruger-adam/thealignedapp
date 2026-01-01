@@ -205,6 +205,8 @@ export function AIAssistantPanel() {
     isOpen,
     messages,
     isLoading,
+    proactiveInsight,
+    isLoadingInsight,
     currentContext,
     closeAssistant,
     sendMessage,
@@ -405,20 +407,34 @@ export function AIAssistantPanel() {
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30">
-                <Sparkles className="h-8 w-8 text-violet-500" />
+                {isLoadingInsight ? (
+                  <Bot className="h-8 w-8 text-violet-500 animate-pulse" />
+                ) : (
+                  <Sparkles className="h-8 w-8 text-violet-500" />
+                )}
               </div>
               <div>
-                <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                  How can I help?
-                </h3>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Ask about your voting patterns, get recommendations, or explore insights.
-                </p>
+                {isLoadingInsight ? (
+                  <p className="text-sm text-zinc-500 animate-pulse">Getting your insights...</p>
+                ) : proactiveInsight ? (
+                  <div className="max-w-xs rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">
+                    {proactiveInsight}
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                      How can I help?
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Ask about your voting patterns, get recommendations, or explore insights.
+                    </p>
+                  </>
+                )}
               </div>
               <QuickSuggestionChips
                 suggestions={initialSuggestions}
                 onSelect={sendMessage}
-                disabled={isLoading}
+                disabled={isLoading || isLoadingInsight}
               />
             </div>
           ) : (
@@ -528,20 +544,34 @@ export function AIAssistantPanel() {
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5 text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30">
-                <Sparkles className="h-10 w-10 text-violet-500" />
+                {isLoadingInsight ? (
+                  <Bot className="h-10 w-10 text-violet-500 animate-pulse" />
+                ) : (
+                  <Sparkles className="h-10 w-10 text-violet-500" />
+                )}
               </div>
               <div>
-                <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  How can I help?
-                </h3>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Ask about your voting patterns, get recommendations, or explore insights.
-                </p>
+                {isLoadingInsight ? (
+                  <p className="text-sm text-zinc-500 animate-pulse">Getting your insights...</p>
+                ) : proactiveInsight ? (
+                  <div className="max-w-sm rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">
+                    {proactiveInsight}
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                      How can I help?
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Ask about your voting patterns, get recommendations, or explore insights.
+                    </p>
+                  </>
+                )}
               </div>
               <QuickSuggestionChips
                 suggestions={initialSuggestions}
                 onSelect={sendMessage}
-                disabled={isLoading}
+                disabled={isLoading || isLoadingInsight}
               />
             </div>
           ) : (
