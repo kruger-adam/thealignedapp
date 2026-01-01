@@ -1180,30 +1180,6 @@ export function QuestionCard({
       */}
 
       <CardFooter className="flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-        {/* Vote Mode Toggle + Vote Buttons */}
-        {user && (
-          <div className="flex w-full items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setIsPrivateMode(!isPrivateMode)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
-                isPrivateMode
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              )}
-              title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
-            >
-              {isPrivateMode ? (
-                <Lock className="h-3 w-3" />
-              ) : (
-                <Unlock className="h-3 w-3" />
-              )}
-              {isPrivateMode ? "Anonymous" : "Public"}
-            </button>
-          </div>
-        )}
-        
         {/* Vote Buttons */}
         <div className="relative grid w-full grid-cols-3 gap-2">
           <Button
@@ -1306,6 +1282,30 @@ export function QuestionCard({
             ))}
           </Button>
         </div>
+
+        {/* Anonymous/Public toggle - centered */}
+        {user && (
+          <div className="flex w-full justify-center">
+            <button
+              type="button"
+              onClick={() => setIsPrivateMode(!isPrivateMode)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                isPrivateMode
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              )}
+              title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
+            >
+              {isPrivateMode ? (
+                <Lock className="h-3 w-3" />
+              ) : (
+                <Unlock className="h-3 w-3" />
+              )}
+              {isPrivateMode ? "Anonymous" : "Public"}
+            </button>
+          </div>
+        )}
 
         {/* Results - Show after voting or if author */}
         {optimisticData.stats.total_votes > 0 && (
