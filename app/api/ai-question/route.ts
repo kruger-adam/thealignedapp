@@ -138,7 +138,9 @@ Respond with ONLY the question, nothing else.`
       console.error('Error triggering categorization:', catError);
     }
 
-    // Trigger AI image generation (only if GEMINI_API_KEY is configured)
+    // NOTE: Image generation disabled to reduce costs. Uncomment to re-enable.
+    // The /api/ai-image route is still available if needed.
+    /*
     if (process.env.GEMINI_API_KEY) {
       try {
         console.log('Triggering image generation...');
@@ -156,6 +158,7 @@ Respond with ONLY the question, nothing else.`
         console.error('Error triggering image generation:', imageError);
       }
     }
+    */
 
     return NextResponse.json({ 
       success: true, 

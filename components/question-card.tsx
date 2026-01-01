@@ -1165,7 +1165,7 @@ export function QuestionCard({
         )}
       </CardContent>
 
-      {/* Question Image - with rounded corners */}
+      {/* NOTE: Question images disabled. Uncomment to re-enable.
       {question.image_url && (
         <div className="relative w-full aspect-video overflow-hidden mx-4 mb-4 rounded-xl" style={{ width: 'calc(100% - 2rem)' }}>
           <Image
@@ -1177,6 +1177,7 @@ export function QuestionCard({
           />
         </div>
       )}
+      */}
 
       <CardFooter className="flex-col gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
         {/* Vote Mode Toggle + Vote Buttons */}
