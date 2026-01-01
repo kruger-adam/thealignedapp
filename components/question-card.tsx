@@ -1449,9 +1449,9 @@ export function QuestionCard({
         <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-300">
           {voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0 ? (
             <VoterList voters={voters} anonymousCounts={anonymousCounts} />
-          ) : (
+          ) : !loadingVoters ? (
             <p className="text-sm text-zinc-500 text-center py-2">No votes yet</p>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -1459,9 +1459,9 @@ export function QuestionCard({
       {showComments && (
         <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="space-y-3">
-            {comments.length === 0 ? (
+            {comments.length === 0 && !loadingComments ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
-            ) : (
+            ) : comments.length > 0 ? (
               comments.map(comment => {
                 const isAIComment = (comment as { is_ai?: boolean }).is_ai === true;
                 const isThinking = (comment as { isThinking?: boolean }).isThinking;
@@ -1577,7 +1577,7 @@ export function QuestionCard({
                   </div>
                 </div>
               );})
-            )}
+            ) : null}
             
             {/* Comment Form */}
             {user ? (
