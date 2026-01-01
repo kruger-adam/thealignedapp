@@ -1395,9 +1395,7 @@ export function QuestionCard({
             <Vote className="h-4 w-4" />
             <span>{optimisticData.stats.total_votes}</span>
             {optimisticData.stats.total_votes > 0 && (
-              loadingVoters ? (
-                <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-              ) : showVoters ? (
+              showVoters ? (
                 <ChevronUp className="h-3 w-3" />
               ) : (
                 <ChevronDown className="h-3 w-3" />
@@ -1416,9 +1414,7 @@ export function QuestionCard({
           >
             <MessageCircle className="h-4 w-4" />
             <span>{commentCount}</span>
-            {loadingComments ? (
-              <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
-            ) : showComments ? (
+            {showComments ? (
               <ChevronUp className="h-3 w-3" />
             ) : (
               <ChevronDown className="h-3 w-3" />
@@ -1450,12 +1446,8 @@ export function QuestionCard({
 
       {/* Expandable Voters List - at bottom of card */}
       {showVoters && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-200">
-          {loadingVoters ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-300" />
-            </div>
-          ) : voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0 ? (
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-300">
+          {voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0 ? (
             <VoterList voters={voters} anonymousCounts={anonymousCounts} />
           ) : (
             <p className="text-sm text-zinc-500 text-center py-2">No votes yet</p>
@@ -1465,13 +1457,9 @@ export function QuestionCard({
 
       {/* Expandable Comments Section - at bottom of card */}
       {showComments && (
-        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="space-y-3">
-            {loadingComments ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-300" />
-              </div>
-            ) : comments.length === 0 ? (
+            {comments.length === 0 ? (
               <p className="text-sm text-zinc-500">No comments yet. Be the first to comment!</p>
             ) : (
               comments.map(comment => {
