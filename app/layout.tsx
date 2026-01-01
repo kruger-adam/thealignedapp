@@ -53,6 +53,51 @@ export default function RootLayout({
         <meta name="theme-color" content="#18181b" />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        {/* Inline splash screen - renders before JS/CSS loads */}
+        <div
+          id="splash-screen"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#09090b',
+            transition: 'opacity 0.3s ease-out',
+          }}
+        >
+          <img
+            src="/logo-transparent.png"
+            alt=""
+            width={80}
+            height={80}
+            style={{
+              width: 80,
+              height: 80,
+              animation: 'pulse 2s ease-in-out infinite',
+            }}
+          />
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes pulse {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.7; transform: scale(0.95); }
+            }
+          `}} />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('load', function() {
+                var splash = document.getElementById('splash-screen');
+                if (splash) {
+                  splash.style.opacity = '0';
+                  setTimeout(function() { splash.remove(); }, 300);
+                }
+              });
+            `,
+          }}
+        />
         <AuthProvider>
           <AIAssistantProvider>
             <ToastProvider>
