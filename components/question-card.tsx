@@ -1283,30 +1283,6 @@ export function QuestionCard({
           </Button>
         </div>
 
-        {/* Anonymous/Public toggle - centered */}
-        {user && (
-          <div className="flex w-full justify-center">
-            <button
-              type="button"
-              onClick={() => setIsPrivateMode(!isPrivateMode)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
-                isPrivateMode
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              )}
-              title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
-            >
-              {isPrivateMode ? (
-                <Lock className="h-3 w-3" />
-              ) : (
-                <Unlock className="h-3 w-3" />
-              )}
-              {isPrivateMode ? "Anonymous" : "Public"}
-            </button>
-          </div>
-        )}
-
         {/* Results - Show after voting or if author */}
         {optimisticData.stats.total_votes > 0 && (
           <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1378,6 +1354,27 @@ export function QuestionCard({
               <ChevronDown className="h-3 w-3" />
             )}
           </button>
+          {/* Anonymous/Public toggle */}
+          {user && (
+            <button
+              type="button"
+              onClick={() => setIsPrivateMode(!isPrivateMode)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
+                isPrivateMode
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              )}
+              title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
+            >
+              {isPrivateMode ? (
+                <Lock className="h-3 w-3" />
+              ) : (
+                <Unlock className="h-3 w-3" />
+              )}
+              {isPrivateMode ? "Anonymous" : "Public"}
+            </button>
+          )}
         </div>
       </CardFooter>
 
