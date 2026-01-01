@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Bot, Send, X, Trash2, Sparkles } from 'lucide-react';
 import { useAIAssistant, Message, AssistantContext } from './ai-assistant-provider';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 // Initial suggestion chips based on context (shown when no messages)
 function getInitialSuggestions(context: AssistantContext): string[] {
@@ -130,7 +132,74 @@ function getSmartFollowUps(messages: Message[], context: AssistantContext): stri
   return unique.slice(0, 4);
 }
 
-function MessageBubble({ message }: { message: Message }) {
+// Component to render parsed message content with clickable @mentions
+function ParsedMessageContent({ 
+  content, 
+  userMap,
+  closeAssistant,
+}: { 
+  content: string; 
+  userMap: Map<string, string>;
+  closeAssistant: () => void;
+}) {
+  if (!content) return null;
+
+  // Parse content for @mentions
+  const parts: React.ReactNode[] = [];
+  const mentionRegex = /@(\w+)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(content)) !== null) {
+    // Add text before the mention
+    if (match.index > lastIndex) {
+      parts.push(content.slice(lastIndex, match.index));
+    }
+
+    const username = match[1];
+    const userId = userMap.get(username.toLowerCase());
+
+    if (userId) {
+      // Clickable mention with known user ID
+      parts.push(
+        <Link
+          key={`mention-${match.index}`}
+          href={`/profile/${userId}`}
+          onClick={closeAssistant}
+          className="font-medium text-violet-600 hover:text-violet-700 hover:underline dark:text-violet-400 dark:hover:text-violet-300"
+        >
+          @{username}
+        </Link>
+      );
+    } else {
+      // Non-clickable mention (unknown user)
+      parts.push(
+        <span key={`mention-${match.index}`} className="font-medium text-violet-600 dark:text-violet-400">
+          @{username}
+        </span>
+      );
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.slice(lastIndex));
+  }
+
+  return <>{parts}</>;
+}
+
+function MessageBubble({ 
+  message, 
+  userMap,
+  closeAssistant,
+}: { 
+  message: Message; 
+  userMap: Map<string, string>;
+  closeAssistant: () => void;
+}) {
   const isUser = message.role === 'user';
 
   return (
@@ -150,13 +219,19 @@ function MessageBubble({ message }: { message: Message }) {
       {/* Message content */}
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
+          'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap',
           isUser
             ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
             : 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100'
         )}
       >
-        {message.content || (
+        {message.content ? (
+          <ParsedMessageContent 
+            content={message.content} 
+            userMap={userMap}
+            closeAssistant={closeAssistant}
+          />
+        ) : (
           <span className="inline-flex items-center gap-1 text-zinc-400">
             <span className="animate-pulse">●</span>
             <span className="animate-pulse animation-delay-150">●</span>
@@ -214,8 +289,10 @@ export function AIAssistantPanel() {
   } = useAIAssistant();
 
   const [inputValue, setInputValue] = useState('');
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const supabase = useMemo(() => createClient(), []);
 
   // Sheet drag state for mobile
   const [sheetHeight, setSheetHeight] = useState(60); // percentage
@@ -230,6 +307,46 @@ export function AIAssistantPanel() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Extract @mentions from messages and fetch user IDs
+  useEffect(() => {
+    const mentionRegex = /@(\w+)/g;
+    const mentionedUsernames = new Set<string>();
+    
+    messages.forEach(m => {
+      let match;
+      while ((match = mentionRegex.exec(m.content)) !== null) {
+        mentionedUsernames.add(match[1].toLowerCase());
+      }
+    });
+
+    // Filter out usernames we already have
+    const unknownUsernames = [...mentionedUsernames].filter(u => !userMap.has(u));
+    
+    if (unknownUsernames.length === 0) return;
+
+    // Fetch user IDs for unknown usernames
+    const fetchUserIds = async () => {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('username', unknownUsernames);
+
+      if (profiles && profiles.length > 0) {
+        setUserMap(prev => {
+          const newMap = new Map(prev);
+          profiles.forEach(p => {
+            if (p.username) {
+              newMap.set(p.username.toLowerCase(), p.id);
+            }
+          });
+          return newMap;
+        });
+      }
+    };
+
+    fetchUserIds();
+  }, [messages, supabase, userMap]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -443,6 +560,8 @@ export function AIAssistantPanel() {
                 <MessageBubble
                   key={message.id}
                   message={message}
+                  userMap={userMap}
+                  closeAssistant={closeAssistant}
                 />
               ))}
               <div ref={messagesEndRef} />
@@ -580,6 +699,8 @@ export function AIAssistantPanel() {
                 <MessageBubble
                   key={message.id}
                   message={message}
+                  userMap={userMap}
+                  closeAssistant={closeAssistant}
                 />
               ))}
               <div ref={messagesEndRef} />
