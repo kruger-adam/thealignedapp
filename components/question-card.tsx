@@ -1323,7 +1323,7 @@ export function QuestionCard({
             )}
           >
             <Vote className="h-4 w-4" />
-            <span>{optimisticData.stats.total_votes} vote{optimisticData.stats.total_votes !== 1 ? 's' : ''}</span>
+            <span>{optimisticData.stats.total_votes}</span>
             {optimisticData.stats.total_votes > 0 && (
               loadingVoters ? (
                 <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
@@ -1345,7 +1345,7 @@ export function QuestionCard({
             className="flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer"
           >
             <MessageCircle className="h-4 w-4" />
-            <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
+            <span>{commentCount}</span>
             {loadingComments ? (
               <span className="h-3 w-3 animate-spin rounded-full border border-zinc-400 border-t-transparent" />
             ) : showComments ? (
@@ -1363,7 +1363,7 @@ export function QuestionCard({
                 "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors",
                 isPrivateMode
                   ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
               )}
               title={isPrivateMode ? "Voting anonymously" : "Vote anonymously"}
             >
