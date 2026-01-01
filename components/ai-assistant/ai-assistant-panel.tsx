@@ -368,7 +368,7 @@ export function AIAssistantPanel() {
             placeholder="Ask me anything..."
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm',
+              'flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base',
               'placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100',
               'dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500',
               'dark:focus:border-violet-600 dark:focus:ring-violet-900/50'
@@ -488,7 +488,7 @@ export function AIAssistantPanel() {
             placeholder="Ask me anything..."
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm',
+              'flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base',
               'placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100',
               'dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder:text-zinc-500',
               'dark:focus:border-violet-600 dark:focus:ring-violet-900/50'
