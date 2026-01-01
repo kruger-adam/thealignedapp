@@ -35,10 +35,10 @@ function getInitialSuggestions(context: AssistantContext): string[] {
     case 'feed':
     default:
       return [
+        'Help me create a question',
         'My voting patterns',
         'Recommend questions',
         'Who thinks like me?',
-        'Surprise me',
       ];
   }
 }
@@ -112,12 +112,25 @@ function getSmartFollowUps(messages: Message[], context: AssistantContext): stri
     suggestions.push('What does this say about me?');
   }
   
+  // If they discussed question creation/brainstorming
+  if (conversationText.includes('question') || conversationText.includes('ask') || conversationText.includes('create') || conversationText.includes('post')) {
+    if (!conversationText.includes('improve')) {
+      suggestions.push('Improve my question');
+    }
+    if (!conversationText.includes('more ideas')) {
+      suggestions.push('Give me more ideas');
+    }
+    if (!conversationText.includes('different topic')) {
+      suggestions.push('Try a different topic');
+    }
+  }
+  
   // Always have some analytics options available
   if (suggestions.length < 3) {
     const analytics = [
+      "Help me create a question",
       "What's my voting streak?",
       'Where am I in the minority?',
-      'What are my controversial takes?',
       'Recommend something new',
     ];
     for (const a of analytics) {

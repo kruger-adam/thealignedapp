@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock } from 'lucide-react';
+import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 import { useToast } from '@/components/ui/toast';
+import { useAIAssistant } from '@/components/ai-assistant';
 
 // Confetti colors for celebration
 const CONFETTI_COLORS = [
@@ -147,6 +148,7 @@ const allPrompts = Object.values(topicPrompts).flat();
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { openAssistant, sendMessage } = useAIAssistant();
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,6 +157,17 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [expirationHours, setExpirationHours] = useState<number | null>(null); // null = no expiration
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
   const supabase = useMemo(() => createClient(), []);
+  
+  // Handle opening AI assistant for brainstorming
+  const handleAIBrainstorm = useCallback(() => {
+    openAssistant();
+    // Send a brainstorming prompt with any existing content
+    if (content.trim()) {
+      sendMessage(`Help me improve this question idea: "${content.trim()}"`);
+    } else {
+      sendMessage('Help me brainstorm a great question to post. What topics would spark interesting debates?');
+    }
+  }, [openAssistant, sendMessage, content]);
   
   // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
@@ -504,6 +517,15 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                   {topic}
                 </button>
               ))}
+              {/* AI Brainstorm button */}
+              <button
+                type="button"
+                onClick={handleAIBrainstorm}
+                className="rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 px-2.5 py-1 text-xs font-medium text-white transition-all hover:from-violet-600 hover:to-indigo-600 hover:shadow-md flex items-center gap-1"
+              >
+                <Bot className="h-3 w-3" />
+                Ask AI
+              </button>
             </div>
             
             {/* Options row: time limit and visibility */}

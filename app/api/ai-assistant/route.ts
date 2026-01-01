@@ -157,6 +157,12 @@ interface VotingActivity {
   mostActiveDay: string | null;
 }
 
+interface QuestionIdea {
+  topic: string;
+  category: string;
+  reason: string;
+}
+
 interface ContextData {
   userName: string;
   userStats: {
@@ -192,6 +198,11 @@ interface ContextData {
   controversialVotes: ControversialVote[];
   votingActivity: VotingActivity;
   minorityVotes: { question: string; userVote: string; percentWhoAgreed: number }[];
+  // Question brainstorming data
+  recentPlatformQuestions: string[];
+  underrepresentedCategories: string[];
+  trendingTopics: string[];
+  questionIdeas: QuestionIdea[];
 }
 
 async function gatherContextData(
@@ -542,6 +553,67 @@ async function gatherContextData(
     mostActiveDay,
   };
 
+  // Get recent platform questions for brainstorming context
+  const { data: recentPlatformQs } = await supabase
+    .from('questions')
+    .select('content, category')
+    .order('created_at', { ascending: false })
+    .limit(30);
+  
+  const recentPlatformQuestions = recentPlatformQs?.map(q => q.content) || [];
+  
+  // Find underrepresented categories (categories with few recent questions)
+  const allCategories = ['Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly', 'Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment', 'Politics', 'Sports', 'Food & Lifestyle'];
+  const recentCategoryCounts: Record<string, number> = {};
+  recentPlatformQs?.forEach(q => {
+    if (q.category) {
+      recentCategoryCounts[q.category] = (recentCategoryCounts[q.category] || 0) + 1;
+    }
+  });
+  
+  const underrepresentedCategories = allCategories
+    .filter(cat => (recentCategoryCounts[cat] || 0) < 3)
+    .slice(0, 5);
+  
+  // Generate question ideas based on user's interests and gaps
+  const questionIdeas: QuestionIdea[] = [];
+  
+  // Suggest based on user's top categories
+  if (topCategories.length > 0) {
+    questionIdeas.push({
+      topic: `A new angle on ${topCategories[0]}`,
+      category: topCategories[0],
+      reason: `You engage most with ${topCategories[0]} questions`,
+    });
+  }
+  
+  // Suggest based on underrepresented categories
+  if (underrepresentedCategories.length > 0) {
+    questionIdeas.push({
+      topic: `Something about ${underrepresentedCategories[0]}`,
+      category: underrepresentedCategories[0],
+      reason: `${underrepresentedCategories[0]} needs more questions lately`,
+    });
+  }
+  
+  // Trending topics (based on recent high-engagement questions)
+  const { data: trendingQs } = await supabase
+    .from('questions')
+    .select('content, category')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  // Get vote counts for trending calculation
+  const trendingTopics: string[] = [];
+  if (trendingQs && trendingQs.length > 0) {
+    // Extract common themes from recent questions
+    const themes = new Set<string>();
+    trendingQs.forEach(q => {
+      if (q.category) themes.add(q.category);
+    });
+    trendingTopics.push(...Array.from(themes).slice(0, 5));
+  }
+
   const contextData: ContextData = {
     userName: profile?.username || 'User',
     userStats,
@@ -553,6 +625,10 @@ async function gatherContextData(
     controversialVotes,
     votingActivity,
     minorityVotes,
+    recentPlatformQuestions,
+    underrepresentedCategories,
+    trendingTopics,
+    questionIdeas,
   };
 
   // Add question-specific data if on a question page
@@ -658,6 +734,9 @@ WHAT YOU CAN HELP WITH:
 - Analyzing their controversial/minority votes
 - Discussing specific questions they're viewing
 - Comparing them with other users
+- BRAINSTORMING NEW QUESTIONS TO POST (this is important!)
+- Helping refine and improve question wording
+- Suggesting topics that would spark interesting debates
 
 About the current user (${data.userName}):
 - They've cast ${data.userStats.totalVotes} votes total
@@ -693,6 +772,42 @@ RECOMMENDED QUESTIONS TO SUGGEST (questions user has NOT voted on yet - ONLY sug
 ${data.recommendedQuestions.length > 0
   ? data.recommendedQuestions.map(q => `- "${q.content}" [${q.category}] - ${q.totalVotes} votes, ${q.yesPercent}% Yes / ${q.noPercent}% No`).join('\n')
   : 'No unanswered questions found.'}
+
+=== QUESTION BRAINSTORMING DATA ===
+
+RECENT QUESTIONS ON THE PLATFORM (to avoid duplicates and inspire new angles):
+${data.recentPlatformQuestions.slice(0, 15).map(q => `- "${q}"`).join('\n') || 'No recent questions'}
+
+CATEGORIES THAT NEED MORE QUESTIONS (underrepresented lately):
+${data.underrepresentedCategories.length > 0 
+  ? data.underrepresentedCategories.join(', ')
+  : 'All categories are well-represented'}
+
+TRENDING TOPICS/CATEGORIES:
+${data.trendingTopics.length > 0 ? data.trendingTopics.join(', ') : 'No trending data yet'}
+
+PERSONALIZED QUESTION IDEAS FOR ${data.userName}:
+${data.questionIdeas.length > 0
+  ? data.questionIdeas.map(idea => `- ${idea.topic} (${idea.category}) - ${idea.reason}`).join('\n')
+  : 'No personalized ideas yet'}
+
+WHAT MAKES A GREAT ALIGNED QUESTION:
+1. Binary-friendly: Can be answered with Yes, No, or Not Sure
+2. Thought-provoking: Makes people pause and think
+3. Debatable: Reasonable people could disagree
+4. Concise: Under 280 characters
+5. Clear: No ambiguity about what's being asked
+6. Universal: Most people can relate and have an opinion
+
+QUESTION BRAINSTORMING GUIDELINES:
+- When asked to help brainstorm, suggest 2-3 specific question ideas
+- Make questions punchy and conversational
+- Avoid yes/no questions that are too obvious (everyone agrees)
+- Suggest questions that would create interesting 50/50 splits
+- If user provides a topic, help them phrase it as a voteable question
+- If user has a draft, help refine it to be more engaging
+- Consider what's NOT been asked recently (check RECENT QUESTIONS above)
+- Suggest categories that need more love (check UNDERREPRESENTED above)
 `;
 
   // Add context-specific information
@@ -743,7 +858,12 @@ QUERIES YOU CAN NOW ANSWER:
 - "What's my voting streak?" → Use VOTING ACTIVITY data
 - "How active have I been?" → Use VOTING ACTIVITY data
 - "Who thinks like me?" → Use SIMILAR USERS data
-- "What should I vote on next?" → Use RECOMMENDED QUESTIONS data`;
+- "What should I vote on next?" → Use RECOMMENDED QUESTIONS data
+- "Help me create a question" → Use QUESTION BRAINSTORMING DATA
+- "What should I ask?" → Suggest topics from UNDERREPRESENTED CATEGORIES or user interests
+- "Improve my question: [draft]" → Refine their draft to be more engaging/binary
+- "Give me question ideas" → Generate 2-3 specific question suggestions
+- "What topics need more questions?" → Check UNDERREPRESENTED CATEGORIES`;
 
   return prompt;
 }
