@@ -141,6 +141,22 @@ interface RecommendedQuestion {
   noPercent: number;
 }
 
+interface ControversialVote {
+  question: string;
+  userVote: string;
+  majorityVote: string;
+  majorityPercent: number;
+}
+
+interface VotingActivity {
+  votesToday: number;
+  votesThisWeek: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastVoteDate: string | null;
+  mostActiveDay: string | null;
+}
+
 interface ContextData {
   userName: string;
   userStats: {
@@ -173,6 +189,9 @@ interface ContextData {
   topCategories: string[];
   similarUsers: SimilarUser[];
   recommendedQuestions: RecommendedQuestion[];
+  controversialVotes: ControversialVote[];
+  votingActivity: VotingActivity;
+  minorityVotes: { question: string; userVote: string; percentWhoAgreed: number }[];
 }
 
 async function gatherContextData(
@@ -361,6 +380,168 @@ async function gatherContextData(
     recommendedQuestions.splice(5);
   }
 
+  // Get controversial votes (where user disagreed with majority)
+  const controversialVotes: ControversialVote[] = [];
+  const minorityVotes: { question: string; userVote: string; percentWhoAgreed: number }[] = [];
+  
+  // Get user's votes with question details
+  const { data: userVotesWithQuestions } = await supabase
+    .from('responses')
+    .select('vote, question_id, questions(id, content)')
+    .eq('user_id', userId)
+    .eq('is_ai', false)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  if (userVotesWithQuestions) {
+    for (const uv of userVotesWithQuestions.slice(0, 20)) {
+      const q = uv.questions as unknown as { id: string; content: string } | null;
+      if (!q) continue;
+      
+      // Get vote distribution for this question
+      const { data: qVotes } = await supabase
+        .from('responses')
+        .select('vote')
+        .eq('question_id', q.id);
+      
+      if (!qVotes || qVotes.length < 3) continue;
+      
+      const yesCount = qVotes.filter(v => v.vote === 'YES').length;
+      const noCount = qVotes.filter(v => v.vote === 'NO').length;
+      const unsureCount = qVotes.filter(v => v.vote === 'UNSURE').length;
+      const total = yesCount + noCount + unsureCount;
+      
+      // Determine majority vote
+      let majorityVote: string;
+      let majorityCount: number;
+      if (yesCount >= noCount && yesCount >= unsureCount) {
+        majorityVote = 'YES';
+        majorityCount = yesCount;
+      } else if (noCount >= yesCount && noCount >= unsureCount) {
+        majorityVote = 'NO';
+        majorityCount = noCount;
+      } else {
+        majorityVote = 'UNSURE';
+        majorityCount = unsureCount;
+      }
+      
+      const majorityPercent = Math.round((majorityCount / total) * 100);
+      
+      // Calculate what percent agreed with user
+      let agreedCount = 0;
+      if (uv.vote === 'YES') agreedCount = yesCount;
+      else if (uv.vote === 'NO') agreedCount = noCount;
+      else agreedCount = unsureCount;
+      const percentWhoAgreed = Math.round((agreedCount / total) * 100);
+      
+      // Add to controversial if user disagreed with majority
+      if (uv.vote !== majorityVote && majorityPercent >= 50) {
+        controversialVotes.push({
+          question: q.content,
+          userVote: uv.vote,
+          majorityVote,
+          majorityPercent,
+        });
+      }
+      
+      // Add to minority votes if user was in the minority (< 40%)
+      if (percentWhoAgreed < 40) {
+        minorityVotes.push({
+          question: q.content,
+          userVote: uv.vote,
+          percentWhoAgreed,
+        });
+      }
+    }
+  }
+  
+  // Sort and limit
+  controversialVotes.sort((a, b) => b.majorityPercent - a.majorityPercent);
+  controversialVotes.splice(5);
+  minorityVotes.sort((a, b) => a.percentWhoAgreed - b.percentWhoAgreed);
+  minorityVotes.splice(5);
+  
+  // Get voting activity and streak data
+  const { data: allUserVotes } = await supabase
+    .from('responses')
+    .select('created_at')
+    .eq('user_id', userId)
+    .eq('is_ai', false)
+    .order('created_at', { ascending: false });
+  
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  const votesToday = allUserVotes?.filter(v => new Date(v.created_at) >= todayStart).length || 0;
+  const votesThisWeek = allUserVotes?.filter(v => new Date(v.created_at) >= weekStart).length || 0;
+  
+  // Calculate voting streak
+  let currentStreak = 0;
+  let longestStreak = 0;
+  const dayCounts: Record<string, number> = {};
+  
+  allUserVotes?.forEach(v => {
+    const date = new Date(v.created_at).toISOString().split('T')[0];
+    dayCounts[date] = (dayCounts[date] || 0) + 1;
+  });
+  
+  // Find most active day
+  let mostActiveDay: string | null = null;
+  let maxVotesOnDay = 0;
+  Object.entries(dayCounts).forEach(([date, count]) => {
+    if (count > maxVotesOnDay) {
+      maxVotesOnDay = count;
+      mostActiveDay = date;
+    }
+  });
+  
+  // Calculate streak (consecutive days)
+  const sortedDays = Object.keys(dayCounts).sort().reverse();
+  if (sortedDays.length > 0) {
+    const today = now.toISOString().split('T')[0];
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    // Check if they voted today or yesterday (streak still alive)
+    if (sortedDays[0] === today || sortedDays[0] === yesterday) {
+      currentStreak = 1;
+      for (let i = 1; i < sortedDays.length; i++) {
+        const prevDay = new Date(sortedDays[i - 1]);
+        const currDay = new Date(sortedDays[i]);
+        const diffDays = (prevDay.getTime() - currDay.getTime()) / (24 * 60 * 60 * 1000);
+        if (diffDays === 1) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+    }
+    
+    // Calculate longest streak
+    let tempStreak = 1;
+    for (let i = 1; i < sortedDays.length; i++) {
+      const prevDay = new Date(sortedDays[i - 1]);
+      const currDay = new Date(sortedDays[i]);
+      const diffDays = (prevDay.getTime() - currDay.getTime()) / (24 * 60 * 60 * 1000);
+      if (diffDays === 1) {
+        tempStreak++;
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak);
+        tempStreak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+  }
+  
+  const votingActivity: VotingActivity = {
+    votesToday,
+    votesThisWeek,
+    currentStreak,
+    longestStreak,
+    lastVoteDate: allUserVotes?.[0]?.created_at || null,
+    mostActiveDay,
+  };
+
   const contextData: ContextData = {
     userName: profile?.username || 'User',
     userStats,
@@ -369,6 +550,9 @@ async function gatherContextData(
     topCategories,
     similarUsers,
     recommendedQuestions,
+    controversialVotes,
+    votingActivity,
+    minorityVotes,
   };
 
   // Add question-specific data if on a question page
@@ -467,10 +651,35 @@ Your personality:
 - Use data to back up insights when relevant
 - Be encouraging and curious
 
+WHAT YOU CAN HELP WITH:
+- Voting patterns and activity insights
+- Finding similar users and comparing opinions
+- Recommending new questions to vote on
+- Analyzing their controversial/minority votes
+- Discussing specific questions they're viewing
+- Comparing them with other users
+
 About the current user (${data.userName}):
 - They've cast ${data.userStats.totalVotes} votes total
 - Voting pattern: ${data.userStats.yesPercent}% Yes, ${data.userStats.noPercent}% No, ${data.userStats.unsurePercent}% Not Sure
 - Top categories they engage with: ${data.topCategories.join(', ') || 'Not enough data yet'}
+
+VOTING ACTIVITY & STREAKS:
+- Votes today: ${data.votingActivity.votesToday}
+- Votes this week: ${data.votingActivity.votesThisWeek}
+- Current voting streak: ${data.votingActivity.currentStreak} day${data.votingActivity.currentStreak !== 1 ? 's' : ''}
+- Longest streak ever: ${data.votingActivity.longestStreak} day${data.votingActivity.longestStreak !== 1 ? 's' : ''}
+${data.votingActivity.mostActiveDay ? `- Most active day: ${data.votingActivity.mostActiveDay} (${data.votingActivity.votesToday} votes)` : ''}
+
+CONTROVERSIAL VOTES (where ${data.userName} disagreed with the majority):
+${data.controversialVotes.length > 0
+  ? data.controversialVotes.map(v => `- "${v.question}" - User voted ${v.userVote}, but ${v.majorityPercent}% voted ${v.majorityVote}`).join('\n')
+  : 'No controversial votes found - user tends to agree with the majority!'}
+
+MINORITY OPINIONS (where less than 40% agreed with ${data.userName}):
+${data.minorityVotes.length > 0
+  ? data.minorityVotes.map(v => `- "${v.question}" - User voted ${v.userVote}, only ${v.percentWhoAgreed}% agreed`).join('\n')
+  : 'No strong minority positions found.'}
 
 QUESTIONS USER HAS ALREADY VOTED ON (do NOT recommend these - they already answered them):
 ${data.recentQuestions.slice(0, 5).map(q => `- "${q}"`).join('\n') || 'No recent votes'}
@@ -526,7 +735,15 @@ REMEMBER - CRITICAL:
 - Use EXACT usernames with @ prefix (e.g., @username) when mentioning users.
 - If asked about something not in this prompt, say "I don't have that data yet" rather than making it up.
 - If they ask to argue the other side, take the opposite position playfully.
-- Keep it fun and engaging!`;
+- Keep it fun and engaging!
+
+QUERIES YOU CAN NOW ANSWER:
+- "What are my controversial votes?" → Use CONTROVERSIAL VOTES data
+- "Where am I in the minority?" → Use MINORITY OPINIONS data
+- "What's my voting streak?" → Use VOTING ACTIVITY data
+- "How active have I been?" → Use VOTING ACTIVITY data
+- "Who thinks like me?" → Use SIMILAR USERS data
+- "What should I vote on next?" → Use RECOMMENDED QUESTIONS data`;
 
   return prompt;
 }
