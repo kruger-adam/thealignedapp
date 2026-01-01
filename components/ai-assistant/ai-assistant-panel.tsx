@@ -6,8 +6,8 @@ import { useAIAssistant, Message, AssistantContext } from './ai-assistant-provid
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
-// Quick suggestion chips based on context
-function getQuickSuggestions(context: AssistantContext): string[] {
+// Initial suggestion chips based on context (shown when no messages)
+function getInitialSuggestions(context: AssistantContext): string[] {
   switch (context.page) {
     case 'question':
       return [
@@ -39,6 +39,95 @@ function getQuickSuggestions(context: AssistantContext): string[] {
         'Surprise me',
       ];
   }
+}
+
+// Smart follow-up suggestions based on conversation context
+function getSmartFollowUps(messages: Message[], context: AssistantContext): string[] {
+  if (messages.length === 0) return getInitialSuggestions(context);
+  
+  // Get the last few messages for context
+  const recentMessages = messages.slice(-4);
+  const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  
+  const conversationText = recentMessages.map(m => m.content).join(' ').toLowerCase();
+  const lastResponse = (lastAssistantMsg?.content || '').toLowerCase();
+  const lastQuestion = (lastUserMsg?.content || '').toLowerCase();
+  
+  const suggestions: string[] = [];
+  
+  // Detect topics discussed and suggest relevant follow-ups
+  
+  // If they discussed similar users
+  if (lastResponse.includes('@') || conversationText.includes('similar') || conversationText.includes('thinks like')) {
+    suggestions.push('Tell me more about them');
+    suggestions.push('Where do we disagree?');
+  }
+  
+  // If they discussed controversial/minority votes
+  if (conversationText.includes('controversial') || conversationText.includes('minority') || conversationText.includes('disagree')) {
+    suggestions.push('Why do I think differently?');
+    suggestions.push('Find more like this');
+  }
+  
+  // If they discussed voting patterns or streaks
+  if (conversationText.includes('streak') || conversationText.includes('active') || conversationText.includes('pattern')) {
+    suggestions.push('What are my controversial votes?');
+    suggestions.push('Who votes like me?');
+  }
+  
+  // If they discussed recommendations
+  if (conversationText.includes('recommend') || conversationText.includes('vote on') || conversationText.includes('question')) {
+    suggestions.push('Show me more questions');
+    suggestions.push('Something more controversial');
+  }
+  
+  // If on a question page
+  if (context.page === 'question') {
+    if (!conversationText.includes('other side') && !conversationText.includes('argue')) {
+      suggestions.push('Argue the other side');
+    }
+    if (!conversationText.includes('why')) {
+      suggestions.push('Why did people vote this way?');
+    }
+  }
+  
+  // If on a profile page
+  if (context.page === 'profile' && context.profileId !== 'ai') {
+    if (!conversationText.includes('agree')) {
+      suggestions.push('What do we agree on?');
+    }
+    if (!conversationText.includes('differ') && !conversationText.includes('disagree')) {
+      suggestions.push('Where do we differ?');
+    }
+  }
+  
+  // General follow-ups based on response content
+  if (lastResponse.includes('streak')) {
+    suggestions.push('How can I improve?');
+  }
+  if (lastResponse.includes('%')) {
+    suggestions.push('What does this say about me?');
+  }
+  
+  // Always have some analytics options available
+  if (suggestions.length < 3) {
+    const analytics = [
+      "What's my voting streak?",
+      'Where am I in the minority?',
+      'What are my controversial takes?',
+      'Recommend something new',
+    ];
+    for (const a of analytics) {
+      if (!conversationText.includes(a.toLowerCase().slice(0, 10)) && suggestions.length < 4) {
+        suggestions.push(a);
+      }
+    }
+  }
+  
+  // Dedupe and limit
+  const unique = [...new Set(suggestions)];
+  return unique.slice(0, 4);
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -132,7 +221,8 @@ export function AIAssistantPanel() {
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
 
-  const quickSuggestions = getQuickSuggestions(currentContext);
+  const initialSuggestions = getInitialSuggestions(currentContext);
+  const smartFollowUps = getSmartFollowUps(messages, currentContext);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -326,7 +416,7 @@ export function AIAssistantPanel() {
                 </p>
               </div>
               <QuickSuggestionChips
-                suggestions={quickSuggestions}
+                suggestions={initialSuggestions}
                 onSelect={sendMessage}
                 disabled={isLoading}
               />
@@ -344,11 +434,14 @@ export function AIAssistantPanel() {
           )}
         </div>
 
-        {/* Quick suggestions when there are messages */}
+        {/* Smart follow-up suggestions based on conversation */}
         {messages.length > 0 && !isLoading && (
           <div className="border-t border-zinc-100 px-4 py-2 dark:border-zinc-800">
+            <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+              Follow up
+            </div>
             <QuickSuggestionChips
-              suggestions={quickSuggestions.slice(0, 3)}
+              suggestions={smartFollowUps}
               onSelect={sendMessage}
               disabled={isLoading}
             />
@@ -446,7 +539,7 @@ export function AIAssistantPanel() {
                 </p>
               </div>
               <QuickSuggestionChips
-                suggestions={quickSuggestions}
+                suggestions={initialSuggestions}
                 onSelect={sendMessage}
                 disabled={isLoading}
               />
@@ -464,11 +557,14 @@ export function AIAssistantPanel() {
           )}
         </div>
 
-        {/* Quick suggestions when there are messages */}
+        {/* Smart follow-up suggestions based on conversation */}
         {messages.length > 0 && !isLoading && (
           <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
+            <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+              Follow up
+            </div>
             <QuickSuggestionChips
-              suggestions={quickSuggestions.slice(0, 3)}
+              suggestions={smartFollowUps}
               onSelect={sendMessage}
               disabled={isLoading}
             />
