@@ -291,6 +291,7 @@ export function AIAssistantPanel() {
   const { user } = useAuth();
   const {
     isOpen,
+    isClosing,
     messages,
     isLoading,
     proactiveInsight,
@@ -473,8 +474,8 @@ export function AIAssistantPanel() {
       {/* Backdrop for mobile */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden',
-          'animate-in fade-in duration-200'
+          'fixed inset-0 z-40 bg-black/40 lg:hidden',
+          isClosing ? 'animate-genie-backdrop-out' : 'animate-genie-backdrop-in'
         )}
         onClick={closeAssistant}
       />
@@ -482,9 +483,9 @@ export function AIAssistantPanel() {
       {/* Mobile: Bottom Sheet */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-white shadow-2xl lg:hidden',
+          'fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white shadow-2xl lg:hidden',
           'dark:bg-zinc-900',
-          'animate-in slide-in-from-bottom duration-300',
+          isClosing ? 'animate-genie-close-mobile' : 'animate-genie-open-mobile',
           isDragging ? '' : 'transition-[height] duration-200'
         )}
         style={{ height: `${sheetHeight}dvh` }}
@@ -636,7 +637,7 @@ export function AIAssistantPanel() {
         className={cn(
           'fixed right-0 top-0 z-40 hidden h-full w-[420px] flex-col border-l border-zinc-200 bg-white shadow-xl lg:flex',
           'dark:border-zinc-800 dark:bg-zinc-900',
-          'animate-in slide-in-from-right duration-300'
+          isClosing ? 'animate-genie-close-desktop' : 'animate-genie-open-desktop'
         )}
       >
         {/* Header */}

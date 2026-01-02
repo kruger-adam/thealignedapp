@@ -12,6 +12,7 @@ export interface Message {
 
 export interface AIAssistantContextType {
   isOpen: boolean;
+  isClosing: boolean;
   messages: Message[];
   isLoading: boolean;
   proactiveInsight: string | null;
@@ -34,8 +35,12 @@ const AIAssistantContext = createContext<AIAssistantContextType | undefined>(und
 
 const SESSION_STORAGE_KEY = 'ai-assistant-messages';
 
+// Duration for genie close animation (matches CSS)
+const GENIE_CLOSE_DURATION = 350;
+
 export function AIAssistantProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [proactiveInsight, setProactiveInsight] = useState<string | null>(null);
@@ -125,9 +130,27 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const openAssistant = useCallback(() => setIsOpen(true), []);
-  const closeAssistant = useCallback(() => setIsOpen(false), []);
-  const toggleAssistant = useCallback(() => setIsOpen(prev => !prev), []);
+  const openAssistant = useCallback(() => {
+    setIsClosing(false);
+    setIsOpen(true);
+  }, []);
+  
+  const closeAssistant = useCallback(() => {
+    setIsClosing(true);
+    // Wait for genie animation to complete before actually closing
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, GENIE_CLOSE_DURATION);
+  }, []);
+  
+  const toggleAssistant = useCallback(() => {
+    if (isOpen) {
+      closeAssistant();
+    } else {
+      openAssistant();
+    }
+  }, [isOpen, closeAssistant, openAssistant]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -212,6 +235,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
     <AIAssistantContext.Provider
       value={{
         isOpen,
+        isClosing,
         messages,
         isLoading,
         proactiveInsight,
