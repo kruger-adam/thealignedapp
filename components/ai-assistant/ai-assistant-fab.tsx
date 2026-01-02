@@ -15,8 +15,11 @@ export function AIAssistantFAB() {
   const [bubbleVisible, setBubbleVisible] = useState(false);
 
   // Check if user has seen the proactive bubble before
+  // TODO: Re-enable when poll creation flow is polished
+  const PROACTIVE_BUBBLE_ENABLED = false;
+  
   useEffect(() => {
-    if (!user) return;
+    if (!user || !PROACTIVE_BUBBLE_ENABLED) return;
     
     // Small delay before showing bubble for better UX
     const timer = setTimeout(() => {
