@@ -3,7 +3,7 @@ import { Bot } from 'lucide-react';
 
 export default function Loading() {
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6 slide-in-from-bottom-2">
+    <div className="mx-auto max-w-2xl px-4 py-6 slide-in-from-bottom-2">
       {/* AI Profile Header Skeleton */}
       <Card className="mb-6 overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600" />
@@ -59,7 +59,7 @@ export default function Loading() {
           ))}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
 

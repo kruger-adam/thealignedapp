@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function Loading() {
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6 slide-in-from-bottom-2">
+    <div className="mx-auto max-w-2xl px-4 py-6 slide-in-from-bottom-2">
       {/* Back Button */}
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
         <ArrowLeft className="h-4 w-4" />
@@ -90,7 +90,7 @@ export default function Loading() {
           </div>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
 
