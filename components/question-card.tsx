@@ -851,7 +851,7 @@ export function QuestionCard({
       if (match.index > lastIndex) {
         const textBefore = content.substring(lastIndex, match.index);
         if (textBefore) {
-          parts.push(textBefore);
+          parts.push(<span key={`text-${lastIndex}`}>{textBefore}</span>);
         }
       }
       
@@ -919,11 +919,11 @@ export function QuestionCard({
     if (lastIndex < content.length) {
       const remaining = content.substring(lastIndex);
       if (remaining) {
-        parts.push(remaining);
+        parts.push(<span key={`text-${lastIndex}`}>{remaining}</span>);
       }
     }
     
-    return parts.length > 0 ? parts : content;
+    return parts.length > 0 ? <>{parts}</> : content;
   };
   
   // Local state for vote (persists after voting without refetch)

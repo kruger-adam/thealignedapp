@@ -710,7 +710,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     
     while ((match = mentionRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
-        parts.push(content.substring(lastIndex, match.index));
+        parts.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex, match.index)}</span>);
       }
       
       if (match[1] && match[2]) {
@@ -754,10 +754,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     }
     
     if (lastIndex < content.length) {
-      parts.push(content.substring(lastIndex));
+      parts.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex)}</span>);
     }
     
-    return parts.length > 0 ? parts : content;
+    return parts.length > 0 ? <>{parts}</> : content;
   };
 
   // Real-time comments subscription
