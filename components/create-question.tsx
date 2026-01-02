@@ -143,7 +143,17 @@ const defaultTopicPrompts = topicPrompts;
 type TopicKey = keyof typeof topicPrompts;
 
 // Flatten all prompts for typewriter animation
-const allPrompts = Object.values(topicPrompts).flat();
+const allPromptsBase = Object.values(topicPrompts).flat();
+
+// Fisher-Yates shuffle
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const { user } = useAuth();
@@ -218,16 +228,19 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     setTimeout(() => setConfettiParticles([]), 1000);
   }, []);
   
+  // Shuffle prompts once per session for variety
+  const shuffledPrompts = useMemo(() => shuffleArray(allPromptsBase), []);
+  
   // Typewriter animation state
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [displayedText, setDisplayedText] = useState(allPrompts[0][0]); // Start with first char
+  const [displayedText, setDisplayedText] = useState(() => shuffledPrompts[0]?.[0] ?? ''); // Start with first char
   const [isTyping, setIsTyping] = useState(true);
   
   // Typewriter effect
   useEffect(() => {
     if (isExpanded) return; // Don't animate when expanded
     
-    const currentQuestion = allPrompts[questionIndex];
+    const currentQuestion = shuffledPrompts[questionIndex];
     let timeout: NodeJS.Timeout;
     
     if (isTyping) {
@@ -250,15 +263,15 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         }, 15); // Faster backspace
       } else {
         // Move to next question immediately (no flash)
-        const nextIndex = (questionIndex + 1) % allPrompts.length;
+        const nextIndex = (questionIndex + 1) % shuffledPrompts.length;
         setQuestionIndex(nextIndex);
-        setDisplayedText(allPrompts[nextIndex].slice(0, 1)); // Start with first char
+        setDisplayedText(shuffledPrompts[nextIndex].slice(0, 1)); // Start with first char
         setIsTyping(true);
       }
     }
     
     return () => clearTimeout(timeout);
-  }, [displayedText, isTyping, questionIndex, isExpanded]);
+  }, [displayedText, isTyping, questionIndex, isExpanded, shuffledPrompts]);
 
   const charCount = content.length;
   const maxChars = 280;
