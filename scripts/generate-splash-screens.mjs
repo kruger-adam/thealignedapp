@@ -21,8 +21,9 @@ const SPLASH_SCREENS = [
   [1179, 2556, 3, 'iPhone 14 Pro/15/15 Pro/16/16 Pro'],
   [1290, 2796, 3, 'iPhone 14 Pro Max/15 Plus/15 Pro Max/16 Plus'],
   [1080, 2340, 3, 'iPhone 12 mini/13 mini'],
-  [1206, 2622, 3, 'iPhone 16 Pro'],
-  [1320, 2868, 3, 'iPhone 16 Pro Max'],
+  [1206, 2622, 3, 'iPhone 16 Pro/17/17 Pro'],
+  [1320, 2868, 3, 'iPhone 16 Pro Max/17 Pro Max'],
+  [1260, 2736, 3, 'iPhone 17 Air'],
   // iPads
   [1668, 2388, 2, 'iPad Pro 11"'],
   [2048, 2732, 2, 'iPad Pro 12.9"'],
