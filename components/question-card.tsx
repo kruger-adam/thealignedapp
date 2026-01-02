@@ -849,9 +849,9 @@ export function QuestionCard({
     while ((match = combinedRegex.exec(content)) !== null) {
       // Add text before the match
       if (match.index > lastIndex) {
-        const textBefore = content.substring(lastIndex, match.index).trim();
+        const textBefore = content.substring(lastIndex, match.index);
         if (textBefore) {
-          parts.push(textBefore + ' ');
+          parts.push(textBefore);
         }
       }
       
@@ -917,7 +917,7 @@ export function QuestionCard({
     
     // Add remaining text
     if (lastIndex < content.length) {
-      const remaining = content.substring(lastIndex).trim();
+      const remaining = content.substring(lastIndex);
       if (remaining) {
         parts.push(remaining);
       }
