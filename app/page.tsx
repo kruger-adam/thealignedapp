@@ -361,6 +361,7 @@ export default function FeedPage() {
   }, [loadingMore, hasMore, loading, fetchQuestions]);
 
   // Intersection observer for infinite scroll
+  // rootMargin triggers load 800px before reaching the bottom (roughly 3-4 posts early)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -368,7 +369,7 @@ export default function FeedPage() {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '800px' }
     );
 
     const currentRef = loadMoreRef.current;
