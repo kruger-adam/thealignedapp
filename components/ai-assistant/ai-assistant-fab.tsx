@@ -101,10 +101,10 @@ export function AIAssistantFAB() {
             
             {/* Message */}
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              What&apos;s on your mind? 💭
+              Hello! 👋
             </p>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Tell me a topic and I&apos;ll create a poll just for you!
+              What&apos;s a hobby or interest of yours? I&apos;ll create a poll that might interest you!
             </p>
             
             {/* Speech bubble tail */}
