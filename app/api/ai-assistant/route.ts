@@ -17,15 +17,18 @@ interface MessageHistory {
   content: string;
 }
 
+type SpecialMode = 'poll-creation' | null;
+
 // Rate limit: 50 assistant queries per user per day
 const DAILY_LIMIT = 50;
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, context, history } = await request.json() as {
+    const { message, context, history, specialMode } = await request.json() as {
       message: string;
       context: AssistantContext;
       history: MessageHistory[];
+      specialMode?: SpecialMode;
     };
 
     if (!message?.trim()) {
@@ -52,6 +55,11 @@ export async function POST(request: NextRequest) {
 
     if ((todayCount || 0) >= DAILY_LIMIT) {
       return new Response(`Daily limit reached (${DAILY_LIMIT} queries per day). Try again tomorrow!`, { status: 429 });
+    }
+
+    // Handle poll creation mode
+    if (specialMode === 'poll-creation') {
+      return handlePollCreation(supabase, user.id, message);
     }
 
     // Gather context-specific data
@@ -141,6 +149,118 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('AI Assistant error:', error);
     return new Response('Something went wrong. Please try again.', { status: 500 });
+  }
+}
+
+// Handle the special poll creation flow
+async function handlePollCreation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  topic: string
+): Promise<Response> {
+  try {
+    // 1. Generate a poll question based on the topic
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a creative poll creator. Given a topic the user is interested in, create an engaging yes/no question that would spark interesting discussion.
+
+Rules:
+- The question MUST be answerable with Yes, No, or Not Sure
+- Keep it under 200 characters
+- Make it thought-provoking but not offensive
+- Frame it as a genuine question people would want to vote on
+- Don't be preachy or leading - keep it neutral
+
+Respond with ONLY the question text, nothing else.`
+        },
+        {
+          role: 'user',
+          content: `Create a poll question about: ${topic}`
+        }
+      ],
+      max_tokens: 100,
+      temperature: 0.9,
+    });
+
+    const pollQuestion = completion.choices[0]?.message?.content?.trim();
+
+    if (!pollQuestion) {
+      return new Response("I couldn't come up with a good question for that topic. Try describing what you're curious about in a different way!", { status: 200 });
+    }
+
+    // 2. Create the poll (as anonymous, authored by AI system)
+    const { data: newQuestion, error: insertError } = await supabase
+      .from('questions')
+      .insert({
+        content: pollQuestion,
+        author_id: null, // Anonymous
+        is_ai: true,
+      })
+      .select()
+      .single();
+
+    if (insertError || !newQuestion) {
+      console.error('Error creating poll:', insertError);
+      return new Response("Oops, I couldn't create the poll. Please try again!", { status: 200 });
+    }
+
+    // 3. Trigger AI vote on the new question
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
+
+    try {
+      await fetch(`${baseUrl}/api/ai-vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: newQuestion.id }),
+      });
+    } catch (voteError) {
+      console.error('Error triggering AI vote:', voteError);
+      // Continue anyway - AI vote is nice to have but not critical
+    }
+
+    // 4. Trigger categorization
+    try {
+      const catResponse = await fetch(`${baseUrl}/api/categorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: pollQuestion }),
+      });
+      const catResult = await catResponse.json();
+      
+      if (catResult.category) {
+        await supabase
+          .from('questions')
+          .update({ category: catResult.category })
+          .eq('id', newQuestion.id);
+      }
+    } catch (catError) {
+      console.error('Error triggering categorization:', catError);
+    }
+
+    // 5. Log this interaction
+    await supabase.from('ai_assistant_logs').insert({
+      user_id: userId,
+      message: `[Poll Creation] Topic: ${topic}`,
+      response: `Created poll: ${pollQuestion}`,
+      context_page: 'feed',
+      context_id: newQuestion.id,
+    });
+
+    // 6. Return the response with link
+    const response = `Done! I created this poll based on your interest:\n\n**"${pollQuestion}"**\n\nI've already voted on it 🤖\n\n👉 [Vote now to see if we agree!](/question/${newQuestion.id})`;
+
+    return new Response(response, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+
+  } catch (error) {
+    console.error('Error in poll creation:', error);
+    return new Response("Something went wrong creating your poll. Please try again!", { status: 200 });
   }
 }
 

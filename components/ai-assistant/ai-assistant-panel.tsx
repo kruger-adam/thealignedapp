@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Bot, Send, X, Trash2, Sparkles } from 'lucide-react';
+import { Bot, Send, X, Trash2, Sparkles, MessageCircleQuestion } from 'lucide-react';
 import { useAIAssistant, Message, AssistantContext } from './ai-assistant-provider';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
@@ -145,7 +145,7 @@ function getSmartFollowUps(messages: Message[], context: AssistantContext): stri
   return unique.slice(0, 4);
 }
 
-// Component to render parsed message content with clickable @mentions
+// Component to render parsed message content with clickable @mentions, links, and bold text
 function ParsedMessageContent({ 
   content, 
   userMap,
@@ -157,39 +157,62 @@ function ParsedMessageContent({
 }) {
   if (!content) return null;
 
-  // Parse content for @mentions
+  // Combined regex for @mentions, markdown links [text](url), and bold **text**
+  const combinedRegex = /(@(\w+))|(\[([^\]]+)\]\(([^)]+)\))|(\*\*([^*]+)\*\*)/g;
   const parts: React.ReactNode[] = [];
-  const mentionRegex = /@(\w+)/g;
   let lastIndex = 0;
   let match;
 
-  while ((match = mentionRegex.exec(content)) !== null) {
-    // Add text before the mention
+  while ((match = combinedRegex.exec(content)) !== null) {
+    // Add text before the match
     if (match.index > lastIndex) {
       parts.push(content.slice(lastIndex, match.index));
     }
 
-    const username = match[1];
-    const userId = userMap.get(username.toLowerCase());
+    if (match[1]) {
+      // @mention
+      const username = match[2];
+      const userId = userMap.get(username.toLowerCase());
 
-    if (userId) {
-      // Clickable mention with known user ID
+      if (userId) {
+        parts.push(
+          <Link
+            key={`mention-${match.index}`}
+            href={`/profile/${userId}`}
+            onClick={closeAssistant}
+            className="font-medium text-violet-600 hover:text-violet-700 hover:underline dark:text-violet-400 dark:hover:text-violet-300"
+          >
+            @{username}
+          </Link>
+        );
+      } else {
+        parts.push(
+          <span key={`mention-${match.index}`} className="font-medium text-violet-600 dark:text-violet-400">
+            @{username}
+          </span>
+        );
+      }
+    } else if (match[3]) {
+      // Markdown link [text](url)
+      const linkText = match[4];
+      const linkUrl = match[5];
       parts.push(
         <Link
-          key={`mention-${match.index}`}
-          href={`/profile/${userId}`}
+          key={`link-${match.index}`}
+          href={linkUrl}
           onClick={closeAssistant}
-          className="font-medium text-violet-600 hover:text-violet-700 hover:underline dark:text-violet-400 dark:hover:text-violet-300"
+          className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
         >
-          @{username}
+          {linkText}
         </Link>
       );
-    } else {
-      // Non-clickable mention (unknown user)
+    } else if (match[6]) {
+      // Bold **text**
+      const boldText = match[7];
       parts.push(
-        <span key={`mention-${match.index}`} className="font-medium text-violet-600 dark:text-violet-400">
-          @{username}
-        </span>
+        <strong key={`bold-${match.index}`} className="font-semibold">
+          {boldText}
+        </strong>
       );
     }
 
@@ -297,6 +320,7 @@ export function AIAssistantPanel() {
     proactiveInsight,
     isLoadingInsight,
     currentContext,
+    specialMode,
     closeAssistant,
     sendMessage,
     clearMessages,
@@ -537,15 +561,31 @@ export function AIAssistantPanel() {
         <div className="flex-1 overflow-y-auto p-4">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30">
-                {isLoadingInsight ? (
+              <div className={cn(
+                "flex h-16 w-16 items-center justify-center rounded-full",
+                specialMode === 'poll-creation' 
+                  ? "bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30"
+                  : "bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30"
+              )}>
+                {specialMode === 'poll-creation' ? (
+                  <MessageCircleQuestion className="h-8 w-8 text-emerald-500" />
+                ) : isLoadingInsight ? (
                   <Bot className="h-8 w-8 text-violet-500 animate-pulse" />
                 ) : (
                   <Sparkles className="h-8 w-8 text-violet-500" />
                 )}
               </div>
               <div>
-                {isLoadingInsight ? (
+                {specialMode === 'poll-creation' ? (
+                  <>
+                    <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                      Let&apos;s create a poll for you! 🎯
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      What topic are you curious about? I&apos;ll turn it into a poll.
+                    </p>
+                  </>
+                ) : isLoadingInsight ? (
                   <p className="text-sm text-zinc-500 animate-pulse">Getting your insights...</p>
                 ) : proactiveInsight ? (
                   <div className="max-w-xs rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">
@@ -562,11 +602,13 @@ export function AIAssistantPanel() {
                   </>
                 )}
               </div>
-              <QuickSuggestionChips
-                suggestions={initialSuggestions}
-                onSelect={sendMessage}
-                disabled={isLoading || isLoadingInsight}
-              />
+              {specialMode !== 'poll-creation' && (
+                <QuickSuggestionChips
+                  suggestions={initialSuggestions}
+                  onSelect={sendMessage}
+                  disabled={isLoading || isLoadingInsight}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -676,15 +718,31 @@ export function AIAssistantPanel() {
         <div className="flex-1 overflow-y-auto p-5">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-5 text-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30">
-                {isLoadingInsight ? (
+              <div className={cn(
+                "flex h-20 w-20 items-center justify-center rounded-full",
+                specialMode === 'poll-creation' 
+                  ? "bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30"
+                  : "bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30"
+              )}>
+                {specialMode === 'poll-creation' ? (
+                  <MessageCircleQuestion className="h-10 w-10 text-emerald-500" />
+                ) : isLoadingInsight ? (
                   <Bot className="h-10 w-10 text-violet-500 animate-pulse" />
                 ) : (
                   <Sparkles className="h-10 w-10 text-violet-500" />
                 )}
               </div>
               <div>
-                {isLoadingInsight ? (
+                {specialMode === 'poll-creation' ? (
+                  <>
+                    <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+                      Let&apos;s create a poll for you! 🎯
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      What topic are you curious about? I&apos;ll turn it into a poll.
+                    </p>
+                  </>
+                ) : isLoadingInsight ? (
                   <p className="text-sm text-zinc-500 animate-pulse">Getting your insights...</p>
                 ) : proactiveInsight ? (
                   <div className="max-w-sm rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">
@@ -701,11 +759,13 @@ export function AIAssistantPanel() {
                   </>
                 )}
               </div>
-              <QuickSuggestionChips
-                suggestions={initialSuggestions}
-                onSelect={sendMessage}
-                disabled={isLoading || isLoadingInsight}
-              />
+              {specialMode !== 'poll-creation' && (
+                <QuickSuggestionChips
+                  suggestions={initialSuggestions}
+                  onSelect={sendMessage}
+                  disabled={isLoading || isLoadingInsight}
+                />
+              )}
             </div>
           ) : (
             <div className="space-y-4">

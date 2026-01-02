@@ -10,6 +10,8 @@ export interface Message {
   timestamp: Date;
 }
 
+export type SpecialMode = 'poll-creation' | null;
+
 export interface AIAssistantContextType {
   isOpen: boolean;
   isClosing: boolean;
@@ -18,7 +20,9 @@ export interface AIAssistantContextType {
   proactiveInsight: string | null;
   isLoadingInsight: boolean;
   currentContext: AssistantContext;
+  specialMode: SpecialMode;
   openAssistant: () => void;
+  openAssistantWithPrompt: (mode: SpecialMode) => void;
   closeAssistant: () => void;
   toggleAssistant: () => void;
   sendMessage: (content: string) => Promise<void>;
@@ -46,6 +50,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
   const [proactiveInsight, setProactiveInsight] = useState<string | null>(null);
   const [isLoadingInsight, setIsLoadingInsight] = useState(false);
   const [insightFetched, setInsightFetched] = useState(false);
+  const [specialMode, setSpecialMode] = useState<SpecialMode>(null);
   const pathname = usePathname();
 
   // Derive context from current route
@@ -132,6 +137,17 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
 
   const openAssistant = useCallback(() => {
     setIsClosing(false);
+    setSpecialMode(null);
+    setIsOpen(true);
+  }, []);
+
+  const openAssistantWithPrompt = useCallback((mode: SpecialMode) => {
+    setIsClosing(false);
+    setSpecialMode(mode);
+    // Clear existing messages to start fresh with this mode
+    setMessages([]);
+    setProactiveInsight(null);
+    setInsightFetched(true); // Don't fetch insight, we have a special mode
     setIsOpen(true);
   }, []);
   
@@ -141,6 +157,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
+      setSpecialMode(null);
     }, GENIE_CLOSE_DURATION);
   }, []);
   
@@ -183,6 +200,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
           message: content.trim(),
           context: currentContext,
           history: messages.slice(-10), // Send last 10 messages for context
+          specialMode: specialMode,
         }),
       });
 
@@ -241,7 +259,9 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
         proactiveInsight,
         isLoadingInsight,
         currentContext,
+        specialMode,
         openAssistant,
+        openAssistantWithPrompt,
         closeAssistant,
         toggleAssistant,
         sendMessage,
