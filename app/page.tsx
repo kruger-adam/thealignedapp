@@ -30,8 +30,18 @@ export default function FeedPage() {
   const supabase = useMemo(() => createClient(), []);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // Check if current sort uses client-side sorting (filters already applied in fetchQuestions)
+  const isClientSortMode = ['popular', 'controversial', 'consensus', 'most_undecided', 'most_sensitive', 'most_commented'].includes(sortBy);
+
   // Filter questions by category, min votes, time period, and unanswered
+  // For client-sort modes, filters are already applied before pagination in fetchQuestions
   const filteredQuestions = useMemo(() => {
+    // For client-sort modes, filters are already applied - just return questions
+    if (isClientSortMode) {
+      return questions;
+    }
+    
+    // For 'newest' sort, apply filters client-side (paginated from DB)
     let filtered = questions;
     if (categoryFilter) {
       filtered = filtered.filter(q => q.category === categoryFilter);
@@ -71,7 +81,7 @@ export default function FeedPage() {
       });
     }
     return filtered;
-  }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
+  }, [questions, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, isClientSortMode]);
 
   const fetchQuestions = useCallback(async (append = false) => {
     if (append) {
@@ -343,15 +353,55 @@ export default function FeedPage() {
       }
     });
 
-    // For client-side sorted results, apply pagination after sorting
+    // For client-side sorted results, apply filters then pagination after sorting
     if (needsClientSort) {
-      // Apply pagination to the sorted full list
+      // Apply filters to the full sorted list before pagination
+      let filteredSorted = sorted;
+      
+      if (categoryFilter) {
+        filteredSorted = filteredSorted.filter(q => q.category === categoryFilter);
+      }
+      if (minVotes > 0) {
+        filteredSorted = filteredSorted.filter(q => q.stats.total_votes >= minVotes);
+      }
+      if (timePeriod !== 'all') {
+        const now = new Date();
+        let cutoff: Date;
+        switch (timePeriod) {
+          case 'day':
+            cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case 'week':
+            cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'month':
+            cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        filteredSorted = filteredSorted.filter(q => new Date(q.created_at) >= cutoff);
+      }
+      if (unansweredOnly) {
+        filteredSorted = filteredSorted.filter(q => !q.user_vote);
+      }
+      if (pollStatus !== 'all') {
+        const now = new Date();
+        filteredSorted = filteredSorted.filter(q => {
+          if (!q.expires_at) {
+            return pollStatus === 'active';
+          }
+          const expiresAt = new Date(q.expires_at);
+          const isExpired = expiresAt <= now;
+          return pollStatus === 'expired' ? isExpired : !isExpired;
+        });
+      }
+      
+      // Apply pagination to the filtered sorted list
       const startIndex = currentOffset;
       const endIndex = currentOffset + PAGE_SIZE;
-      const paginatedResults = sorted.slice(startIndex, endIndex);
+      const paginatedResults = filteredSorted.slice(startIndex, endIndex);
       
       // Check if there are more results
-      if (endIndex >= sorted.length) {
+      if (endIndex >= filteredSorted.length) {
         setHasMore(false);
       }
       
@@ -378,13 +428,24 @@ export default function FeedPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user, sortBy, offset]);
+  }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
 
-  // Reset and fetch when sort/filters change
+  // Check if current sort requires client-side sorting (needs filter refetch)
+  const needsClientSortForFilters = ['popular', 'controversial', 'consensus', 'most_undecided', 'most_sensitive', 'most_commented'].includes(sortBy);
+
+  // Reset and fetch when sort changes or user changes
   useEffect(() => {
     fetchQuestions(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, sortBy]);
+
+  // For client-sort modes, also refetch when filters change (filters are applied before pagination)
+  useEffect(() => {
+    if (needsClientSortForFilters) {
+      fetchQuestions(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
 
   // Load more when user scrolls to bottom
   const loadMore = useCallback(() => {
