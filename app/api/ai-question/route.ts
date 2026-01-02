@@ -54,7 +54,6 @@ export async function POST(request: Request) {
 
 Avoid:
 - Questions that are too personal or invasive
-- Highly political or divisive topics that could cause heated arguments
 - Questions that have obvious "correct" answers
 - Questions similar to ones recently asked
 
