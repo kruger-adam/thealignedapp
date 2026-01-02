@@ -1,13 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { Bot, Users, UserCircle, Globe, Sparkles } from 'lucide-react';
+import { Bot, Users, UserCircle, Globe, Sparkles, ExternalLink } from 'lucide-react';
+
+// Detect in-app browsers (Facebook, Messenger, Instagram, etc.)
+function isInAppBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || navigator.vendor || '';
+  // Check for common in-app browser signatures
+  return /FBAN|FBAV|Instagram|Messenger|LinkedIn|Twitter|MicroMessenger|Line|WhatsApp/i.test(ua);
+}
 
 export function LandingPage() {
   const supabase = createClient();
+  const [showInAppWarning, setShowInAppWarning] = useState(false);
+  const [isInApp, setIsInApp] = useState(false);
+
+  useEffect(() => {
+    setIsInApp(isInAppBrowser());
+  }, []);
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -16,6 +31,14 @@ export function LandingPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+  };
+
+  const handleSignIn = () => {
+    if (isInApp) {
+      setShowInAppWarning(true);
+    } else {
+      signInWithGoogle();
+    }
   };
 
   return (
@@ -34,7 +57,7 @@ export function LandingPage() {
             <Image src="/logo.png" alt="Aligned" width={32} height={32} className="rounded-lg" />
             <span className="text-xl font-bold text-zinc-100">Aligned</span>
           </div>
-          <Button onClick={signInWithGoogle} size="sm">
+          <Button onClick={handleSignIn} size="sm">
             Sign In
           </Button>
         </div>
@@ -55,7 +78,7 @@ export function LandingPage() {
             compare with AI, friends, family, and strangers.
           </p>
           <Button 
-            onClick={signInWithGoogle} 
+            onClick={handleSignIn} 
             size="lg" 
             className="text-lg px-8 py-6 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0 shadow-lg shadow-emerald-500/25"
           >
@@ -132,6 +155,51 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* In-app browser warning modal */}
+      {showInAppWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-zinc-900 p-6 shadow-xl border border-zinc-800">
+            <h2 className="mb-2 text-lg font-semibold text-zinc-100">
+              Open in Browser
+            </h2>
+            <p className="mb-4 text-sm text-zinc-400">
+              Google Sign-In doesn&apos;t work in this browser. Please open this page in Safari or Chrome:
+            </p>
+            <ol className="mb-4 space-y-2 text-sm text-zinc-400">
+              <li className="flex items-start gap-2">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-medium">1</span>
+                <span>Tap the <strong className="text-zinc-200">⋯</strong> or <strong className="text-zinc-200">Share</strong> button</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-medium">2</span>
+                <span>Select <strong className="text-zinc-200">&quot;Open in Safari&quot;</strong> or <strong className="text-zinc-200">&quot;Open in Browser&quot;</strong></span>
+              </li>
+            </ol>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInAppWarning(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  setShowInAppWarning(false);
+                }}
+                className="flex-1 gap-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Copy Link
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
