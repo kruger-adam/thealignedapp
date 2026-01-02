@@ -85,8 +85,19 @@ export default function FeedPage() {
     const currentOffset = append ? offset : 0;
 
     try {
-      // Fetch questions using direct fetch (Supabase client has issues)
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc&limit=${PAGE_SIZE}&offset=${currentOffset}`;
+      // For sort options that need aggregated data, we need to fetch all questions
+      // and sort client-side. For simple sorts, we can do it server-side.
+      const needsClientSort = ['popular', 'controversial', 'consensus', 'most_undecided', 'most_sensitive', 'most_commented'].includes(sortBy);
+      
+      let url: string;
+      if (needsClientSort) {
+        // Fetch all questions when we need to sort by aggregated data
+        url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc`;
+      } else {
+        // For 'newest', paginate normally
+        url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/questions?select=*&order=created_at.desc&limit=${PAGE_SIZE}&offset=${currentOffset}`;
+      }
+      
       const response = await fetch(url, {
         headers: {
           'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -105,7 +116,8 @@ export default function FeedPage() {
       }
 
     // Check if we got fewer results than requested (no more pages)
-    if (!rawQuestions || rawQuestions.length < PAGE_SIZE) {
+    // For client-side sorted results, we handle pagination after sorting
+    if (!needsClientSort && (!rawQuestions || rawQuestions.length < PAGE_SIZE)) {
       setHasMore(false);
     }
 
@@ -331,12 +343,33 @@ export default function FeedPage() {
       }
     });
 
-    if (append) {
-      setQuestions(prev => [...prev, ...sorted]);
-      setOffset(currentOffset + rawQuestions.length);
+    // For client-side sorted results, apply pagination after sorting
+    if (needsClientSort) {
+      // Apply pagination to the sorted full list
+      const startIndex = currentOffset;
+      const endIndex = currentOffset + PAGE_SIZE;
+      const paginatedResults = sorted.slice(startIndex, endIndex);
+      
+      // Check if there are more results
+      if (endIndex >= sorted.length) {
+        setHasMore(false);
+      }
+      
+      if (append) {
+        setQuestions(prev => [...prev, ...paginatedResults]);
+        setOffset(endIndex);
+      } else {
+        setQuestions(paginatedResults);
+        setOffset(PAGE_SIZE);
+      }
     } else {
-      setQuestions(sorted);
-      setOffset(rawQuestions.length);
+      if (append) {
+        setQuestions(prev => [...prev, ...sorted]);
+        setOffset(currentOffset + rawQuestions.length);
+      } else {
+        setQuestions(sorted);
+        setOffset(rawQuestions.length);
+      }
     }
     setLoading(false);
     setLoadingMore(false);
