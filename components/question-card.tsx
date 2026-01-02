@@ -367,6 +367,13 @@ export function QuestionCard({
 
   // Handle keyboard navigation in mention dropdown
   const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle backspace to remove last chip when input is empty
+    if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
+      e.preventDefault();
+      setMentionedUsers(prev => prev.slice(0, -1));
+      return;
+    }
+    
     if (!showMentions) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -863,16 +870,34 @@ export function QuestionCard({
           </Link>
         );
       } else if (match[3]) {
-        // Simple @username format - just show as styled text (no link without ID)
+        // Simple @username format - check if it's AI
         const username = match[3];
-        parts.push(
-          <span
-            key={`${match.index}-${username}`}
-            className="font-medium text-blue-600 dark:text-blue-400"
-          >
-            @{username}
-          </span>
-        );
+        if (username.toLowerCase() === 'ai') {
+          // Render AI mention with avatar
+          parts.push(
+            <Link
+              key={`${match.index}-ai`}
+              href="/profile/ai"
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-violet-700 hover:opacity-80 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-2.5 w-2.5 text-white" />
+              </span>
+              <span>AI</span>
+            </Link>
+          );
+        } else {
+          // Regular username - show as styled text (no link without ID)
+          parts.push(
+            <span
+              key={`${match.index}-${username}`}
+              className="font-medium text-blue-600 dark:text-blue-400"
+            >
+              @{username}
+            </span>
+          );
+        }
       } else if (match[4]) {
         // GIF format [gif:url]
         const gifUrl = match[4];
@@ -1665,9 +1690,9 @@ export function QuestionCard({
                       <p className={cn(
                         "text-sm break-words",
                         isAIComment ? "text-zinc-700 dark:text-zinc-300" : "text-zinc-700 dark:text-zinc-300",
-                        isThinking && "text-zinc-400 dark:text-zinc-500"
+                        isThinking && !comment.content && "text-zinc-400 dark:text-zinc-500"
                       )}>
-                        {isThinking ? '...' : renderCommentContent(comment.content)}
+                        {isThinking && !comment.content ? '...' : renderCommentContent(comment.content)}
                       </p>
                     )}
                   </div>
@@ -1729,7 +1754,7 @@ export function QuestionCard({
                       <span
                         key={taggedUser.id}
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium",
+                          "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium",
                           taggedUser.is_ai 
                             ? "bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
                             : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
@@ -1747,21 +1772,6 @@ export function QuestionCard({
                           />
                         )}
                         <span>{taggedUser.is_ai ? 'AI' : `@${taggedUser.username}`}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMentionedUsers(prev => prev.filter(u => u.id !== taggedUser.id));
-                          }}
-                          className={cn(
-                            "ml-0.5",
-                            taggedUser.is_ai 
-                              ? "text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-200"
-                              : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                          )}
-                        >
-                          ×
-                        </button>
                       </span>
                     ))}
                     {/* Text input - auto-expanding textarea */}

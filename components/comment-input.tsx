@@ -20,6 +20,7 @@ interface CommentInputProps {
   onCommentAdded: (comment: Comment) => void;
   onAICommentAdded?: (comment: Comment) => void;
   onAIThinking?: (placeholderId: string) => void;
+  onAIStreaming?: (placeholderId: string, content: string) => void;
   onAIError?: (placeholderId: string, error: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function CommentInput({
   onCommentAdded,
   onAICommentAdded,
   onAIThinking,
+  onAIStreaming,
   onAIError,
 }: CommentInputProps) {
   const [commentText, setCommentText] = useState('');
@@ -247,7 +249,7 @@ export function CommentInput({
             onAIThinking(aiPlaceholderId);
           }
 
-          // Call the AI API
+          // Call the AI API with streaming
           try {
             const aiResponse = await fetch('/api/ai-comment', {
               method: 'POST',
@@ -259,18 +261,50 @@ export function CommentInput({
               }),
             });
 
-            if (aiResponse.ok) {
-              const { comment: aiComment } = await aiResponse.json();
-              if (onAICommentAdded) {
-                onAICommentAdded({
-                  id: aiComment.id,
-                  user_id: userId,
-                  content: aiComment.content,
-                  created_at: aiComment.created_at,
-                  username: 'AI',
-                  avatar_url: null,
-                  is_ai: true,
-                });
+            if (aiResponse.ok && aiResponse.body) {
+              const reader = aiResponse.body.getReader();
+              const decoder = new TextDecoder();
+              let streamedContent = '';
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                
+                // Check for comment metadata at end of stream
+                if (chunk.includes('__COMMENT_DATA__:')) {
+                  const [textPart, dataPart] = chunk.split('__COMMENT_DATA__:');
+                  if (textPart.trim()) {
+                    streamedContent += textPart.replace(/\n\n$/, '');
+                    if (onAIStreaming) {
+                      onAIStreaming(aiPlaceholderId, streamedContent);
+                    }
+                  }
+                  
+                  // Parse the comment data and finalize
+                  try {
+                    const commentData = JSON.parse(dataPart);
+                    if (onAICommentAdded) {
+                      onAICommentAdded({
+                        id: commentData.id,
+                        user_id: userId,
+                        content: streamedContent,
+                        created_at: commentData.created_at,
+                        username: 'AI',
+                        avatar_url: null,
+                        is_ai: true,
+                      });
+                    }
+                  } catch {
+                    console.error('Failed to parse comment data');
+                  }
+                } else {
+                  streamedContent += chunk;
+                  if (onAIStreaming) {
+                    onAIStreaming(aiPlaceholderId, streamedContent);
+                  }
+                }
               }
             } else {
               const errorData = await aiResponse.json();
@@ -343,7 +377,7 @@ export function CommentInput({
             <span
               key={taggedUser.id}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium',
+                'inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium',
                 taggedUser.is_ai
                   ? 'bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300'
                   : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
@@ -357,21 +391,6 @@ export function CommentInput({
                 <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
               )}
               <span>{taggedUser.is_ai ? taggedUser.username : `@${taggedUser.username}`}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMentionedUsers((prev) => prev.filter((u) => u.id !== taggedUser.id));
-                }}
-                className={cn(
-                  'ml-0.5',
-                  taggedUser.is_ai
-                    ? 'text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200'
-                    : 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200'
-                )}
-              >
-                ×
-              </button>
             </span>
           ))}
           <input
@@ -386,6 +405,11 @@ export function CommentInput({
               if (e.key === 'Enter' && !showMentions) {
                 e.preventDefault();
                 submitComment();
+              }
+              // Remove last chip on backspace when input is empty
+              if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
+                e.preventDefault();
+                setMentionedUsers((prev) => prev.slice(0, -1));
               }
             }}
           />

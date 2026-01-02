@@ -477,6 +477,13 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   };
 
   const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle backspace to remove last chip when input is empty
+    if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
+      e.preventDefault();
+      setMentionedUsers(prev => prev.slice(0, -1));
+      return;
+    }
+    
     if (!showMentions) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -598,14 +605,15 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           setComments(prev => [...prev, {
             id: aiPlaceholderId,
             user_id: user.id,
-            content: '...',
+            content: '',
             created_at: new Date().toISOString(),
             username: 'AI',
             avatar_url: null,
             is_ai: true,
+            isThinking: true,
           }]);
           
-          // Call the AI API
+          // Call the AI API with streaming
           try {
             const aiResponse = await fetch('/api/ai-comment', {
               method: 'POST',
@@ -617,30 +625,63 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               }),
             });
             
-            if (aiResponse.ok) {
-              const { comment: aiComment } = await aiResponse.json();
-              // Replace placeholder with actual AI response
-              setComments(prev => prev.map(c => 
-                c.id === aiPlaceholderId 
-                  ? {
-                      id: aiComment.id,
-                      user_id: user.id,
-                      content: aiComment.content,
-                      created_at: aiComment.created_at,
-                      username: 'AI',
-                      avatar_url: null,
-                      is_ai: true,
-                    }
-                  : c
-              ));
+            if (aiResponse.ok && aiResponse.body) {
+              const reader = aiResponse.body.getReader();
+              const decoder = new TextDecoder();
+              let fullContent = '';
+              let commentData: { id: string; created_at: string } | null = null;
+              
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                
+                // Check for comment metadata at end
+                if (chunk.includes('__COMMENT_DATA__:')) {
+                  const parts = chunk.split('__COMMENT_DATA__:');
+                  if (parts[0]) {
+                    fullContent += parts[0].replace(/\n\n$/, '');
+                  }
+                  try {
+                    commentData = JSON.parse(parts[1]);
+                  } catch {
+                    console.error('Failed to parse comment data');
+                  }
+                } else {
+                  fullContent += chunk;
+                }
+                
+                // Update the comment with streamed content
+                const displayContent = fullContent;
+                setComments(prev => prev.map(c => 
+                  c.id === aiPlaceholderId 
+                    ? {
+                        ...c,
+                        id: commentData?.id || aiPlaceholderId,
+                        content: displayContent,
+                        created_at: commentData?.created_at || c.created_at,
+                        isThinking: !commentData,
+                      }
+                    : c
+                ));
+              }
             } else {
-              const errorData = await aiResponse.json();
-              // Replace placeholder with error message
+              // Handle error response
+              let errorMessage = 'Sorry, I couldn\'t respond right now.';
+              try {
+                const errorData = await aiResponse.json();
+                errorMessage = errorData.error || errorMessage;
+              } catch {
+                // Ignore JSON parse error
+              }
               setComments(prev => prev.map(c => 
                 c.id === aiPlaceholderId 
                   ? {
                       ...c,
-                      content: errorData.error || 'Sorry, I couldn\'t respond right now.',
+                      content: errorMessage,
+                      isThinking: false,
+                      isError: true,
                     }
                   : c
               ));
@@ -685,11 +726,28 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           </Link>
         );
       } else if (match[3]) {
-        parts.push(
-          <span key={`${match.index}-${match[3]}`} className="font-medium text-blue-600 dark:text-blue-400">
-            @{match[3]}
-          </span>
-        );
+        const username = match[3];
+        if (username.toLowerCase() === 'ai') {
+          // Render AI mention with avatar
+          parts.push(
+            <Link
+              key={`${match.index}-ai`}
+              href="/profile/ai"
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-violet-700 hover:opacity-80 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+            >
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-2.5 w-2.5 text-white" />
+              </span>
+              <span>AI</span>
+            </Link>
+          );
+        } else {
+          parts.push(
+            <span key={`${match.index}-${username}`} className="font-medium text-blue-600 dark:text-blue-400">
+              @{username}
+            </span>
+          );
+        }
       }
       
       lastIndex = match.index + match[0].length;
@@ -1052,6 +1110,8 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             ) : (
               comments.map((comment) => {
                 const isAIComment = comment.is_ai === true;
+                const isThinking = (comment as { isThinking?: boolean }).isThinking;
+                const isError = (comment as { isError?: boolean }).isError;
                 
                 return (
                 <div key={comment.id} className={cn(
@@ -1061,7 +1121,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   {isAIComment ? (
                     <Link href="/profile/ai">
                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 transition-opacity hover:opacity-80">
-                        <Bot className="h-4 w-4 text-white" />
+                        <Bot className={cn("h-4 w-4 text-white", isThinking && !comment.content && "animate-pulse")} />
                       </div>
                     </Link>
                   ) : (
@@ -1087,9 +1147,17 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                           {comment.username || 'Anonymous'}
                         </Link>
                       )}
-                      <span className="text-xs text-zinc-400">
-                        {getTimeAgo(new Date(comment.created_at))}
-                      </span>
+                      {!isThinking && (
+                        <span className="text-xs text-zinc-400">
+                          {getTimeAgo(new Date(comment.created_at))}
+                        </span>
+                      )}
+                      {isThinking && !comment.content && (
+                        <span className="text-xs text-violet-500 animate-pulse">thinking...</span>
+                      )}
+                      {isError && (
+                        <span className="text-xs text-rose-500">error</span>
+                      )}
                       {comment.updated_at && new Date(comment.updated_at).getTime() > new Date(comment.created_at).getTime() + 1000 && (
                         <span className="text-xs text-zinc-400 italic">(edited)</span>
                       )}
@@ -1151,8 +1219,11 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">
-                        {renderCommentContent(comment.content)}
+                      <p className={cn(
+                        "text-sm text-zinc-700 dark:text-zinc-300 break-words",
+                        isThinking && !comment.content && "text-zinc-400 dark:text-zinc-500"
+                      )}>
+                        {isThinking && !comment.content ? '...' : renderCommentContent(comment.content)}
                       </p>
                     )}
                   </div>
@@ -1210,7 +1281,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                     <span
                       key={taggedUser.id}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs font-medium",
+                        "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium",
                         taggedUser.is_ai 
                           ? "bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
                           : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
@@ -1224,21 +1295,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                         <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
                       )}
                       <span>{taggedUser.is_ai ? taggedUser.username : `@${taggedUser.username}`}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMentionedUsers(prev => prev.filter(u => u.id !== taggedUser.id));
-                        }}
-                        className={cn(
-                          "ml-0.5",
-                          taggedUser.is_ai
-                            ? "text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200"
-                            : "text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                        )}
-                      >
-                        ×
-                      </button>
                     </span>
                   ))}
                   <input
