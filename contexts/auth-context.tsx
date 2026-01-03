@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
+import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/lib/types';
 
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!profile) {
             console.warn('User profile not found - signing out deleted user');
             await supabase.auth.signOut();
+            posthog.reset();
             setUser(null);
             setProfile(null);
             setLoading(false);
@@ -65,6 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(user);
           setProfile(profile);
+          
+          // Identify user in PostHog for session replay filtering
+          posthog.identify(user.id, {
+            email: user.email,
+            name: profile.username,
+          });
         }
       } catch {
         // Auth error - user not logged in
@@ -85,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!profile) {
             console.warn('User profile not found - signing out deleted user');
             await supabase.auth.signOut();
+            posthog.reset();
             setUser(null);
             setProfile(null);
             setLoading(false);
@@ -93,9 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(session.user);
           setProfile(profile);
+          
+          // Identify user in PostHog for session replay filtering
+          posthog.identify(session.user.id, {
+            email: session.user.email,
+            name: profile.username,
+          });
         } else {
           setUser(null);
           setProfile(null);
+          posthog.reset();
         }
         
         setLoading(false);
@@ -116,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    posthog.reset(); // Clear PostHog identity
     setUser(null);
     setProfile(null);
     // Redirect to landing page
