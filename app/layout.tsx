@@ -5,6 +5,8 @@ import { Header } from '@/components/header';
 import { InstallPrompt } from '@/components/install-prompt';
 import { ToastProvider } from '@/components/ui/toast';
 import { AIAssistantProvider, AIAssistantFAB, AIAssistantPanel } from '@/components/ai-assistant';
+import { PostHogProvider } from '@/components/posthog-provider';
+import { PostHogPageView } from '@/components/posthog-pageview';
 import './globals.css';
 
 const instrumentSans = Instrument_Sans({
@@ -73,17 +75,20 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/splash/splash-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <AuthProvider>
-          <AIAssistantProvider>
-            <ToastProvider>
-              <Header />
-              <main>{children}</main>
-              <InstallPrompt />
-              <AIAssistantFAB />
-              <AIAssistantPanel />
-            </ToastProvider>
-          </AIAssistantProvider>
-        </AuthProvider>
+        <PostHogProvider>
+          <PostHogPageView />
+          <AuthProvider>
+            <AIAssistantProvider>
+              <ToastProvider>
+                <Header />
+                <main>{children}</main>
+                <InstallPrompt />
+                <AIAssistantFAB />
+                <AIAssistantPanel />
+              </ToastProvider>
+            </AIAssistantProvider>
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );
