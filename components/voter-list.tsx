@@ -120,7 +120,7 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
     <div className="space-y-3">
       {renderVoteSection('YES', yesVoters, 'Yes', 'text-emerald-600')}
       {renderVoteSection('NO', noVoters, 'No', 'text-rose-600')}
-      {renderVoteSection('UNSURE', unsureVoters, 'Not Sure / Depends', 'text-amber-600')}
+      {renderVoteSection('UNSURE', unsureVoters, 'Not Sure', 'text-amber-600')}
     </div>
   );
 }

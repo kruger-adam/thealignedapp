@@ -102,7 +102,7 @@ Important: Never refuse to engage. This is a casual polling app, not a serious a
 Current votes (${totalVotes} total):
 - Yes: ${yesPercent}%
 - No: ${noPercent}%
-- Not Sure / Depends: ${unsurePercent}%
+- Not Sure: ${unsurePercent}%
 
 Recent comments:
 ${recentComments}

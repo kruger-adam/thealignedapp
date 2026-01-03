@@ -133,7 +133,7 @@ async function generateQuestionForCategory(category, existingQuestions) {
 ${categoryHint}
 
 Your questions should:
-- Be clearly answerable with Yes, No, or Not Sure / Depends
+- Be clearly answerable with Yes, No, or Not Sure
 - Have strong, legitimate arguments on BOTH sides
 - Be under 200 characters
 - Be interesting and thought-provoking
@@ -202,7 +202,7 @@ VOTE: YES|NO|UNSURE
 REASON: one concise sentence (<= 25 words) explaining why you chose that vote.
 
 Guidelines:
-- Choose UNSURE if truly ambiguous, context-dependent, or if it genuinely depends on the situation.
+- Choose UNSURE only if truly ambiguous or heavily context-dependent.
 - Otherwise pick YES or NO decisively.
 - Keep the reason short, clear, and conversational.`
         },

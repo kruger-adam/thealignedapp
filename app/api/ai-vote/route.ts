@@ -79,7 +79,7 @@ VOTE: YES|NO|UNSURE
 REASON: one concise sentence (<= 25 words) explaining why you chose that vote.
 
 Guidelines:
-- Choose UNSURE if truly ambiguous, context-dependent, or if it genuinely depends on the situation.
+- Choose UNSURE only if truly ambiguous or heavily context-dependent.
 - Otherwise pick YES or NO decisively.
 - Keep the reason short, clear, and conversational.`;
 

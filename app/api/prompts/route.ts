@@ -126,7 +126,7 @@ async function generateNewPrompt(category: string, supabase: ReturnType<typeof g
 Category: ${category}
 
 Rules:
-- Must be answerable with Yes, No, or Not Sure / Depends
+- Must be answerable with Yes, No, or Not Sure
 - Should spark interesting discussion
 - Under 150 characters
 - Don't be offensive or overly political

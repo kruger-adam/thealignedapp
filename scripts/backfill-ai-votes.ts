@@ -32,7 +32,7 @@ REASON: <one concise sentence explaining why>
 
 Guidelines:
 - Vote based on your genuine perspective as an AI
-- Consider nuance; pick UNSURE if truly ambiguous, context-dependent, or if it genuinely depends
+- Consider nuance; pick UNSURE if truly ambiguous or context-dependent
 - Be decisive otherwise
 - Keep the reasoning short, clear, and conversational`;
 

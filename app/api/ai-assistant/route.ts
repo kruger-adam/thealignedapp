@@ -168,7 +168,7 @@ async function handlePollCreation(
           content: `You are a creative poll creator. Given a topic the user is interested in, create an engaging yes/no question that would spark interesting discussion.
 
 Rules:
-- The question MUST be answerable with Yes, No, or Not Sure / Depends
+- The question MUST be answerable with Yes, No, or Not Sure
 - Keep it under 200 characters
 - Make it thought-provoking but not offensive
 - Frame it as a genuine question people would want to vote on
@@ -848,7 +848,7 @@ async function gatherContextData(
 }
 
 function buildSystemPrompt(data: ContextData): string {
-  let prompt = `You are the AI Assistant for Aligned, a polling app where users vote Yes, No, or Not Sure / Depends on questions to discover opinions and find common ground with others.
+  let prompt = `You are the AI Assistant for Aligned, a polling app where users vote Yes, No, or Not Sure on questions to discover opinions and find common ground with others.
 
 CRITICAL RULES - YOU MUST FOLLOW THESE:
 1. NEVER invent or make up usernames. Only mention users listed in "SIMILAR USERS" below.
@@ -879,7 +879,7 @@ WHAT YOU CAN HELP WITH:
 
 About the current user (${data.userName}):
 - They've cast ${data.userStats.totalVotes} votes total
-- Voting pattern: ${data.userStats.yesPercent}% Yes, ${data.userStats.noPercent}% No, ${data.userStats.unsurePercent}% Not Sure / Depends
+- Voting pattern: ${data.userStats.yesPercent}% Yes, ${data.userStats.noPercent}% No, ${data.userStats.unsurePercent}% Not Sure
 - Top categories they engage with: ${data.topCategories.join(', ') || 'Not enough data yet'}
 
 VOTING ACTIVITY & STREAKS:
@@ -931,7 +931,7 @@ ${data.questionIdeas.length > 0
   : 'No personalized ideas yet'}
 
 WHAT MAKES A GREAT ALIGNED QUESTION:
-1. Binary-friendly: Can be answered with Yes, No, or Not Sure / Depends
+1. Binary-friendly: Can be answered with Yes, No, or Not Sure
 2. Thought-provoking: Makes people pause and think
 3. Debatable: Reasonable people could disagree
 4. Concise: Under 280 characters
@@ -954,7 +954,7 @@ QUESTION BRAINSTORMING GUIDELINES:
     prompt += `
 CURRENT CONTEXT: The user is viewing a specific question.
 Question: "${data.questionData.content}"
-Current results: ${data.questionData.yesPercent}% Yes, ${data.questionData.noPercent}% No, ${data.questionData.unsurePercent}% Not Sure / Depends (${data.questionData.totalVotes} total votes)
+Current results: ${data.questionData.yesPercent}% Yes, ${data.questionData.noPercent}% No, ${data.questionData.unsurePercent}% Not Sure (${data.questionData.totalVotes} total votes)
 User's vote: ${data.questionData.userVote || 'Has not voted yet'}
 
 Recent comments on this question:

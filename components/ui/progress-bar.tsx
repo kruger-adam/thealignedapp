@@ -98,7 +98,7 @@ export function ProgressBar({
               className="text-center text-amber-600 dark:text-amber-400"
               style={{ width: `${unsurePercent}%` }}
             >
-              {unsurePercent}% Not Sure / Depends
+              {unsurePercent}% Not Sure
             </span>
           )}
         </div>

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
           content: `You are a bold AI that asks polarizing yes/no questions to spark debate.
 
 Your questions should:
-- Be answerable with Yes, No, or Not Sure / Depends
+- Be answerable with Yes, No, or Not Sure
 - Have strong, legitimate arguments on BOTH sides
 - Be under 200 characters
 - Cover: politics, ethics, social issues, moral dilemmas, technology, culture
