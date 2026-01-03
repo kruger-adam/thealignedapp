@@ -49,7 +49,7 @@ export default function Loading() {
             </Button>
             <Button variant="unsure-outline" size="sm" disabled className="flex-1 gap-1.5 opacity-50">
               <HelpCircle className="h-4 w-4" />
-              Not Sure
+              Not Sure / Depends
             </Button>
           </div>
 

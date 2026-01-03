@@ -1080,7 +1080,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               >
                 {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
                 <HelpCircle className="h-4 w-4" />
-                Not Sure
+                Not Sure / Depends
               </Button>
             </div>
           )}

@@ -1430,7 +1430,7 @@ export function QuestionCard({
           >
             {(isPrivateMode || (localVoteIsAnonymous && optimisticData.userVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
             <HelpCircle className="h-4 w-4" />
-            Not Sure
+            Not Sure / Depends
             {/* Confetti particles for UNSURE */}
             {animatingVote === 'UNSURE' && confettiParticles.map((particle) => (
               <span
@@ -1482,7 +1482,7 @@ export function QuestionCard({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                    AI voted {aiVote.vote === 'YES' ? 'Yes' : aiVote.vote === 'NO' ? 'No' : 'Not Sure'}
+                    AI voted {aiVote.vote === 'YES' ? 'Yes' : aiVote.vote === 'NO' ? 'No' : 'Not Sure / Depends'}
                   </span>
                 </div>
                 {aiVote.reasoning && (

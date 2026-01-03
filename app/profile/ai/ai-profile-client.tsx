@@ -88,7 +88,7 @@ type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 const voteConfig = {
   YES: { icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Yes' },
   NO: { icon: XIcon, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
-  UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure' },
+  UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure / Depends' },
 };
 
 export function AIProfileClient({
@@ -141,7 +141,7 @@ export function AIProfileClient({
             <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
             <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
             <StatBox label="No" value={stats.noCount} icon={XIcon} className="text-rose-600" />
-            <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
+            <StatBox label="Not Sure / Depends" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
             <StatBox label="Created" value={stats.questionsCreated} icon={MessageSquare} className="text-violet-600" />
           </div>
 
