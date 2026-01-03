@@ -482,3 +482,52 @@ body {
     animation-direction: reverse;
   }
 }
+
+/* Onboarding confetti animations */
+@keyframes confetti-fall-down {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotateZ(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotateZ(720deg);
+  }
+}
+
+@keyframes confetti-spin {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(180deg);
+  }
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall-down ease-in forwards;
+}
+
+.animate-confetti-spin {
+  animation: confetti-spin linear infinite;
+  animation-duration: 1s;
+}
+
+/* Progress bar shimmer */
+@keyframes progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-progress-shimmer {
+  animation: progress-shimmer 2s infinite;
+}
+
+/* Safe area for mobile bottom bar */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

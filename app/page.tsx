@@ -7,12 +7,14 @@ import { CreateQuestion } from '@/components/create-question';
 import { FeedFilters } from '@/components/feed-filters';
 import { Search } from '@/components/search';
 import { LandingPage } from '@/components/landing-page';
+import { OnboardingFlow } from '@/components/onboarding';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
-import { QuestionWithStats, SortOption, VoteType } from '@/lib/types';
+import { QuestionWithStats, SortOption, VoteType, Category } from '@/lib/types';
 import { MinVotes, TimePeriod, PollStatus } from '@/components/feed-filters';
 
 const PAGE_SIZE = 15;
+const ONBOARDING_TARGET_VOTES = 10;
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
@@ -22,13 +24,63 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [categoryFilter, setCategoryFilter] = useState<import('@/lib/types').Category | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<Category | null>(null);
   const [minVotes, setMinVotes] = useState<MinVotes>(0);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [pollStatus, setPollStatus] = useState<PollStatus>('all');
   const supabase = useMemo(() => createClient(), []);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Onboarding state
+  const [onboardingVoteCount, setOnboardingVoteCount] = useState<number | null>(null);
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(false);
+  const [onboardingCategory, setOnboardingCategory] = useState<Category | null>(null);
+  const [onboardingLoaded, setOnboardingLoaded] = useState(false);
+
+  // Check if user needs onboarding
+  const showOnboarding = user && onboardingLoaded && onboardingVoteCount !== null && onboardingVoteCount < ONBOARDING_TARGET_VOTES;
+
+  // Fetch onboarding data when user loads
+  useEffect(() => {
+    async function fetchOnboardingData() {
+      if (!user) {
+        setOnboardingLoaded(true);
+        return;
+      }
+
+      try {
+        // Fetch user's vote count (non-AI votes only)
+        const { count: voteCount } = await supabase
+          .from('responses')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_ai', false);
+
+        // Fetch onboarding_dismissed from profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_dismissed')
+          .eq('id', user.id)
+          .single();
+
+        setOnboardingVoteCount(voteCount ?? 0);
+        setOnboardingDismissed(profile?.onboarding_dismissed ?? false);
+        setOnboardingLoaded(true);
+      } catch (error) {
+        console.error('Error fetching onboarding data:', error);
+        setOnboardingLoaded(true);
+      }
+    }
+
+    fetchOnboardingData();
+  }, [user, supabase]);
+
+  // Handle onboarding category selection - this sets the feed filter
+  const handleOnboardingCategorySelect = useCallback((category: Category) => {
+    setOnboardingCategory(category);
+    setCategoryFilter(category);
+  }, []);
 
   // Filters are always applied before pagination in fetchQuestions now
   // So we just use questions directly - no need for additional client-side filtering
@@ -411,6 +463,16 @@ export default function FeedPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
+      {/* Onboarding Flow */}
+      {showOnboarding && user && (
+        <OnboardingFlow
+          userId={user.id}
+          initialVoteCount={onboardingVoteCount ?? 0}
+          initialDismissed={onboardingDismissed}
+          onCategorySelect={handleOnboardingCategorySelect}
+          selectedCategory={onboardingCategory}
+        />
+      )}
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -498,6 +560,9 @@ export default function FeedPage() {
               </p>
             )}
           </div>
+          
+          {/* Extra padding when onboarding progress bar is visible */}
+          {showOnboarding && <div className="h-24" />}
         </div>
       )}
     </div>
