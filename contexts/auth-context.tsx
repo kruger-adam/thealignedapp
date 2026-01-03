@@ -48,10 +48,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
         
         if (user) {
           const profile = await fetchProfile(user.id);
+          
+          // If user exists in auth but profile doesn't exist in DB,
+          // the user was deleted - sign them out
+          if (!profile) {
+            console.warn('User profile not found - signing out deleted user');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+          
+          setUser(user);
           setProfile(profile);
         }
       } catch {
@@ -65,12 +77,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
-        
         if (session?.user) {
           const profile = await fetchProfile(session.user.id);
+          
+          // If user exists in auth but profile doesn't exist in DB,
+          // the user was deleted - sign them out
+          if (!profile) {
+            console.warn('User profile not found - signing out deleted user');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+          
+          setUser(session.user);
           setProfile(profile);
         } else {
+          setUser(null);
           setProfile(null);
         }
         
