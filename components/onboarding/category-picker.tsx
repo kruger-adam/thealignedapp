@@ -19,6 +19,7 @@ const CATEGORIES: { value: Category; emoji: string; description: string }[] = [
   { value: 'Politics', emoji: '🗳️', description: 'Governance & policy' },
   { value: 'Sports', emoji: '⚽', description: 'Games & competition' },
   { value: 'Food & Lifestyle', emoji: '🍕', description: 'How we live' },
+  { value: 'Effective Altruism', emoji: '🌐', description: 'Doing the most good' },
 ];
 
 interface CategoryPickerProps {

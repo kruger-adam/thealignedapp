@@ -14,6 +14,7 @@ const CATEGORIES = [
   'Politics',
   'Sports',
   'Food & Lifestyle',
+  'Effective Altruism',
   'Other',
 ] as const;
 

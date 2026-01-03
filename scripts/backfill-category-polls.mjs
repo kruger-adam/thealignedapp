@@ -34,6 +34,7 @@ const ALL_CATEGORIES = [
   'Politics',
   'Sports',
   'Food & Lifestyle',
+  'Effective Altruism',
   'Other',
 ];
 
@@ -112,6 +113,7 @@ async function generateQuestionForCategory(category, existingQuestions) {
     'Politics': 'Focus on political issues, policies, governance, and civic debates (stay balanced, avoid extreme positions).',
     'Sports': 'Focus on sports, athletes, competitions, rules, and sports culture debates.',
     'Food & Lifestyle': 'Focus on food preferences, cooking, lifestyle choices, and daily life decisions.',
+    'Effective Altruism': 'Focus on cause prioritization, charity effectiveness, longtermism vs near-term impact, earning to give, AI safety, global health, animal welfare, and debates within the EA community. Frame questions around real tensions and tradeoffs EAs discuss.',
     'Other': 'Generate an interesting question that doesn\'t fit neatly into other categories.',
   };
 

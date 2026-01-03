@@ -25,6 +25,7 @@ export type Category =
   | 'Politics'
   | 'Sports'
   | 'Food & Lifestyle'
+  | 'Effective Altruism'
   | 'Other';
 
 export interface Question {

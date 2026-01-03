@@ -69,6 +69,7 @@ const categories: Category[] = [
   'Politics',
   'Sports',
   'Food & Lifestyle',
+  'Effective Altruism',
   'Other',
 ];
 
