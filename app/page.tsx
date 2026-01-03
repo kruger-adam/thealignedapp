@@ -10,6 +10,7 @@ import { LandingPage } from '@/components/landing-page';
 import { OnboardingFlow } from '@/components/onboarding';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
+import { FEATURES } from '@/lib/features';
 import { QuestionWithStats, SortOption, VoteType, Category } from '@/lib/types';
 import { MinVotes, TimePeriod, PollStatus } from '@/components/feed-filters';
 
@@ -38,13 +39,13 @@ export default function FeedPage() {
   const [onboardingCategory, setOnboardingCategory] = useState<Category | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
 
-  // Check if user needs onboarding
-  const showOnboarding = user && onboardingLoaded && onboardingVoteCount !== null && onboardingVoteCount < ONBOARDING_TARGET_VOTES;
+  // Check if user needs onboarding (controlled by feature flag)
+  const showOnboarding = FEATURES.ONBOARDING_FLOW && user && onboardingLoaded && onboardingVoteCount !== null && onboardingVoteCount < ONBOARDING_TARGET_VOTES;
 
-  // Fetch onboarding data when user loads
+  // Fetch onboarding data when user loads (only if feature is enabled)
   useEffect(() => {
     async function fetchOnboardingData() {
-      if (!user) {
+      if (!FEATURES.ONBOARDING_FLOW || !user) {
         setOnboardingLoaded(true);
         return;
       }
