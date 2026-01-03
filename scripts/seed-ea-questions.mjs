@@ -50,6 +50,36 @@ const EA_QUESTIONS = [
   
   // From "If far-UV is so great, why isn't it everywhere?"
   "Should EA biosecurity funding prioritize far-UV light technology for pathogen reduction?",
+  
+  // From "Do short AI timelines make other cause areas useless?"
+  "If AGI arrives within 10 years, should EAs working on global health switch to AI safety?",
+  
+  // From "The myth of AI 'warning shots' as cavalry"
+  "Should we expect AI 'warning shots' that give us time to course-correct before catastrophe?",
+  
+  // From "10 years of Earning to Give"
+  "Is earning to give still a top-tier EA career strategy in 2026?",
+  
+  // From "Price-, Taste-, and Convenience-Competitive Plant-Based Meat Would Not Currently Replace Meat"
+  "Would price-competitive plant-based meat significantly reduce meat consumption?",
+  
+  // From "Can we help individual people cost-effectively?"
+  "Should EA sometimes fund helping specific individuals rather than only scalable interventions?",
+  
+  // From "Let's think about slowing down AI"
+  "Should the EA community advocate more strongly for slowing down AI development?",
+  
+  // From "Why I No Longer Prioritize Wild Animal Welfare"
+  "Is wild animal welfare too intractable to be worth significant EA resources right now?",
+  
+  // From "Meaningfully reducing meat consumption is an unsolved problem: meta-analysis"
+  "Have EA-backed interventions actually succeeded at meaningfully reducing meat consumption?",
+  
+  // From "The Case for Insect Consciousness"
+  "Should insect welfare be a serious EA cause area?",
+  
+  // From "There is No EA Sorting Hat"
+  "Does EA career advice put too much pressure on people to find their 'perfect fit'?",
 ];
 
 // Validate environment
