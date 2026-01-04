@@ -27,7 +27,7 @@ interface CommentInputProps {
 
 export function CommentInput({
   questionId,
-  questionAuthorId,
+  questionAuthorId: _questionAuthorId, // Unused - handled by API route
   userId,
   userMetadata,
   onCommentAdded,

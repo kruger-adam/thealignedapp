@@ -5,7 +5,6 @@ import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock, Bot } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { triggerInstallPrompt } from '@/components/install-prompt';
 import { useToast } from '@/components/ui/toast';
@@ -176,7 +175,6 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [hasExpiration, setHasExpiration] = useState(false);
   const [expirationHours, setExpirationHours] = useState<number | null>(null); // null = no expiration
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
-  const supabase = useMemo(() => createClient(), []);
   
   // Handle opening AI assistant for brainstorming
   const handleAIBrainstorm = useCallback(() => {
@@ -365,8 +363,6 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
         setIsAnimating(false);
         return;
       }
-
-      const newQuestion = data.question;
 
       // Success! Spawn confetti celebration
       spawnCelebrationConfetti();

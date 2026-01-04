@@ -105,7 +105,7 @@ export async function checkRateLimit(
 export async function recordRateLimit(
   userId: string,
   type: RateLimitType,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   const supabase = await createClient();
   

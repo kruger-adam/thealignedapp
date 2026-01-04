@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, recordRateLimit } from '@/lib/rate-limit';
+import { MentionSuggestion } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build content with mentions
-    const mentionStrings = (mentionedUsers || []).map((u: any) =>
+    const mentionStrings = (mentionedUsers || []).map((u: MentionSuggestion) =>
       u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
     );
     const messageText = content.trim();
@@ -99,8 +100,8 @@ export async function POST(request: NextRequest) {
     // Notify mentioned users (skip AI and self)
     if (mentionedUsers && Array.isArray(mentionedUsers)) {
       mentionedUsers
-        .filter((u: any) => u.id !== user.id && !u.is_ai)
-        .forEach((mentionedUser: any) => {
+        .filter((u: MentionSuggestion) => u.id !== user.id && !u.is_ai)
+        .forEach((mentionedUser: MentionSuggestion) => {
           notifications.push({
             user_id: mentionedUser.id,
             type: 'mention',
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Notify question author (if not the commenter and not already mentioned)
-    const mentionedUserIds = (mentionedUsers || []).map((u: any) => u.id);
+    const mentionedUserIds = (mentionedUsers || []).map((u: MentionSuggestion) => u.id);
     if (question.author_id && question.author_id !== user.id && !mentionedUserIds.includes(question.author_id)) {
       notifications.push({
         user_id: question.author_id,
