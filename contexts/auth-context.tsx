@@ -45,24 +45,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper to recreate a missing profile for an existing auth user
+  const recreateProfile = async (authUser: User): Promise<Profile | null> => {
+    try {
+      console.log('Recreating missing profile for user:', authUser.id);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: authUser.id,
+          email: authUser.email!,
+          username: authUser.user_metadata?.name || authUser.email?.split('@')[0],
+          avatar_url: authUser.user_metadata?.avatar_url,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Failed to recreate profile:', error.message);
+        return null;
+      }
+      
+      console.log('Profile recreated successfully');
+      return data;
+    } catch (err) {
+      console.error('Error recreating profile:', err);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const getUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          const profile = await fetchProfile(user.id);
+          let profile = await fetchProfile(user.id);
           
           // If user exists in auth but profile doesn't exist in DB,
-          // the user was deleted - sign them out
+          // try to recreate the profile (user was "soft deleted")
           if (!profile) {
-            console.warn('User profile not found - signing out deleted user');
-            await supabase.auth.signOut();
-            posthog.reset();
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-            return;
+            console.warn('User profile not found - attempting to recreate');
+            profile = await recreateProfile(user);
+            
+            // If recreation also failed, sign out as last resort
+            if (!profile) {
+              console.error('Failed to recreate profile - signing out');
+              await supabase.auth.signOut();
+              posthog.reset();
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              return;
+            }
           }
           
           setUser(user);
@@ -86,18 +121,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
+          let profile = await fetchProfile(session.user.id);
           
           // If user exists in auth but profile doesn't exist in DB,
-          // the user was deleted - sign them out
+          // try to recreate the profile (user was "soft deleted")
           if (!profile) {
-            console.warn('User profile not found - signing out deleted user');
-            await supabase.auth.signOut();
-            posthog.reset();
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-            return;
+            console.warn('User profile not found - attempting to recreate');
+            profile = await recreateProfile(session.user);
+            
+            // If recreation also failed, sign out as last resort
+            if (!profile) {
+              console.error('Failed to recreate profile - signing out');
+              await supabase.auth.signOut();
+              posthog.reset();
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              return;
+            }
           }
           
           setUser(session.user);
