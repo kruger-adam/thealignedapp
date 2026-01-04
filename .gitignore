@@ -41,3 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .tmp.driveupload/
+
+# personal development scripts
+scripts/cpu-killer*
+scripts/*cpukiller*
+scripts/README-CPU-KILLER.md
