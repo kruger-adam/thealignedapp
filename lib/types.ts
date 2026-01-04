@@ -9,6 +9,9 @@ export interface Profile {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  vote_streak?: number;
+  longest_vote_streak?: number;
+  last_vote_date?: string | null;
 }
 
 export type Category = 

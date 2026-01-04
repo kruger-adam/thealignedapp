@@ -110,6 +110,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const noCount = responses.filter(r => r.vote === 'NO').length;
   const unsureCount = responses.filter(r => r.vote === 'UNSURE').length;
   const changedVotes = history.filter(h => h.previous_vote !== null).length;
+  const voteStreak = profile.vote_streak ?? 0;
+  const longestStreak = profile.longest_vote_streak ?? 0;
 
   // If viewing another user's profile and logged in, get compatibility
   let compatibility = null;
@@ -177,6 +179,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         noCount,
         unsureCount,
         changedVotes,
+        voteStreak,
+        longestStreak,
       }}
       compatibility={compatibility}
       commonGround={commonGround}

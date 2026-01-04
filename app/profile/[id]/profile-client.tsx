@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
+  Flame,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +78,8 @@ interface ProfileClientProps {
     noCount: number;
     unsureCount: number;
     changedVotes: number;
+    voteStreak: number;
+    longestStreak: number;
   };
   compatibility: Compatibility | null;
   commonGround: CommonGround[] | null;
@@ -366,8 +369,9 @@ export function ProfileClient({
           </div>
 
           {/* Stats Row */}
-          <div className="mt-6 grid grid-cols-5 gap-3">
+          <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
             <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
+            <StatBox label="Streak" value={stats.voteStreak} icon={Flame} className="text-orange-500" tooltip={stats.longestStreak > 0 ? `Best: ${stats.longestStreak} days` : undefined} />
             <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
             <StatBox label="No" value={stats.noCount} icon={XIcon} className="text-rose-600" />
             <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
@@ -708,14 +712,16 @@ function StatBox({
   value,
   icon: Icon,
   className,
+  tooltip,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
   className?: string;
+  tooltip?: string;
 }) {
   return (
-    <div className="text-center">
+    <div className="text-center" title={tooltip}>
       <div className={cn('mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800', className)}>
         <Icon className="h-4 w-4" />
       </div>
