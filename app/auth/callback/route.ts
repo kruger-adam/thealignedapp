@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { notifyNewSignup } from '@/lib/notifications';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -43,23 +44,32 @@ export async function GET(request: Request) {
         .single();
       
       if (!profile) {
-        console.log('Profile missing for auth user, recreating profile...');
+        console.log('Profile missing for auth user, creating new profile...');
         
-        // Recreate the profile (mimics the handle_new_user trigger behavior)
+        const username = user.user_metadata?.name || user.email?.split('@')[0] || 'user';
+        
+        // Create the profile (mimics the handle_new_user trigger behavior)
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
             id: user.id,
             email: user.email!,
-            username: user.user_metadata?.name || user.email?.split('@')[0],
+            username,
             avatar_url: user.user_metadata?.avatar_url,
           });
         
         if (insertError) {
-          console.error('Failed to recreate profile:', insertError.message);
+          console.error('Failed to create profile:', insertError.message);
           // Don't fail the auth flow - the user is authenticated, just profile creation failed
         } else {
-          console.log('Profile recreated successfully');
+          console.log('Profile created successfully');
+          
+          // Notify admin of new signup (async, don't block auth flow)
+          notifyNewSignup({
+            email: user.email!,
+            username,
+            signupTime: new Date(),
+          }).catch((err) => console.error('Failed to send signup notification:', err));
         }
       }
       
