@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { MentionSuggestion, AI_MENTION, Comment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/ui/toast';
 
 interface CommentInputProps {
   questionId: string;
@@ -43,6 +44,7 @@ export function CommentInput({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const { showToast } = useToast();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
@@ -154,178 +156,148 @@ export function CommentInput({
 
     setSubmittingComment(true);
     try {
-      // Build content: prepend mentions as @[username](id), then add the message
-      // For AI mentions, just use @AI (no ID needed)
+      const messageText = commentText.trim();
+
+      // Create comment via API route (includes rate limiting)
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          content: messageText,
+          mentionedUsers: mentionedUsers.map((u) => ({
+            id: u.id,
+            username: u.username,
+            is_ai: u.is_ai,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle rate limit error
+        if (response.status === 429) {
+          showToast(data.error || 'Rate limit reached. Please try again later.', 'error');
+        } else {
+          showToast(data.error || 'Failed to post comment', 'error');
+        }
+        setSubmittingComment(false);
+        return;
+      }
+
+      const newComment = data.comment;
+
+      // Build content with mentions for AI check
       const mentionStrings = mentionedUsers.map((u) =>
         u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
       );
-      const messageText = commentText.trim();
       const contentToSave = mentionStrings.length > 0
         ? messageText
           ? `${mentionStrings.join(' ')} ${messageText}`
           : mentionStrings.join(' ')
         : messageText;
 
-      const { data: newComment, error } = await supabase
-        .from('comments')
-        .insert({
-          question_id: questionId,
-          user_id: userId,
-          content: contentToSave,
-        })
-        .select()
-        .single();
+      // Add the new comment to the list
+      const comment: Comment = {
+        id: newComment.id,
+        user_id: newComment.user_id,
+        content: newComment.content,
+        created_at: newComment.created_at,
+        username: userMetadata.name || userMetadata.email?.split('@')[0] || 'Anonymous',
+        avatar_url: userMetadata.avatar_url || null,
+      };
+      onCommentAdded(comment);
 
-      if (error) {
-        console.error('Error inserting comment:', error);
-        setSubmittingComment(false);
-        return;
-      }
+      // Clear input immediately after posting (don't wait for AI)
+      setCommentText('');
+      setMentionedUsers([]);
+      setSubmittingComment(false);
 
-      if (newComment) {
-        // Create notifications
-        const notifications: Array<{
-          user_id: string;
-          type: 'mention' | 'comment';
-          actor_id: string;
-          question_id: string;
-          comment_id: string;
-        }> = [];
+      // Check if comment mentions @AI
+      const hasAIMention = contentToSave.toLowerCase().includes('@ai');
 
-        // Notify mentioned users (skip AI and self)
-        if (mentionedUsers.length > 0) {
-          mentionedUsers
-            .filter((u) => u.id !== userId && !u.is_ai)
-            .forEach((mentionedUser) => {
-              notifications.push({
-                user_id: mentionedUser.id,
-                type: 'mention',
-                actor_id: userId,
-                question_id: questionId,
-                comment_id: newComment.id,
-              });
-            });
+      if (hasAIMention) {
+        // Show "AI is thinking..." placeholder
+        const aiPlaceholderId = `ai-thinking-${Date.now()}`;
+        if (onAIThinking) {
+          onAIThinking(aiPlaceholderId);
         }
 
-        // Notify question author (if not the commenter and not already mentioned)
-        if (questionAuthorId !== userId && !mentionedUsers.some((u) => u.id === questionAuthorId)) {
-          notifications.push({
-            user_id: questionAuthorId,
-            type: 'comment',
-            actor_id: userId,
-            question_id: questionId,
-            comment_id: newComment.id,
+        // Call the AI API with streaming
+        try {
+          const aiResponse = await fetch('/api/ai-comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              questionId: questionId,
+              userQuery: contentToSave,
+              userId: userId,
+            }),
           });
-        }
 
-        // Insert all notifications (fire and forget)
-        if (notifications.length > 0) {
-          supabase.from('notifications').insert(notifications);
-        }
+          if (aiResponse.ok && aiResponse.body) {
+            const reader = aiResponse.body.getReader();
+            const decoder = new TextDecoder();
+            let streamedContent = '';
 
-        // Add the new comment to the list
-        const comment: Comment = {
-          id: newComment.id,
-          user_id: userId,
-          content: newComment.content,
-          created_at: newComment.created_at,
-          username: userMetadata.name || userMetadata.email?.split('@')[0] || 'Anonymous',
-          avatar_url: userMetadata.avatar_url || null,
-        };
-        onCommentAdded(comment);
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-        // Clear input immediately after posting (don't wait for AI)
-        setCommentText('');
-        setMentionedUsers([]);
-        setSubmittingComment(false);
-
-        // Check if comment mentions @AI
-        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
-
-        if (hasAIMention) {
-          // Show "AI is thinking..." placeholder
-          const aiPlaceholderId = `ai-thinking-${Date.now()}`;
-          if (onAIThinking) {
-            onAIThinking(aiPlaceholderId);
-          }
-
-          // Call the AI API with streaming
-          try {
-            const aiResponse = await fetch('/api/ai-comment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                questionId: questionId,
-                userQuery: contentToSave,
-                userId: userId,
-              }),
-            });
-
-            if (aiResponse.ok && aiResponse.body) {
-              const reader = aiResponse.body.getReader();
-              const decoder = new TextDecoder();
-              let streamedContent = '';
-
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                
-                // Check for comment metadata at end of stream
-                if (chunk.includes('__COMMENT_DATA__:')) {
-                  const [textPart, dataPart] = chunk.split('__COMMENT_DATA__:');
-                  if (textPart.trim()) {
-                    streamedContent += textPart.replace(/\n\n$/, '');
-                    if (onAIStreaming) {
-                      onAIStreaming(aiPlaceholderId, streamedContent);
-                    }
-                  }
-                  
-                  // Parse the comment data and finalize
-                  try {
-                    const commentData = JSON.parse(dataPart);
-                    if (onAICommentAdded) {
-                      onAICommentAdded({
-                        id: commentData.id,
-                        user_id: userId,
-                        content: streamedContent,
-                        created_at: commentData.created_at,
-                        username: 'AI',
-                        avatar_url: null,
-                        is_ai: true,
-                      });
-                    }
-                  } catch {
-                    console.error('Failed to parse comment data');
-                  }
-                } else {
-                  streamedContent += chunk;
+              const chunk = decoder.decode(value, { stream: true });
+              
+              // Check for comment metadata at end of stream
+              if (chunk.includes('__COMMENT_DATA__:')) {
+                const [textPart, dataPart] = chunk.split('__COMMENT_DATA__:');
+                if (textPart.trim()) {
+                  streamedContent += textPart.replace(/\n\n$/, '');
                   if (onAIStreaming) {
                     onAIStreaming(aiPlaceholderId, streamedContent);
                   }
                 }
-              }
-            } else {
-              const errorData = await aiResponse.json();
-              if (onAIError) {
-                onAIError(aiPlaceholderId, errorData.error || "Sorry, I couldn't respond right now.");
+                
+                // Parse the comment data and finalize
+                try {
+                  const commentData = JSON.parse(dataPart);
+                  if (onAICommentAdded) {
+                    onAICommentAdded({
+                      id: commentData.id,
+                      user_id: userId,
+                      content: streamedContent,
+                      created_at: commentData.created_at,
+                      username: 'AI',
+                      avatar_url: null,
+                      is_ai: true,
+                    });
+                  }
+                } catch {
+                  console.error('Failed to parse comment data');
+                }
+              } else {
+                streamedContent += chunk;
+                if (onAIStreaming) {
+                  onAIStreaming(aiPlaceholderId, streamedContent);
+                }
               }
             }
-          } catch (aiErr) {
-            console.error('AI comment error:', aiErr);
+          } else {
+            const errorData = await aiResponse.json();
             if (onAIError) {
-              onAIError(aiPlaceholderId, "Sorry, I couldn't respond right now.");
+              onAIError(aiPlaceholderId, errorData.error || "Sorry, I couldn't respond right now.");
             }
           }
+        } catch (aiErr) {
+          console.error('AI comment error:', aiErr);
+          if (onAIError) {
+            onAIError(aiPlaceholderId, "Sorry, I couldn't respond right now.");
+          }
         }
-
-        return;
       }
     } catch (err) {
       console.error('Error submitting comment:', err);
+      setSubmittingComment(false);
     }
-    setSubmittingComment(false);
   };
 
   return (

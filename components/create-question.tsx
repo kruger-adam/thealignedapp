@@ -340,140 +340,83 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       expiresAt = expireDate.toISOString();
     }
     
-    // Insert question immediately with default category
-    const { data: newQuestion, error } = await supabase
-      .from('questions')
-      .insert({
-        author_id: user.id,
-        content: questionContent,
-        category: 'Other', // Default, will be updated async
-        is_anonymous: isAnonymous,
-        expires_at: expiresAt,
-      })
-      .select('id')
-      .single();
+    try {
+      // Create question via API route (includes rate limiting)
+      const response = await fetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: questionContent,
+          isAnonymous,
+          expiresAt,
+        }),
+      });
 
-    if (error || !newQuestion) {
-        console.error('Error creating question:', error);
-      setIsLoading(false);
-      setIsAnimating(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle rate limit error
+        if (response.status === 429) {
+          showToast(data.error || 'Rate limit reached. Please try again later.', 'error');
+        } else {
+          showToast(data.error || 'Failed to create question', 'error');
+        }
+        setIsLoading(false);
+        setIsAnimating(false);
         return;
       }
 
-    // Success! Spawn confetti celebration
-    spawnCelebrationConfetti();
-    triggerHaptic(30); // Longer haptic for success
+      const newQuestion = data.question;
 
-    // Reset form immediately - don't wait for categorization or notifications
-    const wasAnonymous = isAnonymous;
+      // Success! Spawn confetti celebration
+      spawnCelebrationConfetti();
+      triggerHaptic(30); // Longer haptic for success
+
+      // Reset form immediately - don't wait for categorization or notifications
       setContent('');
       setIsExpanded(false);
-    setIsLoading(false);
-    setIsAnonymous(false);
-    setHasExpiration(false);
-    setExpirationHours(null);
-    
-    // Show celebratory toast
-    showToast('Question posted!', 'success');
-    
-    onQuestionCreated?.();
-
-    // Trigger install prompt after creating a question
-    triggerInstallPrompt();
-
-    // Categorize in background (fire and forget)
-    fetch('/api/categorize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: questionContent }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        const category = data.category || 'Other';
-        if (category !== 'Other') {
-          supabase
-            .from('questions')
-            .update({ category })
-            .eq('id', newQuestion.id)
-            .then(({ error: updateError }) => {
-              if (updateError) console.error('Error updating category:', updateError);
-            });
-        }
-      })
-      .catch(err => console.error('Error categorizing question:', err));
-
-    // Check if question matches a prompt and regenerate if needed (fire and forget)
-    fetch('/api/prompts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionContent }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.matched) {
-          // Refetch prompts to get the updated list
-          fetch('/api/prompts')
-            .then(res => res.json())
-            .then(promptsData => {
-              if (promptsData.prompts) {
-                setDynamicPrompts(promptsData.prompts);
-              }
-            });
-        }
-      })
-      .catch(err => console.error('Error checking prompts:', err));
-
-    // AI votes on the question in background, then refresh to show the vote
-    fetch('/api/ai-vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        questionId: newQuestion.id,
-        questionContent: questionContent,
-        authorId: user.id,
-      }),
-    })
-      .then(() => {
-        // Refresh questions to show AI vote
+      setIsLoading(false);
+      setIsAnonymous(false);
+      setHasExpiration(false);
+      setExpirationHours(null);
+      
+      // Show celebratory toast
+      showToast('Question posted!', 'success');
+      
       onQuestionCreated?.();
+
+      // Trigger install prompt after creating a question
+      triggerInstallPrompt();
+
+      // Check if question matches a prompt and regenerate if needed (fire and forget)
+      fetch('/api/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionContent }),
       })
-      .catch(err => console.error('Error getting AI vote:', err));
-
-    // NOTE: Image generation disabled to reduce costs. Uncomment to re-enable.
-    // fetch('/api/ai-image', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     questionId: newQuestion.id,
-    //     questionContent: questionContent,
-    //   }),
-    // })
-    //   .then(() => {
-    //     // Refresh questions to show image
-    //     onQuestionCreated?.();
-    //   })
-    //   .catch(err => console.error('Error generating image:', err));
-
-    // Notify followers in background (fire and forget) - skip for anonymous posts
-    if (!wasAnonymous) {
-      supabase
-        .from('follows')
-        .select('follower_id')
-        .eq('following_id', user.id)
-        .then(({ data: followers }) => {
-          if (followers && followers.length > 0) {
-            const notifications = followers.map(f => ({
-              user_id: f.follower_id,
-              type: 'new_question' as const,
-              actor_id: user.id,
-              question_id: newQuestion.id,
-            }));
-            
-            supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
-              if (notifError) console.error('Error creating notifications:', notifError);
-            });
+        .then(res => res.json())
+        .then(promptData => {
+          if (promptData.matched) {
+            // Refetch prompts to get the updated list
+            fetch('/api/prompts')
+              .then(res => res.json())
+              .then(promptsData => {
+                if (promptsData.prompts) {
+                  setDynamicPrompts(promptsData.prompts);
+                }
+              });
           }
-        });
+        })
+        .catch(err => console.error('Error checking prompts:', err));
+
+      // Refresh questions to show AI vote (API route handles AI voting)
+      onQuestionCreated?.();
+
+    } catch (error) {
+      console.error('Error creating question:', error);
+      showToast('Failed to create question. Please try again.', 'error');
+      setIsLoading(false);
+      setIsAnimating(false);
     }
   };
 
