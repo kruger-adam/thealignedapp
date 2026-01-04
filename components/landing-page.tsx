@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,8 @@ import {
   TrendingUp, 
   MessageCircle, 
   History, 
-  Sparkles, 
   ExternalLink,
   Check,
-  X,
-  HelpCircle,
   ArrowRight,
   Zap
 } from 'lucide-react';
@@ -28,91 +25,101 @@ function isInAppBrowser(): boolean {
   return /FBAN|FBAV|Instagram|Messenger|LinkedIn|Twitter|MicroMessenger|Line|WhatsApp/i.test(ua);
 }
 
-// Mock question card for demo
-function MockQuestionCard() {
-  const [voted, setVoted] = useState<'yes' | 'no' | 'unsure' | null>(null);
-  const [showResults, setShowResults] = useState(false);
+// Sample questions for typewriter effect
+const SAMPLE_QUESTIONS = [
+  "Should voting be mandatory?",
+  "Is it okay to lie to protect someone's feelings?",
+  "Would you take a pill that makes you happy forever?",
+  "Is social media making us lonelier?",
+  "Should AI have legal rights?",
+  "Is free will an illusion?",
+  "Would you want to know the date of your death?",
+];
 
-  const handleVote = (vote: 'yes' | 'no' | 'unsure') => {
-    setVoted(vote);
-    setTimeout(() => setShowResults(true), 300);
-  };
+// Typewriter input component
+function TypewriterInput() {
+  const [displayText, setDisplayText] = useState('');
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const currentQuestion = SAMPLE_QUESTIONS[questionIndex];
+
+  const typeCharacter = useCallback(() => {
+    if (displayText.length < currentQuestion.length) {
+      setDisplayText(currentQuestion.slice(0, displayText.length + 1));
+    } else {
+      setIsTyping(false);
+      setIsPaused(true);
+    }
+  }, [displayText, currentQuestion]);
+
+  const deleteCharacter = useCallback(() => {
+    if (displayText.length > 0) {
+      setDisplayText(displayText.slice(0, -1));
+    } else {
+      // Move to next question
+      setQuestionIndex((prev) => (prev + 1) % SAMPLE_QUESTIONS.length);
+      setIsTyping(true);
+    }
+  }, [displayText]);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+
+    if (isPaused) {
+      // Pause at the end of typing
+      timeout = setTimeout(() => {
+        setIsPaused(false);
+      }, 2000);
+    } else if (isTyping) {
+      // Typing speed
+      timeout = setTimeout(typeCharacter, 50 + Math.random() * 30);
+    } else {
+      // Deleting speed (faster)
+      timeout = setTimeout(deleteCharacter, 25);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [displayText, isTyping, isPaused, typeCharacter, deleteCharacter]);
 
   return (
-    <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-5 max-w-md w-full shadow-2xl shadow-black/50">
-      {/* Question header */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-          <Bot className="w-4 h-4 text-white" />
+    <div className="w-full max-w-lg">
+      <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4 shadow-2xl shadow-black/50">
+        {/* Input header */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center">
+            <span className="text-xs text-zinc-300">?</span>
+          </div>
+          <span className="text-sm text-zinc-500">Ask a question...</span>
         </div>
-        <span className="text-sm text-zinc-400">AI posted</span>
-        <span className="text-xs text-zinc-600">• 2h ago</span>
+        
+        {/* Typewriter text area */}
+        <div className="min-h-[80px] flex items-start">
+          <p className="text-xl md:text-2xl text-zinc-100 font-medium leading-relaxed">
+            {displayText}
+            <span className="inline-block w-0.5 h-6 bg-zinc-400 ml-0.5 animate-pulse" />
+          </p>
+        </div>
+
+        {/* Vote buttons preview (disabled) */}
+        <div className="flex gap-2 mt-4 opacity-50">
+          <div className="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-500 text-center text-sm font-medium">
+            Yes
+          </div>
+          <div className="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-500 text-center text-sm font-medium">
+            No
+          </div>
+          <div className="flex-1 py-2.5 rounded-xl bg-zinc-800 text-zinc-500 text-center text-sm font-medium">
+            Unsure
+          </div>
+        </div>
       </div>
       
-      {/* Question text */}
-      <p className="text-lg text-zinc-100 font-medium mb-4">
-        Is it ethical to eat meat if lab-grown alternatives become indistinguishable?
+      {/* Subtle hint */}
+      <p className="text-center text-xs text-zinc-600 mt-3">
+        Ask anything. Get answers.
       </p>
-
-      {/* Vote buttons */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => handleVote('yes')}
-          className={`flex-1 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-            voted === 'yes'
-              ? 'bg-emerald-500 text-white scale-[0.98]'
-              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-          }`}
-        >
-          <Check className="w-4 h-4" />
-          Yes
-        </button>
-        <button
-          onClick={() => handleVote('no')}
-          className={`flex-1 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-            voted === 'no'
-              ? 'bg-rose-500 text-white scale-[0.98]'
-              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-          }`}
-        >
-          <X className="w-4 h-4" />
-          No
-        </button>
-        <button
-          onClick={() => handleVote('unsure')}
-          className={`flex-1 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-            voted === 'unsure'
-              ? 'bg-amber-500 text-white scale-[0.98]'
-              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-          }`}
-        >
-          <HelpCircle className="w-4 h-4" />
-          Unsure
-        </button>
-      </div>
-
-      {/* Results */}
-      {showResults && (
-        <div className="space-y-2 animate-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-400">247 votes</span>
-            <span className="text-violet-400 flex items-center gap-1">
-              <Bot className="w-3 h-3" />
-              AI voted No
-            </span>
-          </div>
-          <div className="flex h-2 rounded-full overflow-hidden bg-zinc-800">
-            <div className="bg-emerald-500 transition-all duration-500" style={{ width: '42%' }} />
-            <div className="bg-rose-500 transition-all duration-500" style={{ width: '38%' }} />
-            <div className="bg-amber-500 transition-all duration-500" style={{ width: '20%' }} />
-          </div>
-          <div className="flex justify-between text-xs text-zinc-500">
-            <span>42% Yes</span>
-            <span>38% No</span>
-            <span>20% Unsure</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -211,9 +218,9 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right: Mock card */}
+            {/* Right: Typewriter input */}
             <div className={`flex justify-center lg:justify-end ${mounted ? 'animate-in slide-in-from-bottom-2 stagger-2' : 'opacity-0'}`} style={{ animationDelay: '100ms' }}>
-              <MockQuestionCard />
+              <TypewriterInput />
             </div>
           </div>
         </section>
@@ -321,10 +328,6 @@ export function LandingPage() {
           <div className="max-w-6xl mx-auto px-4 py-20 md:py-28">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5 mb-6">
-                  <Sparkles className="w-4 h-4 text-violet-400" />
-                  <span className="text-sm text-violet-300">Powered by GPT-4</span>
-                </div>
                 <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
                   An AI that has opinions
                 </h2>
