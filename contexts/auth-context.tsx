@@ -49,30 +49,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const recreateProfile = async (authUser: User): Promise<Profile | null> => {
     try {
       console.log('Recreating missing profile for user:', authUser.id);
-      console.log('User metadata:', JSON.stringify(authUser.user_metadata));
       
-      const profileData = {
-        id: authUser.id,
-        email: authUser.email!,
-        username: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-        avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
+      // Generate a base username from metadata or email
+      const baseUsername = authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'user';
+      
+      // Try to insert with the base username first, then fall back to a unique variant
+      const tryInsertProfile = async (username: string): Promise<Profile | null> => {
+        const profileData = {
+          id: authUser.id,
+          email: authUser.email!,
+          username: username,
+          avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
+        };
+        
+        console.log('Attempting to insert profile:', JSON.stringify(profileData));
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert(profileData, { onConflict: 'id' })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Insert failed:', error.message, error.code);
+          return null;
+        }
+        
+        console.log('Profile recreated successfully:', JSON.stringify(data));
+        return data;
       };
       
-      console.log('Attempting to insert profile:', JSON.stringify(profileData));
+      // First attempt with base username
+      let profile = await tryInsertProfile(baseUsername);
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Failed to recreate profile:', error.message, error.code, error.details);
-        return null;
+      // If failed (likely due to username conflict), try with email prefix
+      if (!profile) {
+        const emailPrefix = authUser.email?.split('@')[0] || '';
+        const uniqueUsername = `${baseUsername} (${emailPrefix})`;
+        console.log('Retrying with unique username:', uniqueUsername);
+        profile = await tryInsertProfile(uniqueUsername);
       }
       
-      console.log('Profile recreated successfully:', JSON.stringify(data));
-      return data;
+      // Last resort: append random suffix
+      if (!profile) {
+        const randomSuffix = Math.random().toString(36).substring(2, 6);
+        const fallbackUsername = `${baseUsername}_${randomSuffix}`;
+        console.log('Retrying with fallback username:', fallbackUsername);
+        profile = await tryInsertProfile(fallbackUsername);
+      }
+      
+      return profile;
     } catch (err) {
       console.error('Error recreating profile:', err);
       return null;
