@@ -81,12 +81,50 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   // Private voting mode
   const [isPrivateMode, setIsPrivateMode] = useState(false);
 
+  // AI vote state
+  const [aiVote, setAiVote] = useState<{ vote: VoteType; reasoning: string | null } | null>(null);
+  const [loadingAiVote, setLoadingAiVote] = useState(false);
+
   const hasVoted = !!localUserVote;
   const isAuthor = user?.id === question.author_id;
   // Can see results if: voted, is the author, or not logged in (guests can't comment anyway)
   const canSeeResults = hasVoted || isAuthor;
 
   const timeAgo = getTimeAgo(new Date(question.created_at));
+
+  // Fetch AI vote for this question
+  const fetchAiVote = useCallback(async () => {
+    if (aiVote || loadingAiVote || !canSeeResults) return; // Already fetched, loading, or can't see results
+    
+    setLoadingAiVote(true);
+    try {
+      const { data, error } = await supabase
+        .from('responses')
+        .select('vote, ai_reasoning')
+        .eq('question_id', question.id)
+        .eq('is_ai', true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (!error && data) {
+        setAiVote({
+          vote: data.vote as VoteType,
+          reasoning: data.ai_reasoning,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching AI vote:', err);
+    } finally {
+      setLoadingAiVote(false);
+    }
+  }, [question.id, aiVote, loadingAiVote, canSeeResults, supabase]);
+
+  // Fetch AI vote when results become visible
+  useEffect(() => {
+    if (canSeeResults) {
+      fetchAiVote();
+    }
+  }, [canSeeResults, fetchAiVote]);
 
   // Vote handling
   const updateVoteState = (newVote: VoteType | null) => {
@@ -984,6 +1022,30 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   </div>
                 </div>
               )}
+
+              {/* AI Insight - Show after voting or if author */}
+              {canSeeResults && aiVote && (
+                <div className="mt-4 w-full animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-start gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30">
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                      <Bot className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                          AI voted {aiVote.vote === 'YES' ? 'Yes' : aiVote.vote === 'NO' ? 'No' : 'Not Sure'}
+                        </span>
+                      </div>
+                      {aiVote.reasoning && (
+                        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                          &ldquo;{aiVote.reasoning}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   if (!canSeeResults) {
