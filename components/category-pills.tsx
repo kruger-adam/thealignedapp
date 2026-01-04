@@ -5,22 +5,22 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const CATEGORIES: Category[] = [
-  'Hypothetical',
-  'Ethics',
-  'Relationships',
-  'Work & Career',
-  'Fun & Silly',
-  'Society',
-  'Technology',
-  'Health & Wellness',
-  'Entertainment',
-  'Environment',
-  'Politics',
-  'Sports',
-  'Food & Lifestyle',
-  'Effective Altruism',
-  'Other',
+const CATEGORIES: { value: Category; emoji: string }[] = [
+  { value: 'Hypothetical', emoji: '🤔' },
+  { value: 'Ethics', emoji: '⚖️' },
+  { value: 'Relationships', emoji: '💕' },
+  { value: 'Work & Career', emoji: '💼' },
+  { value: 'Fun & Silly', emoji: '🎉' },
+  { value: 'Society', emoji: '🏛️' },
+  { value: 'Technology', emoji: '🤖' },
+  { value: 'Health & Wellness', emoji: '🧘' },
+  { value: 'Entertainment', emoji: '🎬' },
+  { value: 'Environment', emoji: '🌍' },
+  { value: 'Politics', emoji: '🗳️' },
+  { value: 'Sports', emoji: '⚽' },
+  { value: 'Food & Lifestyle', emoji: '🍕' },
+  { value: 'Effective Altruism', emoji: '🌐' },
+  { value: 'Other', emoji: '💭' },
 ];
 
 interface CategoryPillsProps {
@@ -111,18 +111,18 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         </button>
 
         {/* Category pills */}
-        {CATEGORIES.map((category) => (
+        {CATEGORIES.map(({ value, emoji }) => (
           <button
-            key={category}
-            onClick={() => handleClick(category)}
+            key={value}
+            onClick={() => handleClick(value)}
             className={cn(
               'shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-              selected === category
+              selected === value
                 ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
             )}
           >
-            {category}
+            {emoji} {value}
           </button>
         ))}
       </div>
