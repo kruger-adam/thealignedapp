@@ -31,11 +31,44 @@ export async function GET(request: Request) {
       error: error?.message 
     });
     
-    if (!error) {
+    if (!error && data?.session?.user) {
+      const user = data.session.user;
+      
+      // Check if profile exists - might be missing if user was "soft deleted"
+      // (profile deleted but auth user remained)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile) {
+        console.log('Profile missing for auth user, recreating profile...');
+        
+        // Recreate the profile (mimics the handle_new_user trigger behavior)
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            username: user.user_metadata?.name || user.email?.split('@')[0],
+            avatar_url: user.user_metadata?.avatar_url,
+          });
+        
+        if (insertError) {
+          console.error('Failed to recreate profile:', insertError.message);
+          // Don't fail the auth flow - the user is authenticated, just profile creation failed
+        } else {
+          console.log('Profile recreated successfully');
+        }
+      }
+      
       return NextResponse.redirect(`${origin}${next}`);
     }
     
-    console.error('Session exchange error:', error.message);
+    if (error) {
+      console.error('Session exchange error:', error.message);
+    }
   }
 
   // Return the user to an error page with instructions
