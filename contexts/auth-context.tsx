@@ -49,24 +49,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const recreateProfile = async (authUser: User): Promise<Profile | null> => {
     try {
       console.log('Recreating missing profile for user:', authUser.id);
+      console.log('User metadata:', JSON.stringify(authUser.user_metadata));
+      
+      const profileData = {
+        id: authUser.id,
+        email: authUser.email!,
+        username: authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+        avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
+      };
+      
+      console.log('Attempting to insert profile:', JSON.stringify(profileData));
       
       const { data, error } = await supabase
         .from('profiles')
-        .insert({
-          id: authUser.id,
-          email: authUser.email!,
-          username: authUser.user_metadata?.name || authUser.email?.split('@')[0],
-          avatar_url: authUser.user_metadata?.avatar_url,
-        })
+        .upsert(profileData, { onConflict: 'id' })
         .select()
         .single();
       
       if (error) {
-        console.error('Failed to recreate profile:', error.message);
+        console.error('Failed to recreate profile:', error.message, error.code, error.details);
         return null;
       }
       
-      console.log('Profile recreated successfully');
+      console.log('Profile recreated successfully:', JSON.stringify(data));
       return data;
     } catch (err) {
       console.error('Error recreating profile:', err);
