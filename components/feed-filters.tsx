@@ -74,7 +74,7 @@ export function FeedFilters({
           onClick={() => setShowFilters(!showFilters)}
           title="Filters"
           className={cn(
-            'relative flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 transition-colors hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-700/50',
+            'relative flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 transition-all hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800/50 dark:hover:bg-zinc-700/50',
             activeFilterCount > 0 && 'ring-2 ring-zinc-400 dark:ring-zinc-500'
           )}
         >

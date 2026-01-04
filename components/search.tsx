@@ -112,7 +112,7 @@ export function Search() {
       {/* Search trigger button - compact icon style to match sort/filter */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-700"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 transition-all hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-700"
         title="Search (⌘K)"
       >
         <SearchIcon className="h-4 w-4" />

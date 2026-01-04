@@ -46,7 +46,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center active:scale-95 transition-transform">
           <Image 
             src="/logo-transparent.png" 
             alt="Aligned" 
@@ -82,7 +82,7 @@ export function Header() {
                   src={profile?.avatar_url}
                   fallback={profile?.username || user.email || ''}
                   size="sm"
-                  className="cursor-pointer transition-opacity hover:opacity-80"
+                  className="cursor-pointer transition-all hover:opacity-80 active:scale-95"
                 />
               </Link>
             </>

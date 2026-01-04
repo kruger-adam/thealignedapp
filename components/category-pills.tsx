@@ -83,7 +83,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         <div className="absolute left-0 top-0 z-10 flex h-full items-center bg-gradient-to-r from-white via-white to-transparent pl-2 pr-4 dark:from-zinc-950 dark:via-zinc-950">
           <button
             onClick={() => scroll('left')}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm transition-all hover:bg-zinc-200 active:scale-90 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -101,7 +101,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         <button
           onClick={() => handleClick(null)}
           className={cn(
-            'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-[0.97]',
             selected === null
               ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
               : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
@@ -116,7 +116,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
             key={value}
             onClick={() => handleClick(value)}
             className={cn(
-              'shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+              'shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-[0.97]',
               selected === value
                 ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
@@ -132,7 +132,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         <div className="absolute right-0 top-0 z-10 flex h-full items-center bg-gradient-to-l from-white via-white to-transparent pl-4 pr-2 dark:from-zinc-950 dark:via-zinc-950">
           <button
             onClick={() => scroll('right')}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm transition-all hover:bg-zinc-200 active:scale-90 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-4 w-4" />
