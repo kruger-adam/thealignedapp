@@ -38,7 +38,7 @@ const SAMPLE_QUESTIONS = [
 
 // Typewriter input component
 function TypewriterInput() {
-  const [displayText, setDisplayText] = useState('');
+  const [displayText, setDisplayText] = useState(SAMPLE_QUESTIONS[0].slice(0, 1));
   const [questionIndex, setQuestionIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
@@ -58,26 +58,28 @@ function TypewriterInput() {
     if (displayText.length > 0) {
       setDisplayText(displayText.slice(0, -1));
     } else {
-      // Move to next question
-      setQuestionIndex((prev) => (prev + 1) % SAMPLE_QUESTIONS.length);
+      // Move to next question immediately with first char (no flash)
+      const nextIndex = (questionIndex + 1) % SAMPLE_QUESTIONS.length;
+      setQuestionIndex(nextIndex);
+      setDisplayText(SAMPLE_QUESTIONS[nextIndex].slice(0, 1));
       setIsTyping(true);
     }
-  }, [displayText]);
+  }, [displayText, questionIndex]);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
 
     if (isPaused) {
-      // Pause at the end of typing
+      // Pause at the end of typing (matches create-question.tsx)
       timeout = setTimeout(() => {
         setIsPaused(false);
-      }, 2000);
+      }, 500);
     } else if (isTyping) {
-      // Typing speed
-      timeout = setTimeout(typeCharacter, 50 + Math.random() * 30);
+      // Typing speed: 30-50ms per char (matches create-question.tsx)
+      timeout = setTimeout(typeCharacter, 30 + Math.random() * 20);
     } else {
-      // Deleting speed (faster)
-      timeout = setTimeout(deleteCharacter, 25);
+      // Backspace speed: 15ms (matches create-question.tsx)
+      timeout = setTimeout(deleteCharacter, 15);
     }
 
     return () => clearTimeout(timeout);
