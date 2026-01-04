@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
 import { FeedFilters } from '@/components/feed-filters';
@@ -33,6 +33,30 @@ export default function FeedPage() {
   const [pollStatus, setPollStatus] = useState<PollStatus>('all');
   const supabase = useMemo(() => createClient(), []);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sort options for the dropdown
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'newest', label: 'Newest' },
+    { value: 'popular', label: 'Most Votes' },
+    { value: 'most_commented', label: 'Most Commented' },
+    { value: 'controversial', label: 'Most Split' },
+    { value: 'consensus', label: 'Most Agreed' },
+    { value: 'most_undecided', label: 'Most Undecided' },
+    { value: 'most_sensitive', label: 'Most Sensitive' },
+  ];
+
+  // Close sort dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Onboarding state
   const [onboardingVoteCount, setOnboardingVoteCount] = useState<number | null>(null);
@@ -481,30 +505,43 @@ export default function FeedPage() {
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               Feed
             </h1>
-            <p className="text-xs text-zinc-500">
-              Sorted by {sortBy === 'newest' ? 'Newest' : sortBy === 'popular' ? 'Most Votes' : sortBy === 'most_commented' ? 'Most Commented' : sortBy === 'controversial' ? 'Most Split' : sortBy === 'consensus' ? 'Most Agreed' : sortBy === 'most_undecided' ? 'Most Undecided' : 'Most Sensitive'}
-              {(categoryFilter || minVotes > 0 || timePeriod !== 'all' || unansweredOnly) && (
-                <span>
-                  {' · '}
-                  {[
-                    categoryFilter,
-                    minVotes > 0 && `${minVotes}+ votes`,
-                    timePeriod === 'day' && 'Last 24h',
-                    timePeriod === 'week' && 'Last week',
-                    timePeriod === 'month' && 'Last month',
-                    unansweredOnly && 'Unanswered',
-                  ].filter(Boolean).join(', ')}
+            <div className="relative inline-block" ref={sortDropdownRef}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+              >
+                <span>Sorted by</span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {sortOptions.find(s => s.value === sortBy)?.label}
                 </span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showSortDropdown && (
+                <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                  {sortOptions.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setSortBy(value);
+                        setShowSortDropdown(false);
+                      }}
+                      className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                        sortBy === value
+                          ? 'bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100'
+                          : 'text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-700/50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
-            </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Search />
             <FeedFilters 
-              currentSort={sortBy} 
-              onSortChange={setSortBy} 
-              currentCategory={categoryFilter}
-              onCategoryChange={setCategoryFilter}
               minVotes={minVotes}
               onMinVotesChange={setMinVotes}
               timePeriod={timePeriod}

@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUpDown, Filter } from 'lucide-react';
-import { SortOption } from '@/lib/types';
-import type { Category } from '@/lib/types';
+import { Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MinVotes = 0 | 5 | 10 | 25;
@@ -11,10 +9,6 @@ export type TimePeriod = 'all' | 'day' | 'week' | 'month';
 export type PollStatus = 'all' | 'active' | 'expired';
 
 interface FeedFiltersProps {
-  currentSort: SortOption;
-  onSortChange: (sort: SortOption) => void;
-  currentCategory: Category | null;
-  onCategoryChange: (category: Category | null) => void;
   minVotes: MinVotes;
   onMinVotesChange: (min: MinVotes) => void;
   timePeriod: TimePeriod;
@@ -25,16 +19,6 @@ interface FeedFiltersProps {
   onPollStatusChange: (status: PollStatus) => void;
   isLoggedIn: boolean;
 }
-
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'popular', label: 'Most Votes' },
-  { value: 'most_commented', label: 'Most Commented' },
-  { value: 'controversial', label: 'Most Split' },
-  { value: 'consensus', label: 'Most Agreed' },
-  { value: 'most_undecided', label: 'Most Undecided' },
-  { value: 'most_sensitive', label: 'Most Sensitive' },
-];
 
 const minVotesOptions: { value: MinVotes; label: string }[] = [
   { value: 0, label: 'Any' },
@@ -57,10 +41,6 @@ const pollStatusOptions: { value: PollStatus; label: string }[] = [
 ];
 
 export function FeedFilters({ 
-  currentSort, 
-  onSortChange, 
-  currentCategory, 
-  onCategoryChange,
   minVotes,
   onMinVotesChange,
   timePeriod,
@@ -89,26 +69,7 @@ export function FeedFilters({
   }, []);
   
   return (
-    <div className="flex items-center gap-2">
-      {/* Sort dropdown - icon only */}
-      <div className="relative">
-        <select
-          value={currentSort}
-          onChange={(e) => onSortChange(e.target.value as SortOption)}
-          className="h-8 w-8 cursor-pointer appearance-none rounded-lg border-0 bg-zinc-100 text-transparent focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:bg-zinc-800/50 dark:focus:ring-zinc-600"
-          title={sortOptions.find(s => s.value === currentSort)?.label}
-        >
-          {sortOptions.map(({ value, label }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <ArrowUpDown className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-      </div>
-
-      {/* Filters button + dropdown */}
-      <div className="relative" ref={filterRef}>
+    <div className="relative" ref={filterRef}>
         <button
           onClick={() => setShowFilters(!showFilters)}
           title="Filters"
@@ -239,7 +200,6 @@ export function FeedFilters({
             )}
           </div>
         )}
-      </div>
     </div>
   );
 }
