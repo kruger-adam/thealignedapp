@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ArrowUpDown, Filter } from 'lucide-react';
-import { SortOption, Category } from '@/lib/types';
+import { SortOption } from '@/lib/types';
+import type { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export type MinVotes = 0 | 5 | 10 | 25;
@@ -55,24 +56,6 @@ const pollStatusOptions: { value: PollStatus; label: string }[] = [
   { value: 'expired', label: 'Closed' },
 ];
 
-const categories: Category[] = [
-  'Hypothetical',
-  'Ethics',
-  'Relationships',
-  'Work & Career',
-  'Fun & Silly',
-  'Society',
-  'Technology',
-  'Health & Wellness',
-  'Entertainment',
-  'Environment',
-  'Politics',
-  'Sports',
-  'Food & Lifestyle',
-  'Effective Altruism',
-  'Other',
-];
-
 export function FeedFilters({ 
   currentSort, 
   onSortChange, 
@@ -91,8 +74,8 @@ export function FeedFilters({
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   
-  // Count active filters
-  const activeFilterCount = (currentCategory ? 1 : 0) + (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0) + (pollStatus !== 'all' ? 1 : 0);
+  // Count active filters (category is now handled by pills, not counted here)
+  const activeFilterCount = (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0) + (pollStatus !== 'all' ? 1 : 0);
   
   // Close on click outside
   useEffect(() => {
@@ -149,7 +132,6 @@ export function FeedFilters({
               {activeFilterCount > 0 && (
                 <button
                   onClick={() => {
-                    onCategoryChange(null);
                     onMinVotesChange(0);
                     onTimePeriodChange('all');
                     onUnansweredChange(false);
@@ -160,25 +142,6 @@ export function FeedFilters({
                   Clear all
                 </button>
               )}
-            </div>
-            
-            {/* Category filter */}
-            <div className="mb-4">
-              <label className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Category
-              </label>
-              <select
-                value={currentCategory || ''}
-                onChange={(e) => onCategoryChange(e.target.value as Category || null)}
-                className="w-full cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"
-              >
-                <option value="">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
             </div>
             
             {/* Min votes filter */}
