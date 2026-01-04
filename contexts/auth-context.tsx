@@ -46,14 +46,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Helper to recreate a missing profile for an existing auth user
+  // Uses REST API directly with access token for reliable auth
   const recreateProfile = async (authUser: User): Promise<Profile | null> => {
     try {
       console.log('Recreating missing profile for user:', authUser.id);
       
+      // Get the current session to extract access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error('No access token available for profile creation');
+        return null;
+      }
+      
       // Generate a base username from metadata or email
       const baseUsername = authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'user';
       
-      // Try to insert with the base username first, then fall back to a unique variant
+      // Try to insert with the base username first, then fall back to unique variants
       const tryInsertProfile = async (username: string): Promise<Profile | null> => {
         const profileData = {
           id: authUser.id,
@@ -62,21 +70,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
         };
         
-        console.log('Attempting to insert profile:', JSON.stringify(profileData));
+        console.log('Attempting to insert profile via REST:', JSON.stringify(profileData));
         
-        const { data, error } = await supabase
-          .from('profiles')
-          .upsert(profileData, { onConflict: 'id' })
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Insert failed:', error.message, error.code);
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Prefer': 'return=representation',
+              },
+              body: JSON.stringify(profileData),
+            }
+          );
+          
+          console.log('REST response status:', response.status);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('REST insert failed:', response.status, errorText);
+            return null;
+          }
+          
+          const data = await response.json();
+          console.log('Profile recreated successfully:', JSON.stringify(data));
+          return Array.isArray(data) ? data[0] : data;
+        } catch (fetchErr) {
+          console.error('Fetch error:', fetchErr);
           return null;
         }
-        
-        console.log('Profile recreated successfully:', JSON.stringify(data));
-        return data;
       };
       
       // First attempt with base username
