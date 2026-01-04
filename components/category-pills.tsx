@@ -6,20 +6,20 @@ import { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CATEGORIES: { value: Category; emoji: string }[] = [
-  { value: 'Hypothetical', emoji: '🤔' },
-  { value: 'Ethics', emoji: '⚖️' },
-  { value: 'Relationships', emoji: '💕' },
-  { value: 'Work & Career', emoji: '💼' },
-  { value: 'Fun & Silly', emoji: '🎉' },
-  { value: 'Society', emoji: '🏛️' },
-  { value: 'Technology', emoji: '🤖' },
-  { value: 'Health & Wellness', emoji: '🧘' },
+  { value: 'Effective Altruism', emoji: '🌐' },
   { value: 'Entertainment', emoji: '🎬' },
   { value: 'Environment', emoji: '🌍' },
-  { value: 'Politics', emoji: '🗳️' },
-  { value: 'Sports', emoji: '⚽' },
+  { value: 'Ethics', emoji: '⚖️' },
   { value: 'Food & Lifestyle', emoji: '🍕' },
-  { value: 'Effective Altruism', emoji: '🌐' },
+  { value: 'Fun & Silly', emoji: '🎉' },
+  { value: 'Health & Wellness', emoji: '🧘' },
+  { value: 'Hypothetical', emoji: '🤔' },
+  { value: 'Politics', emoji: '🗳️' },
+  { value: 'Relationships', emoji: '💕' },
+  { value: 'Society', emoji: '🏛️' },
+  { value: 'Sports', emoji: '⚽' },
+  { value: 'Technology', emoji: '🤖' },
+  { value: 'Work & Career', emoji: '💼' },
   { value: 'Other', emoji: '💭' },
 ];
 
