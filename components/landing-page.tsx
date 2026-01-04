@@ -203,7 +203,7 @@ export function LandingPage() {
               <p className="text-lg md:text-xl text-zinc-400 mb-8 leading-relaxed max-w-xl">
                 Vote on questions. Discover where you actually agree with friends, strangers, and AI—not just where you clash.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 items-start">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button 
                   onClick={handleSignIn} 
                   size="lg" 
@@ -219,9 +219,10 @@ export function LandingPage() {
                   See how it works
                 </a>
               </div>
-              <div className="mt-4">
+              {/* Product Hunt Badge - Hidden until launch */}
+              {/* <div className="mt-4">
                 <ProductHuntBadge variant="banner" />
-              </div>
+              </div> */}
             </div>
 
             {/* Right: Typewriter input */}
@@ -415,17 +416,18 @@ export function LandingPage() {
           <p className="text-zinc-400 max-w-lg mx-auto mb-8">
             Join and start voting. Discover where you stand—with friends, strangers, and AI.
           </p>
-          <div className="flex flex-col items-center gap-4">
-            <Button 
-              onClick={handleSignIn} 
-              size="lg" 
-              className="text-base px-8 py-6 bg-zinc-100 hover:bg-white text-zinc-900 border-0 shadow-lg shadow-zinc-100/10 gap-2"
-            >
-              Get Started with Google
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+          <Button 
+            onClick={handleSignIn} 
+            size="lg" 
+            className="text-base px-8 py-6 bg-zinc-100 hover:bg-white text-zinc-900 border-0 shadow-lg shadow-zinc-100/10 gap-2"
+          >
+            Get Started with Google
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+          {/* Product Hunt Badge - Hidden until launch */}
+          {/* <div className="mt-4">
             <ProductHuntBadge variant="banner" />
-          </div>
+          </div> */}
         </section>
       </main>
 

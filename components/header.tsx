@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { NotificationsDropdown } from '@/components/notifications-dropdown';
-import { ProductHuntBadge } from '@/components/product-hunt-badge';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +57,7 @@ export function Header() {
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-1">
           <Link href="/">
             <Button
               variant="ghost"
@@ -72,11 +71,6 @@ export function Header() {
               <span className="hidden sm:inline">Feed</span>
             </Button>
           </Link>
-
-          {/* Product Hunt Badge - visible to all users */}
-          <div className="hidden sm:block">
-            <ProductHuntBadge variant="compact" />
-          </div>
 
           {loading ? (
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
