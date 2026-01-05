@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, recordRateLimit } from '@/lib/rate-limit';
 
@@ -70,61 +71,66 @@ export async function POST(request: NextRequest) {
       question_id: newQuestion.id,
     });
 
-    // Trigger background tasks (fire and forget)
+    // Trigger background tasks using waitUntil to ensure they complete
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
 
-    // Categorize in background - the /api/categorize endpoint now handles the DB update
-    fetch(`${baseUrl}/api/categorize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        question: content.trim(),
-        questionId: newQuestion.id,  // Pass ID so categorize endpoint can update DB directly
-      }),
-    }).catch(err => console.error('Error triggering categorization:', err));
+    // Categorize in background - the /api/categorize endpoint handles the DB update
+    waitUntil(
+      fetch(`${baseUrl}/api/categorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          question: content.trim(),
+          questionId: newQuestion.id,
+        }),
+      }).catch(err => console.error('Error triggering categorization:', err))
+    );
 
     // Check if question matches a prompt and regenerate if needed
-    fetch(`${baseUrl}/api/prompts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionContent: content.trim() }),
-    })
-      .catch(err => console.error('Error checking prompts:', err));
+    waitUntil(
+      fetch(`${baseUrl}/api/prompts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionContent: content.trim() }),
+      }).catch(err => console.error('Error checking prompts:', err))
+    );
 
     // AI votes on the question in background
-    fetch(`${baseUrl}/api/ai-vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        questionId: newQuestion.id,
-        questionContent: content.trim(),
-        authorId: user.id,
-      }),
-    })
-      .catch(err => console.error('Error getting AI vote:', err));
+    waitUntil(
+      fetch(`${baseUrl}/api/ai-vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          questionId: newQuestion.id,
+          questionContent: content.trim(),
+          authorId: user.id,
+        }),
+      }).catch(err => console.error('Error getting AI vote:', err))
+    );
 
     // Notify followers in background (skip for anonymous posts)
     if (!isAnonymous) {
-      supabase
-        .from('follows')
-        .select('follower_id')
-        .eq('following_id', user.id)
-        .then(({ data: followers }) => {
-          if (followers && followers.length > 0) {
-            const notifications = followers.map(f => ({
-              user_id: f.follower_id,
-              type: 'new_question' as const,
-              actor_id: user.id,
-              question_id: newQuestion.id,
-            }));
-            
-            supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+      waitUntil(
+        supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+          .then(async ({ data: followers }) => {
+            if (followers && followers.length > 0) {
+              const notifications = followers.map(f => ({
+                user_id: f.follower_id,
+                type: 'new_question' as const,
+                actor_id: user.id,
+                question_id: newQuestion.id,
+              }));
+              
+              const { error: notifError } = await supabase.from('notifications').insert(notifications);
               if (notifError) console.error('Error creating notifications:', notifError);
-            });
-          }
-        });
+            }
+          })
+      );
     }
 
     return NextResponse.json({
