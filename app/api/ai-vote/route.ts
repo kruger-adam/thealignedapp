@@ -144,6 +144,7 @@ Return vote + reason in the specified format.`;
         is_ai: true,
         is_anonymous: false,
         ai_reasoning: aiReasoning,
+        ai_model: 'gemini-3-flash-preview', // Track which model was used
       });
 
     if (insertError) {

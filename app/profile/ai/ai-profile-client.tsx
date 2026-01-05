@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { VoteType } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, getModelDisplayInfo } from '@/lib/utils';
 
 interface AIProfile {
   id: string;
@@ -36,6 +36,7 @@ interface ResponseWithQuestion {
   vote: VoteType;
   updated_at: string;
   ai_reasoning: string | null;
+  ai_model?: string | null;
   question: {
     id: string;
     content: string;
@@ -527,9 +528,23 @@ function AIStanceItem({ response }: { response: ResponseWithQuestion }) {
             <Icon className={cn('h-4 w-4', config.color)} />
           </div>
           <div className="flex-1">
-            <p className="text-sm text-zinc-900 dark:text-zinc-100">
-              {response.question.content}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                {response.question.content}
+              </p>
+              {response.ai_model && (() => {
+                const modelInfo = getModelDisplayInfo(response.ai_model);
+                return (
+                  <span className={cn(
+                    "px-1.5 py-0.5 text-[10px] font-medium rounded",
+                    modelInfo.bgColor,
+                    modelInfo.textColor
+                  )}>
+                    {modelInfo.shortName}
+                  </span>
+                );
+              })()}
+            </div>
             {response.ai_reasoning && (
               <p className="mt-1.5 text-xs text-zinc-500 italic">
                 &ldquo;{response.ai_reasoning}&rdquo;

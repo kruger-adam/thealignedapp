@@ -30,6 +30,7 @@ export default async function AIProfilePage() {
       vote,
       updated_at,
       ai_reasoning,
+      ai_model,
       question:questions (
         id,
         content,
@@ -46,6 +47,7 @@ export default async function AIProfilePage() {
     vote: r.vote as VoteType,
     updated_at: r.updated_at as string,
     ai_reasoning: r.ai_reasoning as string | null,
+    ai_model: r.ai_model as string | null,
     question: Array.isArray(r.question) ? r.question[0] : r.question,
   }));
 

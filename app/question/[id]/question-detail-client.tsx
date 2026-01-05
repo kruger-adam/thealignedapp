@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { QuestionWithStats, VoteType, Comment, MentionSuggestion, Voter, AI_MENTION } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, getModelDisplayInfo } from '@/lib/utils';
 import { VoterList } from '@/components/voter-list';
 import { useToast } from '@/components/ui/toast';
 
@@ -82,7 +82,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   const [isPrivateMode, setIsPrivateMode] = useState(false);
 
   // AI vote state
-  const [aiVote, setAiVote] = useState<{ vote: VoteType; reasoning: string | null } | null>(null);
+  const [aiVote, setAiVote] = useState<{ vote: VoteType; reasoning: string | null; ai_model?: string | null } | null>(null);
   const [loadingAiVote, setLoadingAiVote] = useState(false);
 
   const hasVoted = !!localUserVote;
@@ -100,7 +100,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     try {
       const { data, error } = await supabase
         .from('responses')
-        .select('vote, ai_reasoning')
+        .select('vote, ai_reasoning, ai_model')
         .eq('question_id', question.id)
         .eq('is_ai', true)
         .limit(1)
@@ -110,6 +110,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
         setAiVote({
           vote: data.vote as VoteType,
           reasoning: data.ai_reasoning,
+          ai_model: data.ai_model,
         });
       }
     } catch (err) {
@@ -1031,10 +1032,22 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                       <Bot className="h-3.5 w-3.5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
                           AI voted {aiVote.vote === 'YES' ? 'Yes' : aiVote.vote === 'NO' ? 'No' : 'Not Sure'}
                         </span>
+                        {aiVote.ai_model && (() => {
+                          const modelInfo = getModelDisplayInfo(aiVote.ai_model);
+                          return (
+                            <span className={cn(
+                              "px-1.5 py-0.5 text-[10px] font-medium rounded",
+                              modelInfo.bgColor,
+                              modelInfo.textColor
+                            )}>
+                              {modelInfo.shortName}
+                            </span>
+                          );
+                        })()}
                       </div>
                       {aiVote.reasoning && (
                         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
