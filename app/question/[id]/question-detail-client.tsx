@@ -132,7 +132,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     const oldVote = localUserVote;
     const newStats = { ...localStats };
 
-    // Remove old vote count (SKIP doesn't affect total_votes for percentage calculation)
+    // Remove old vote count
     if (oldVote) {
       if (oldVote === 'YES') { newStats.yes_count--; newStats.total_votes--; }
       else if (oldVote === 'NO') { newStats.no_count--; newStats.total_votes--; }
@@ -146,7 +146,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
       else if (newVote === 'UNSURE') { newStats.unsure_count++; newStats.total_votes++; }
     }
 
-    // Recalculate percentages (based on non-SKIP votes)
+    // Recalculate percentages
     if (newStats.total_votes > 0) {
       newStats.yes_percentage = Math.round((newStats.yes_count / newStats.total_votes) * 100);
       newStats.no_percentage = Math.round((newStats.no_count / newStats.total_votes) * 100);
@@ -234,7 +234,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     });
   };
 
-  // Fetch voters (exclude anonymous and SKIP votes)
+  // Fetch voters (exclude anonymous votes)
   const fetchVoters = async () => {
     if (voters.length > 0 || anonymousCounts.YES > 0 || anonymousCounts.NO > 0 || anonymousCounts.UNSURE > 0) {
       setShowVoters(!showVoters);
