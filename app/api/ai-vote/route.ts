@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Lazy initialization to avoid build-time errors
-function getOpenAI() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+function getGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+  return new GoogleGenerativeAI(apiKey);
 }
 
 // Use service role to bypass RLS (AI votes are system-generated)
@@ -26,7 +28,14 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabase();
-    const openai = getOpenAI();
+    
+    // Check for API key
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured');
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+    }
+    
+    const genAI = getGemini();
 
     // If content not provided, fetch question details from the database
     let questionContent = providedContent;
@@ -73,27 +82,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'AI already voted' }, { status: 200 });
     }
 
-    // Ask GPT to vote + rationale
-    const systemPrompt = `You are voting on a yes/no question in a polling app. Respond with exactly:
+    // Ask Gemini to vote + rationale
+    const prompt = `You are voting on a yes/no question in a polling app. Respond with exactly:
 VOTE: YES|NO|UNSURE
 REASON: one concise sentence (<= 25 words) explaining why you chose that vote.
 
 Guidelines:
 - Choose UNSURE only if truly ambiguous or heavily context-dependent.
 - Otherwise pick YES or NO decisively.
-- Keep the reason short, clear, and conversational.`;
+- Keep the reason short, clear, and conversational.
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Question: "${questionContent}"\n\nReturn vote + reason in the specified format.` },
-      ],
-      max_tokens: 150,
-      temperature: 0.7,
+Question: "${questionContent}"
+
+Return vote + reason in the specified format.`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-3-flash-preview',
+      generationConfig: {
+        maxOutputTokens: 150,
+        temperature: 0.7,
+      },
     });
 
-    const responseText = completion.choices[0].message?.content?.trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+
+    // Log token usage
+    const usageMetadata = response.usageMetadata;
+    if (usageMetadata) {
+      console.log('AI vote token usage:', {
+        prompt_tokens: usageMetadata.promptTokenCount,
+        completion_tokens: usageMetadata.candidatesTokenCount,
+        total_tokens: usageMetadata.totalTokenCount,
+      });
+    }
+
+    const responseText = response.text().trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
     console.log('AI vote raw response:', responseText);
     
     // Parse the vote and reason
