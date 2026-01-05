@@ -121,36 +121,54 @@ Return vote + reason in the specified format.`;
     }
 
     const responseText = response.text().trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
-    console.log('AI vote raw response:', responseText);
+    console.log('AI vote raw response:', JSON.stringify(responseText));
     
     // Parse the vote and reason
     let vote: 'YES' | 'NO' | 'UNSURE' = 'UNSURE';
     let aiReasoning = 'No reason provided.';
     
-    // Parse vote - look for VOTE: followed by YES, NO, or UNSURE
-    const voteMatch = responseText.match(/VOTE:\s*(YES|NO|UNSURE)/i);
+    // Parse vote - look for VOTE: followed by YES, NO, or UNSURE (with optional markdown)
+    const voteMatch = responseText.match(/\*?\*?VOTE:?\*?\*?\s*(YES|NO|UNSURE)/i);
     if (voteMatch) {
       const v = voteMatch[1].toUpperCase();
       if (v === 'YES' || v === 'NO' || v === 'UNSURE') vote = v;
     }
     
     // Parse reason - try multiple patterns to handle different response formats
-    // Pattern 1: REASON: text (on same line or next line)
-    let reasonMatch = responseText.match(/REASON:\s*([^\n]+)/i);
-    if (reasonMatch && reasonMatch[1]) {
-      aiReasoning = reasonMatch[1].trim();
-    } else {
-      // Pattern 2: REASON on one line, text on next line
-      reasonMatch = responseText.match(/REASON:\s*\n\s*([^\n]+)/i);
-      if (reasonMatch && reasonMatch[1]) {
-        aiReasoning = reasonMatch[1].trim();
-      } else {
-        // Pattern 3: Split by REASON: and take first line after it
-        const parts = responseText.split(/REASON:\s*/i);
-        if (parts.length > 1) {
-          const potentialReason = parts[1].split('\n')[0].trim();
-          if (potentialReason && potentialReason.length > 0) {
-            aiReasoning = potentialReason;
+    // Try various labels: REASON, Reasoning, Rationale, Because, Explanation, etc.
+    const reasonPatterns = [
+      /\*?\*?REASON(?:ING)?:?\*?\*?\s*(.+)/i,
+      /\*?\*?RATIONALE:?\*?\*?\s*(.+)/i,
+      /\*?\*?EXPLANATION:?\*?\*?\s*(.+)/i,
+      /\*?\*?BECAUSE:?\*?\*?\s*(.+)/i,
+      /\*?\*?WHY:?\*?\*?\s*(.+)/i,
+    ];
+    
+    for (const pattern of reasonPatterns) {
+      const match = responseText.match(pattern);
+      if (match && match[1]) {
+        // Get just the first sentence/line
+        let extracted = match[1].trim();
+        // If it spans multiple lines, take just the first meaningful line
+        const firstLine = extracted.split('\n')[0].trim();
+        if (firstLine.length > 0) {
+          aiReasoning = firstLine;
+          break;
+        }
+      }
+    }
+    
+    // Fallback: If we found a vote but still no reason, try to extract text after the vote line
+    if (aiReasoning === 'No reason provided.' && vote !== 'UNSURE') {
+      const lines = responseText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      // Find a line that doesn't start with VOTE and isn't just the vote value
+      for (const line of lines) {
+        if (!line.match(/^(\*?\*?)?VOTE/i) && !line.match(/^(YES|NO|UNSURE)$/i)) {
+          // This might be the reasoning
+          const cleaned = line.replace(/^(\*?\*?)?(REASON|REASONING|RATIONALE|EXPLANATION|BECAUSE|WHY):?\*?\*?\s*/i, '').trim();
+          if (cleaned.length > 5) { // At least some meaningful content
+            aiReasoning = cleaned;
+            break;
           }
         }
       }
@@ -158,9 +176,13 @@ Return vote + reason in the specified format.`;
     
     // Clean up any markdown formatting that might be present
     if (aiReasoning && aiReasoning !== 'No reason provided.') {
-      aiReasoning = aiReasoning.replace(/^\*+|\*+$/g, '').trim();
-      // Remove any trailing punctuation that might be from parsing
+      // Remove markdown bold/italic markers
+      aiReasoning = aiReasoning.replace(/^\*+\s*|\s*\*+$/g, '').trim();
+      aiReasoning = aiReasoning.replace(/\*\*/g, '').trim();
+      // Remove any leading/trailing quotes
       aiReasoning = aiReasoning.replace(/^["']|["']$/g, '').trim();
+      // Remove any trailing punctuation artifacts
+      aiReasoning = aiReasoning.replace(/\s*\*+$/, '').trim();
     }
     
     console.log('Parsed vote:', vote, 'reason:', aiReasoning);
