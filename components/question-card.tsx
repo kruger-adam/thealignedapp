@@ -1475,8 +1475,8 @@ export function QuestionCard({
 
         {/* AI Insight - Show after voting or if author */}
         {canSeeResults && aiVote && (
-          <div className="w-full animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-start gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 dark:from-violet-950/30 dark:to-indigo-950/30">
+          <Link href="/profile/ai" className="block w-full animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 p-3 transition-colors hover:from-violet-100 hover:to-indigo-100 dark:from-violet-950/30 dark:to-indigo-950/30 dark:hover:from-violet-950/50 dark:hover:to-indigo-950/50">
               <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
                 <Bot className="h-3.5 w-3.5 text-white" />
               </div>
@@ -1505,7 +1505,7 @@ export function QuestionCard({
                 )}
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Stats Row - votes and comments */}

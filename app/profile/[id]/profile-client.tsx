@@ -859,14 +859,17 @@ function StanceItem({ response }: { response: ResponseWithQuestion }) {
   const Icon = config.icon;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+    <Link
+      href={`/question/${response.question.id}`}
+      className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+    >
       <div className={cn('rounded-full p-2', config.bg)}>
         <Icon className={cn('h-4 w-4', config.color)} />
       </div>
       <p className="flex-1 text-sm text-zinc-900 dark:text-zinc-100">
         {response.question.content}
       </p>
-    </div>
+    </Link>
   );
 }
 
