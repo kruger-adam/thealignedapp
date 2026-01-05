@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Limit execution time to reduce CPU usage
+export const maxDuration = 10;
+
 // Lazy initialization to avoid build-time errors
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;

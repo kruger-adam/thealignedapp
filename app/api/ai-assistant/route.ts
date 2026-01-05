@@ -2,6 +2,9 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
+// Limit execution time to reduce CPU usage
+export const maxDuration = 30;
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

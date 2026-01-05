@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Limit execution time to reduce CPU usage
+export const maxDuration = 10;
+
 const CATEGORIES = [
   'Hypothetical',
   'Ethics',

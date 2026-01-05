@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
+// Limit execution time to reduce CPU usage
+export const maxDuration = 60;
+
 // Lazy initialization to avoid build-time errors
 function getOpenAI() {
   return new OpenAI({
@@ -102,41 +105,38 @@ Respond with ONLY the question.`
     
     console.log('Using baseUrl:', baseUrl);
 
-    // Trigger AI vote on the new question
-    try {
-      console.log('Triggering AI vote...');
-      const voteResponse = await fetch(`${baseUrl}/api/ai-vote`, {
+    // Trigger AI vote and categorization in parallel to reduce CPU time
+    const [voteResult, catResult] = await Promise.allSettled([
+      fetch(`${baseUrl}/api/ai-vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: newQuestion.id }),
-      });
-      const voteResult = await voteResponse.text();
-      console.log('AI vote response:', voteResponse.status, voteResult);
-    } catch (voteError) {
-      console.error('Error triggering AI vote:', voteError);
-    }
-
-    // Trigger categorization
-    try {
-      console.log('Triggering categorization...');
-      const catResponse = await fetch(`${baseUrl}/api/categorize`, {
+      }).catch(err => {
+        console.error('Error triggering AI vote:', err);
+        return null;
+      }),
+      fetch(`${baseUrl}/api/categorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: questionContent }),
-      });
-      const catResult = await catResponse.json();
-      console.log('Categorization response:', catResponse.status, catResult);
-      
-      // Update question with category
-      if (catResult.category) {
-        await supabase
-          .from('questions')
-          .update({ category: catResult.category })
-          .eq('id', newQuestion.id);
-        console.log('Updated question category to:', catResult.category);
-      }
-    } catch (catError) {
-      console.error('Error triggering categorization:', catError);
+      }).then(res => res.json()).catch(err => {
+        console.error('Error triggering categorization:', err);
+        return { category: null };
+      })
+    ]);
+
+    // Handle vote result
+    if (voteResult.status === 'fulfilled' && voteResult.value) {
+      console.log('AI vote response:', voteResult.value.status);
+    }
+
+    // Handle categorization result and update question
+    if (catResult.status === 'fulfilled' && catResult.value?.category) {
+      await supabase
+        .from('questions')
+        .update({ category: catResult.value.category })
+        .eq('id', newQuestion.id);
+      console.log('Updated question category to:', catResult.value.category);
     }
 
     // NOTE: Image generation disabled to reduce costs. Uncomment to re-enable.
