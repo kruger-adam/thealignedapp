@@ -86,23 +86,23 @@ export async function POST(req: Request) {
     }
 
     // Ask Gemini to vote + rationale
-    const prompt = `You are voting on a yes/no question in a polling app. Respond with exactly:
-VOTE: YES|NO|UNSURE
-REASON: one concise sentence (<= 25 words) explaining why you chose that vote.
+    const prompt = `Vote on this yes/no poll question. You MUST respond with EXACTLY two lines:
 
-Guidelines:
-- Choose UNSURE only if truly ambiguous or heavily context-dependent.
-- Otherwise pick YES or NO decisively.
-- Keep the reason short, clear, and conversational.
+Line 1: VOTE: followed by YES, NO, or UNSURE
+Line 2: REASON: followed by a one-sentence explanation (under 25 words)
+
+Example response format:
+VOTE: YES
+REASON: This seems reasonable based on common practice.
 
 Question: "${questionContent}"
 
-Return vote + reason in the specified format.`;
+Respond now with your vote and reason (both lines required):`;
 
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       generationConfig: {
-        maxOutputTokens: 150,
+        maxOutputTokens: 256, // Increased to ensure full response
         temperature: 0.7,
       },
     });
@@ -110,7 +110,15 @@ Return vote + reason in the specified format.`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
 
-    // Log token usage
+    // Log finish reason and token usage for debugging
+    const candidate = response.candidates?.[0];
+    if (candidate) {
+      console.log('AI vote finish reason:', candidate.finishReason);
+      if (candidate.safetyRatings) {
+        console.log('AI vote safety ratings:', JSON.stringify(candidate.safetyRatings));
+      }
+    }
+
     const usageMetadata = response.usageMetadata;
     if (usageMetadata) {
       console.log('AI vote token usage:', {
