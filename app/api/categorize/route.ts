@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 // Limit execution time to reduce CPU usage
 export const maxDuration = 10;
@@ -25,7 +26,7 @@ export type Category = typeof CATEGORIES[number];
 
 export async function POST(request: NextRequest) {
   try {
-    const { question } = await request.json();
+    const { question, questionId } = await request.json();
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 });
@@ -85,7 +86,25 @@ Respond with ONLY the category name, nothing else. If the question doesn't clear
     
     // Log if we couldn't match the category (for debugging)
     if (category === 'Other' && cleanedCategory && cleanedCategory.toLowerCase() !== 'other') {
-      console.warn(`Could not match category "${cleanedCategory}" (raw: "${rawCategory}") for question. Defaulting to "Other".`);
+      console.warn(`[CATEGORIZATION] Could not match category "${cleanedCategory}" (raw: "${rawCategory}") for question: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}". Defaulting to "Other".`);
+    } else if (category !== 'Other') {
+      console.log(`[CATEGORIZATION] Successfully categorized question: "${question.substring(0, 100)}${question.length > 100 ? '...' : ''}" -> "${category}"`);
+    }
+    
+    // If questionId is provided, update the database directly
+    // This ensures the update happens within this function's lifecycle
+    if (questionId) {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from('questions')
+        .update({ category })
+        .eq('id', questionId);
+      
+      if (error) {
+        console.error(`[CATEGORIZATION] Error updating question ${questionId} category to "${category}":`, error);
+      } else {
+        console.log(`[CATEGORIZATION] Updated question ${questionId} in database with category: "${category}"`);
+      }
     }
     
     return NextResponse.json({ category });

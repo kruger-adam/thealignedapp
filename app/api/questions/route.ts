@@ -75,35 +75,15 @@ export async function POST(request: NextRequest) {
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
 
-    // Categorize in background
+    // Categorize in background - the /api/categorize endpoint now handles the DB update
     fetch(`${baseUrl}/api/categorize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: content.trim() }),
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Categorization API returned ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(async (data) => {
-        if (data.category) {
-          // Create a new supabase client for the background update
-          const updateClient = await createClient();
-          const { error } = await updateClient
-            .from('questions')
-            .update({ category: data.category })
-            .eq('id', newQuestion.id);
-          
-          if (error) {
-            console.error('Error updating question category:', error);
-          } else {
-            console.log(`Updated question ${newQuestion.id} category to: ${data.category}`);
-          }
-        }
-      })
-      .catch(err => console.error('Error categorizing question:', err));
+      body: JSON.stringify({ 
+        question: content.trim(),
+        questionId: newQuestion.id,  // Pass ID so categorize endpoint can update DB directly
+      }),
+    }).catch(err => console.error('Error triggering categorization:', err));
 
     // Check if question matches a prompt and regenerate if needed
     fetch(`${baseUrl}/api/prompts`, {

@@ -226,21 +226,16 @@ Respond with ONLY the question text, nothing else.`
       // Continue anyway - AI vote is nice to have but not critical
     }
 
-    // 4. Trigger categorization
+    // 4. Trigger categorization (endpoint now handles DB update directly)
     try {
-      const catResponse = await fetch(`${baseUrl}/api/categorize`, {
+      await fetch(`${baseUrl}/api/categorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: pollQuestion }),
+        body: JSON.stringify({ 
+          question: pollQuestion,
+          questionId: newQuestion.id,  // Pass ID so categorize endpoint updates DB directly
+        }),
       });
-      const catResult = await catResponse.json();
-      
-      if (catResult.category) {
-        await supabase
-          .from('questions')
-          .update({ category: catResult.category })
-          .eq('id', newQuestion.id);
-      }
     } catch (catError) {
       console.error('Error triggering categorization:', catError);
     }

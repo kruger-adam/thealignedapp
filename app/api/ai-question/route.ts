@@ -106,6 +106,7 @@ Respond with ONLY the question.`
     console.log('Using baseUrl:', baseUrl);
 
     // Trigger AI vote and categorization in parallel to reduce CPU time
+    // The /api/categorize endpoint now handles the DB update directly
     const [voteResult, catResult] = await Promise.allSettled([
       fetch(`${baseUrl}/api/ai-vote`, {
         method: 'POST',
@@ -118,10 +119,13 @@ Respond with ONLY the question.`
       fetch(`${baseUrl}/api/categorize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: questionContent }),
-      }).then(res => res.json()).catch(err => {
+        body: JSON.stringify({ 
+          question: questionContent,
+          questionId: newQuestion.id,  // Pass ID so categorize endpoint updates DB directly
+        }),
+      }).catch(err => {
         console.error('Error triggering categorization:', err);
-        return { category: null };
+        return null;
       })
     ]);
 
@@ -130,13 +134,9 @@ Respond with ONLY the question.`
       console.log('AI vote response:', voteResult.value.status);
     }
 
-    // Handle categorization result and update question
-    if (catResult.status === 'fulfilled' && catResult.value?.category) {
-      await supabase
-        .from('questions')
-        .update({ category: catResult.value.category })
-        .eq('id', newQuestion.id);
-      console.log('Updated question category to:', catResult.value.category);
+    // Handle categorization result (DB update now happens in /api/categorize)
+    if (catResult.status === 'fulfilled') {
+      console.log('Categorization completed for question:', newQuestion.id);
     }
 
     // NOTE: Image generation disabled to reduce costs. Uncomment to re-enable.
