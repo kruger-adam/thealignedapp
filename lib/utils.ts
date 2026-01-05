@@ -38,7 +38,7 @@ export function getModelDisplayInfo(model: AIModel | null | undefined): ModelDis
     if (modelLower.includes('3') && modelLower.includes('flash')) {
       return {
         displayName: 'Gemini 3 Flash',
-        shortName: 'Gemini 3',
+        shortName: 'Gemini 3 Flash',
         bgColor: 'bg-blue-100 dark:bg-blue-900/30',
         textColor: 'text-blue-700 dark:text-blue-400',
         borderColor: 'border-blue-200 dark:border-blue-800',
@@ -57,8 +57,8 @@ export function getModelDisplayInfo(model: AIModel | null | undefined): ModelDis
   if (modelLower.includes('gpt')) {
     if (modelLower.includes('4.1') || modelLower.includes('4o')) {
       return {
-        displayName: 'GPT-4.1 Mini',
-        shortName: 'GPT-4.1',
+        displayName: 'GPT-4.1 mini',
+        shortName: 'GPT-4.1 mini',
         bgColor: 'bg-green-100 dark:bg-green-900/30',
         textColor: 'text-green-700 dark:text-green-400',
         borderColor: 'border-green-200 dark:border-green-800',
