@@ -125,13 +125,15 @@ export function AIAssistantFAB() {
           'hover:from-violet-600 hover:to-indigo-700 hover:shadow-xl hover:scale-105',
           'active:scale-95',
           'focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2',
+          // Hide on mobile when panel is open (mobile sheet has its own close button in header)
+          showAsOpen && 'hidden lg:flex',
           // Adjust position when panel is open on desktop
           'lg:bottom-6 lg:right-6',
           showAsOpen && 'lg:right-[calc(420px+1.5rem)]',
           // Genie "pull" effect - scale down slightly when opening
-          showAsOpen && !isClosing && 'scale-90',
+          showAsOpen && !isClosing && 'lg:scale-90',
           // Genie "push" effect - scale up when closing (the panel is returning to this point)
-          isClosing && 'scale-110'
+          isClosing && 'lg:scale-110'
         )}
         aria-label={showAsOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
       >
