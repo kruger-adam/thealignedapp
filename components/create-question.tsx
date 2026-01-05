@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock, Bot } from 'lucide-react';
+import { Plus, Send, Loader2, Lock, Unlock, Sparkles, Clock, Bot, Wand2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
@@ -175,6 +175,57 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   const [hasExpiration, setHasExpiration] = useState(false);
   const [expirationHours, setExpirationHours] = useState<number | null>(null); // null = no expiration
   const [dynamicPrompts, setDynamicPrompts] = useState<Record<string, string[]> | null>(null);
+  
+  // Reword suggestion state
+  const [isRewording, setIsRewording] = useState(false);
+  const [rewordSuggestion, setRewordSuggestion] = useState<string | null>(null);
+  
+  // Handle AI reword request
+  const handleReword = useCallback(async () => {
+    if (!content.trim() || isRewording) return;
+    
+    setIsRewording(true);
+    setRewordSuggestion(null);
+    
+    try {
+      const response = await fetch('/api/ai-reword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: content.trim(),
+          type: 'question',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        showToast(data.error || 'Failed to reword question', 'error');
+        setIsRewording(false);
+        return;
+      }
+      
+      setRewordSuggestion(data.reworded);
+    } catch (error) {
+      console.error('Error rewording:', error);
+      showToast('Failed to reword question. Please try again.', 'error');
+    } finally {
+      setIsRewording(false);
+    }
+  }, [content, isRewording, showToast]);
+  
+  // Accept the reword suggestion
+  const acceptReword = useCallback(() => {
+    if (rewordSuggestion) {
+      setContent(rewordSuggestion);
+      setRewordSuggestion(null);
+    }
+  }, [rewordSuggestion]);
+  
+  // Decline the reword suggestion
+  const declineReword = useCallback(() => {
+    setRewordSuggestion(null);
+  }, []);
   
   // Handle opening AI assistant for brainstorming
   const handleAIBrainstorm = useCallback(() => {
@@ -566,7 +617,43 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
               </button>
             </div>
             
-            {/* Actions row: character count, cancel, post */}
+            {/* Reword suggestion */}
+            {rewordSuggestion && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/50">
+                <div className="flex items-start gap-2">
+                  <Wand2 className="h-4 w-4 mt-0.5 text-violet-600 dark:text-violet-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">
+                      AI Suggestion
+                    </p>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                      {rewordSuggestion}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        onClick={acceptReword}
+                        className="h-7 gap-1 bg-violet-600 hover:bg-violet-700 text-white"
+                      >
+                        <Check className="h-3 w-3" />
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={declineReword}
+                        className="h-7 gap-1 text-zinc-600 dark:text-zinc-400"
+                      >
+                        <X className="h-3 w-3" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Actions row: character count, cancel, reword, post */}
             <div className="flex items-center justify-between">
               <span
                 className={cn(
@@ -591,9 +678,25 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
                     setIsAnonymous(false);
                     setHasExpiration(false);
                     setExpirationHours(null);
+                    setRewordSuggestion(null);
                   }}
                 >
                   Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReword}
+                  disabled={!content.trim() || isRewording || isLoading}
+                  className="gap-1.5"
+                  title="AI will suggest a reworded version"
+                >
+                  {isRewording ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  Reword
                 </Button>
                 <Button
                   ref={postButtonRef}

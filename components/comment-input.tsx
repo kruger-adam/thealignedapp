@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { Send, Bot } from 'lucide-react';
+import { Send, Bot, Wand2, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { MentionSuggestion, AI_MENTION, Comment } from '@/lib/types';
@@ -44,7 +44,58 @@ export function CommentInput({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [isRewording, setIsRewording] = useState(false);
+  const [rewordSuggestion, setRewordSuggestion] = useState<string | null>(null);
   const { showToast } = useToast();
+
+  // Handle AI reword request
+  const handleReword = async () => {
+    if (!commentText.trim() || isRewording) return;
+    
+    setIsRewording(true);
+    setRewordSuggestion(null);
+    
+    try {
+      const response = await fetch('/api/ai-reword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: commentText.trim(),
+          type: 'comment',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        showToast(data.error || 'Failed to reword comment', 'error');
+        setIsRewording(false);
+        return;
+      }
+      
+      setRewordSuggestion(data.reworded);
+    } catch (error) {
+      console.error('Error rewording:', error);
+      showToast('Failed to reword comment. Please try again.', 'error');
+    } finally {
+      setIsRewording(false);
+    }
+  };
+  
+  // Accept the reword suggestion
+  const acceptReword = () => {
+    if (rewordSuggestion) {
+      setCommentText(rewordSuggestion);
+      setRewordSuggestion(null);
+      inputRef.current?.focus();
+    }
+  };
+  
+  // Decline the reword suggestion
+  const declineReword = () => {
+    setRewordSuggestion(null);
+    inputRef.current?.focus();
+  };
 
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
@@ -301,7 +352,43 @@ export function CommentInput({
   };
 
   return (
-    <div className="relative">
+    <div className="relative space-y-2">
+      {/* Reword suggestion */}
+      {rewordSuggestion && (
+        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/50">
+          <div className="flex items-start gap-2">
+            <Wand2 className="h-4 w-4 mt-0.5 text-violet-600 dark:text-violet-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">
+                AI Suggestion
+              </p>
+              <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                {rewordSuggestion}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Button
+                  size="sm"
+                  onClick={acceptReword}
+                  className="h-7 gap-1 bg-violet-600 hover:bg-violet-700 text-white"
+                >
+                  <Check className="h-3 w-3" />
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={declineReword}
+                  className="h-7 gap-1 text-zinc-600 dark:text-zinc-400"
+                >
+                  <X className="h-3 w-3" />
+                  Decline
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mention suggestions */}
       {showMentions && mentionSuggestions.length > 0 && (
         <div className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
@@ -386,6 +473,20 @@ export function CommentInput({
             }}
           />
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleReword}
+          disabled={isRewording || !commentText.trim() || submittingComment}
+          className="flex-shrink-0"
+          title="AI will suggest a reworded version"
+        >
+          {isRewording ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Wand2 className="h-4 w-4" />
+          )}
+        </Button>
         <Button
           size="icon"
           variant="ghost"
