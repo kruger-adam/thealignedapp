@@ -83,6 +83,68 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to get "Ask Them About" - questions where user_a is UNSURE but user_b has an opinion (YES/NO)
+CREATE OR REPLACE FUNCTION get_ask_them_about(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)
+RETURNS TABLE (
+    question_id UUID,
+    content TEXT,
+    their_vote vote_type,
+    controversy_score NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        q.id,
+        q.content,
+        r2.vote,
+        qs.controversy_score
+    FROM responses r1
+    INNER JOIN responses r2 ON r1.question_id = r2.question_id
+    INNER JOIN questions q ON q.id = r1.question_id
+    INNER JOIN question_stats qs ON qs.question_id = q.id
+    WHERE r1.user_id = user_a 
+      AND r2.user_id = user_b 
+      AND r1.vote = 'UNSURE'
+      AND r2.vote IN ('YES', 'NO')
+      -- Exclude anonymous votes and AI votes
+      AND r1.is_anonymous = false AND r2.is_anonymous = false
+      AND r1.is_ai = false AND r2.is_ai = false
+    ORDER BY qs.controversy_score DESC
+    LIMIT limit_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get "Share Your Take" - questions where user_a has an opinion (YES/NO) but user_b is UNSURE
+CREATE OR REPLACE FUNCTION get_share_your_take(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)
+RETURNS TABLE (
+    question_id UUID,
+    content TEXT,
+    your_vote vote_type,
+    controversy_score NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        q.id,
+        q.content,
+        r1.vote,
+        qs.controversy_score
+    FROM responses r1
+    INNER JOIN responses r2 ON r1.question_id = r2.question_id
+    INNER JOIN questions q ON q.id = r1.question_id
+    INNER JOIN question_stats qs ON qs.question_id = q.id
+    WHERE r1.user_id = user_a 
+      AND r2.user_id = user_b 
+      AND r1.vote IN ('YES', 'NO')
+      AND r2.vote = 'UNSURE'
+      -- Exclude anonymous votes and AI votes
+      AND r1.is_anonymous = false AND r2.is_anonymous = false
+      AND r1.is_ai = false AND r2.is_ai = false
+    ORDER BY qs.controversy_score DESC
+    LIMIT limit_count;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Function to get divergence (disagreements)
 -- Updated: Only show YES vs NO disagreements, not UNSURE vs YES/NO
 CREATE OR REPLACE FUNCTION get_divergence(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)

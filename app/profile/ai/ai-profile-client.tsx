@@ -14,6 +14,8 @@ import {
   Bot,
   Sparkles,
   MessageSquare,
+  Lightbulb,
+  MessageSquareShare,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -79,6 +81,16 @@ interface AIProfileClientProps {
     user_vote: VoteType;
     ai_vote: VoteType;
   }>;
+  askThemAbout: Array<{
+    question_id: string;
+    content: string;
+    their_vote: VoteType;
+  }>;
+  shareYourTake: Array<{
+    question_id: string;
+    content: string;
+    your_vote: VoteType;
+  }>;
   currentUserId?: string;
   createdQuestions: CreatedQuestion[];
 }
@@ -99,6 +111,8 @@ export function AIProfileClient({
   compatibility,
   commonGround,
   divergence,
+  askThemAbout,
+  shareYourTake,
   currentUserId,
   createdQuestions,
 }: AIProfileClientProps) {
@@ -310,7 +324,7 @@ export function AIProfileClient({
       {activeTab === 'comparison' && (
         <div className="space-y-6">
           {/* Common Ground */}
-          {(() => {
+          {commonGround.length > 0 && (() => {
             const startIdx = commonGroundPage * PAGE_SIZE;
             const endIdx = Math.min(startIdx + PAGE_SIZE, commonGround.length);
             const pageItems = commonGround.slice(startIdx, endIdx);
@@ -350,36 +364,33 @@ export function AIProfileClient({
                       </div>
                     )}
                   </div>
+                  <p className="text-sm text-zinc-500">Questions where you both voted the same way.</p>
                 </CardHeader>
                 <CardContent>
-                  {pageItems.length > 0 ? (
-                    <div className="space-y-2">
-                      {pageItems.map((item) => (
-                        <Link
-                          key={item.question_id}
-                          href={`/question/${item.question_id}`}
-                          className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
-                        >
-                          <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
-                            {(() => {
-                              const Icon = voteConfig[item.shared_vote].icon;
-                              return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
-                            })()}
-                          </div>
-                          <p className="flex-1 text-sm">{item.content}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No common ground found yet. Vote on more questions!</p>
-                  )}
+                  <div className="space-y-2">
+                    {pageItems.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
+                      >
+                        <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
+                          {(() => {
+                            const Icon = voteConfig[item.shared_vote].icon;
+                            return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
+                          })()}
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                      </Link>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             );
           })()}
 
           {/* Divergence */}
-          {(() => {
+          {divergence.length > 0 && (() => {
             const startIdx = divergencePage * PAGE_SIZE;
             const endIdx = Math.min(startIdx + PAGE_SIZE, divergence.length);
             const pageItems = divergence.slice(startIdx, endIdx);
@@ -419,41 +430,113 @@ export function AIProfileClient({
                       </div>
                     )}
                   </div>
+                  <p className="text-sm text-zinc-500">Questions where you took opposite stances.</p>
                 </CardHeader>
                 <CardContent>
-                  {pageItems.length > 0 ? (
-                    <div className="space-y-2">
-                      {pageItems.map((item) => (
-                        <Link
-                          key={item.question_id}
-                          href={`/question/${item.question_id}`}
-                          className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
-                        >
-                          <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
-                            <span className="flex items-center gap-1 text-xs">
-                              <span className="w-8 font-medium">You:</span>
-                              <span className={voteConfig[item.user_vote].color}>
-                                {voteConfig[item.user_vote].label}
-                              </span>
+                  <div className="space-y-2">
+                    {pageItems.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
+                      >
+                        <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-8 font-medium">You:</span>
+                            <span className={voteConfig[item.user_vote].color}>
+                              {voteConfig[item.user_vote].label}
                             </span>
-                            <span className="flex items-center gap-1 text-xs">
-                              <span className="w-8 font-medium">AI:</span>
-                              <span className={voteConfig[item.ai_vote].color}>
-                                {voteConfig[item.ai_vote].label}
-                              </span>
+                          </span>
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-8 font-medium">AI:</span>
+                            <span className={voteConfig[item.ai_vote].color}>
+                              {voteConfig[item.ai_vote].label}
                             </span>
-                          </div>
-                          <p className="flex-1 text-sm">{item.content}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No disagreements found! You and the AI think alike.</p>
-                  )}
+                          </span>
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                      </Link>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             );
           })()}
+
+          {/* Ask Them About (Ask AI About) */}
+          {askThemAbout.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-blue-600">
+                  <Lightbulb className="h-5 w-5" />
+                  Ask AI About
+                </CardTitle>
+                <p className="text-sm text-zinc-500">Questions where you&apos;re undecided but AI has an opinion.</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {askThemAbout.map((item) => (
+                    <Link
+                      key={item.question_id}
+                      href={`/question/${item.question_id}`}
+                      className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 transition-colors hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40"
+                    >
+                      <div className={cn('rounded-full p-1.5', voteConfig[item.their_vote].bg)}>
+                        {(() => {
+                          const Icon = voteConfig[item.their_vote].icon;
+                          return <Icon className={cn('h-4 w-4', voteConfig[item.their_vote].color)} />;
+                        })()}
+                      </div>
+                      <p className="flex-1 text-sm">{item.content}</p>
+                      <span className="text-xs text-zinc-500">
+                        AI said {voteConfig[item.their_vote].label}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Share Your Take */}
+          {shareYourTake.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-violet-600">
+                  <MessageSquareShare className="h-5 w-5" />
+                  Share Your Take
+                </CardTitle>
+                <p className="text-sm text-zinc-500">Questions where you have an opinion but AI is undecided.</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {shareYourTake.map((item) => (
+                    <Link
+                      key={item.question_id}
+                      href={`/question/${item.question_id}`}
+                      className="flex items-center gap-3 rounded-lg bg-violet-50 p-3 transition-colors hover:bg-violet-100 dark:bg-violet-950/30 dark:hover:bg-violet-900/40"
+                    >
+                      <div className={cn('rounded-full p-1.5', voteConfig[item.your_vote].bg)}>
+                        {(() => {
+                          const Icon = voteConfig[item.your_vote].icon;
+                          return <Icon className={cn('h-4 w-4', voteConfig[item.your_vote].color)} />;
+                        })()}
+                      </div>
+                      <p className="flex-1 text-sm">{item.content}</p>
+                      <span className="text-xs text-zinc-500">
+                        You said {voteConfig[item.your_vote].label}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Empty state */}
+          {commonGround.length === 0 && divergence.length === 0 && askThemAbout.length === 0 && shareYourTake.length === 0 && (
+            <p className="py-8 text-center text-zinc-500">No comparison data yet. Vote on more questions to see how you compare with the AI!</p>
+          )}
         </div>
       )}
     </div>

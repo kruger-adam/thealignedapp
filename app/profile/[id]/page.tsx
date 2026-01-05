@@ -117,6 +117,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   let compatibility = null;
   let commonGround = null;
   let divergence = null;
+  let askThemAbout = null;
+  let shareYourTake = null;
 
   if (user && !isOwnProfile) {
     const { data: compatData } = await supabase.rpc('calculate_compatibility', {
@@ -141,6 +143,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       limit_count: 5,
     });
     divergence = divergeData;
+
+    const { data: askData } = await supabase.rpc('get_ask_them_about', {
+      user_a: user.id,
+      user_b: profile.id,
+      limit_count: 5,
+    });
+    askThemAbout = askData;
+
+    const { data: shareData } = await supabase.rpc('get_share_your_take', {
+      user_a: user.id,
+      user_b: profile.id,
+      limit_count: 5,
+    });
+    shareYourTake = shareData;
   }
 
   // Fetch follow counts
@@ -185,6 +201,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       compatibility={compatibility}
       commonGround={commonGround}
       divergence={divergence}
+      askThemAbout={askThemAbout}
+      shareYourTake={shareYourTake}
       currentUserId={user?.id}
       createdQuestions={createdQuestions || []}
       followCounts={{

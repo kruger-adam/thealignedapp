@@ -20,13 +20,15 @@ import {
   ChevronRight,
   Lock,
   Flame,
+  Lightbulb,
+  MessageSquareShare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { Profile, VoteType, Compatibility, CommonGround, Divergence } from '@/lib/types';
+import { Profile, VoteType, Compatibility, CommonGround, Divergence, AskThemAbout, ShareYourTake } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -84,6 +86,8 @@ interface ProfileClientProps {
   compatibility: Compatibility | null;
   commonGround: CommonGround[] | null;
   divergence: Divergence[] | null;
+  askThemAbout: AskThemAbout[] | null;
+  shareYourTake: ShareYourTake[] | null;
   currentUserId?: string;
   createdQuestions: CreatedQuestion[];
   followCounts: {
@@ -111,6 +115,8 @@ export function ProfileClient({
   compatibility,
   commonGround,
   divergence,
+  askThemAbout,
+  shareYourTake,
   currentUserId,
   createdQuestions,
   followCounts,
@@ -559,6 +565,8 @@ export function ProfileClient({
             const pageItems = filteredCommon.slice(startIdx, endIdx);
             const totalPages = Math.ceil(filteredCommon.length / PAGE_SIZE);
             
+            if (filteredCommon.length === 0) return null;
+            
             return (
               <Card>
                 <CardHeader className="pb-3">
@@ -593,32 +601,29 @@ export function ProfileClient({
                       </div>
                     )}
                   </div>
+                  <p className="text-sm text-zinc-500">Questions where you both voted the same way.</p>
                 </CardHeader>
                 <CardContent>
-                  {pageItems.length > 0 ? (
-                    <div className="space-y-2">
-                      {pageItems.map((item) => (
-                        <Link
-                          key={item.question_id}
-                          href={`/question/${item.question_id}`}
-                          className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
-                        >
-                          <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
-                            {(() => {
-                              const Icon = voteConfig[item.shared_vote].icon;
-                              return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
-                            })()}
-                          </div>
-                          <p className="flex-1 text-sm">{item.content}</p>
-                          <span className="text-xs text-zinc-500">
-                            {Math.round(item.controversy_score)}% split
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No common ground found yet.</p>
-                  )}
+                  <div className="space-y-2">
+                    {pageItems.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
+                      >
+                        <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
+                          {(() => {
+                            const Icon = voteConfig[item.shared_vote].icon;
+                            return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
+                          })()}
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                        <span className="text-xs text-zinc-500">
+                          {Math.round(item.controversy_score)}% split
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -631,6 +636,8 @@ export function ProfileClient({
             const endIdx = Math.min(startIdx + PAGE_SIZE, filteredDiverge.length);
             const pageItems = filteredDiverge.slice(startIdx, endIdx);
             const totalPages = Math.ceil(filteredDiverge.length / PAGE_SIZE);
+            
+            if (filteredDiverge.length === 0) return null;
             
             return (
               <Card>
@@ -666,41 +673,126 @@ export function ProfileClient({
                       </div>
                     )}
                   </div>
+                  <p className="text-sm text-zinc-500">Questions where you took opposite stances.</p>
                 </CardHeader>
                 <CardContent>
-                  {pageItems.length > 0 ? (
-                    <div className="space-y-2">
-                      {pageItems.map((item) => (
-                        <Link
-                          key={item.question_id}
-                          href={`/question/${item.question_id}`}
-                          className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
-                        >
-                          <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
-                            <span className="flex items-center gap-1 text-xs">
-                              <span className="w-8 font-medium">You:</span>
-                              <span className={voteConfig[item.vote_a].color}>
-                                {voteConfig[item.vote_a].label}
-                              </span>
+                  <div className="space-y-2">
+                    {pageItems.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
+                      >
+                        <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-8 font-medium">You:</span>
+                            <span className={voteConfig[item.vote_a].color}>
+                              {voteConfig[item.vote_a].label}
                             </span>
-                            <span className="flex items-center gap-1 text-xs">
-                              <span className="w-8 font-medium">They:</span>
-                              <span className={voteConfig[item.vote_b].color}>
-                                {voteConfig[item.vote_b].label}
-                              </span>
+                          </span>
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-8 font-medium">They:</span>
+                            <span className={voteConfig[item.vote_b].color}>
+                              {voteConfig[item.vote_b].label}
                             </span>
-                          </div>
-                          <p className="flex-1 text-sm">{item.content}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No disagreements found!</p>
-                  )}
+                          </span>
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                      </Link>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             );
           })()}
+
+          {/* Ask Them About */}
+          {(() => {
+            const items = askThemAbout || [];
+            if (items.length === 0) return null;
+            
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-blue-600">
+                    <Lightbulb className="h-5 w-5" />
+                    Ask Them About
+                  </CardTitle>
+                  <p className="text-sm text-zinc-500">Questions where you&apos;re undecided but they have an opinion.</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {items.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 transition-colors hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40"
+                      >
+                        <div className={cn('rounded-full p-1.5', voteConfig[item.their_vote].bg)}>
+                          {(() => {
+                            const Icon = voteConfig[item.their_vote].icon;
+                            return <Icon className={cn('h-4 w-4', voteConfig[item.their_vote].color)} />;
+                          })()}
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                        <span className="text-xs text-zinc-500">
+                          They said {voteConfig[item.their_vote].label}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Share Your Take */}
+          {(() => {
+            const items = shareYourTake || [];
+            if (items.length === 0) return null;
+            
+            return (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-violet-600">
+                    <MessageSquareShare className="h-5 w-5" />
+                    Share Your Take
+                  </CardTitle>
+                  <p className="text-sm text-zinc-500">Questions where you have an opinion but they&apos;re undecided.</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {items.map((item) => (
+                      <Link
+                        key={item.question_id}
+                        href={`/question/${item.question_id}`}
+                        className="flex items-center gap-3 rounded-lg bg-violet-50 p-3 transition-colors hover:bg-violet-100 dark:bg-violet-950/30 dark:hover:bg-violet-900/40"
+                      >
+                        <div className={cn('rounded-full p-1.5', voteConfig[item.your_vote].bg)}>
+                          {(() => {
+                            const Icon = voteConfig[item.your_vote].icon;
+                            return <Icon className={cn('h-4 w-4', voteConfig[item.your_vote].color)} />;
+                          })()}
+                        </div>
+                        <p className="flex-1 text-sm">{item.content}</p>
+                        <span className="text-xs text-zinc-500">
+                          You said {voteConfig[item.your_vote].label}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Empty state when no comparison data at all */}
+          {(!commonGround || commonGround.length === 0) && 
+           (!divergence || divergence.length === 0) && 
+           (!askThemAbout || askThemAbout.length === 0) && 
+           (!shareYourTake || shareYourTake.length === 0) && (
+            <p className="py-8 text-center text-zinc-500">No comparison data yet. Vote on more questions to see how you compare!</p>
+          )}
         </div>
       )}
     </div>

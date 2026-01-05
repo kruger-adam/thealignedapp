@@ -77,6 +77,16 @@ export default async function AIProfilePage() {
     user_vote: VoteType;
     ai_vote: VoteType;
   }> = [];
+  const askThemAbout: Array<{
+    question_id: string;
+    content: string;
+    their_vote: VoteType;
+  }> = [];
+  const shareYourTake: Array<{
+    question_id: string;
+    content: string;
+    your_vote: VoteType;
+  }> = [];
 
   if (user) {
     // Get user's votes
@@ -105,14 +115,29 @@ export default async function AIProfilePage() {
       for (const userVote of userResponses) {
         const aiData = aiVoteMap.get(userVote.question_id);
         if (aiData) {
-          // Check if one is UNSURE and the other is YES/NO - exclude from calculation
+          // Check if one is UNSURE and the other is YES/NO
           const userIsUnsure = userVote.vote === 'UNSURE';
           const aiIsUnsure = aiData.vote === 'UNSURE';
           const userHasOpinion = userVote.vote === 'YES' || userVote.vote === 'NO';
           const aiHasOpinion = aiData.vote === 'YES' || aiData.vote === 'NO';
           
-          if ((userIsUnsure && aiHasOpinion) || (aiIsUnsure && userHasOpinion)) {
-            // One has opinion, other is unsure - don't count as agreement or disagreement
+          if (userIsUnsure && aiHasOpinion) {
+            // User is unsure, AI has opinion - "Ask Them About"
+            askThemAbout.push({
+              question_id: userVote.question_id,
+              content: aiData.content,
+              their_vote: aiData.vote,
+            });
+            continue;
+          }
+          
+          if (aiIsUnsure && userHasOpinion) {
+            // AI is unsure, user has opinion - "Share Your Take"
+            shareYourTake.push({
+              question_id: userVote.question_id,
+              content: aiData.content,
+              your_vote: userVote.vote as VoteType,
+            });
             continue;
           }
           
@@ -163,6 +188,8 @@ export default async function AIProfilePage() {
       compatibility={compatibility}
       commonGround={commonGround}
       divergence={divergence}
+      askThemAbout={askThemAbout}
+      shareYourTake={shareYourTake}
       currentUserId={user?.id}
       createdQuestions={createdQuestions || []}
     />

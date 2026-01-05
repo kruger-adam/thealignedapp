@@ -120,6 +120,20 @@ export interface Divergence {
   controversy_score: number;
 }
 
+export interface AskThemAbout {
+  question_id: string;
+  content: string;
+  their_vote: VoteType;
+  controversy_score: number;
+}
+
+export interface ShareYourTake {
+  question_id: string;
+  content: string;
+  your_vote: VoteType;
+  controversy_score: number;
+}
+
 export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 'most_undecided' | 'most_sensitive' | 'most_commented';
 
 export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment';
