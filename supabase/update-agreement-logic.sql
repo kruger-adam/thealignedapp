@@ -29,8 +29,8 @@ BEGIN
         -- Exclude cases where one user voted UNSURE and the other voted YES/NO
         -- (only include if both voted UNSURE, or neither voted UNSURE)
         AND NOT (
-            (vote_a = 'UNSURE' AND vote_b IN ('YES', 'NO')) OR
-            (vote_b = 'UNSURE' AND vote_a IN ('YES', 'NO'))
+            (r1.vote = 'UNSURE' AND r2.vote IN ('YES', 'NO')) OR
+            (r2.vote = 'UNSURE' AND r1.vote IN ('YES', 'NO'))
         )
     ),
     counts AS (
