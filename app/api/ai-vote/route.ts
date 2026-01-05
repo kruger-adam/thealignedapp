@@ -126,16 +126,44 @@ Return vote + reason in the specified format.`;
     // Parse the vote and reason
     let vote: 'YES' | 'NO' | 'UNSURE' = 'UNSURE';
     let aiReasoning = 'No reason provided.';
+    
+    // Parse vote - look for VOTE: followed by YES, NO, or UNSURE
     const voteMatch = responseText.match(/VOTE:\s*(YES|NO|UNSURE)/i);
-    // More flexible regex: match REASON: followed by anything (handles markdown, newlines)
-    const reasonMatch = responseText.match(/REASON:\s*\*?\*?(.+?)(?:\*?\*?\s*$|\n|$)/i);
     if (voteMatch) {
       const v = voteMatch[1].toUpperCase();
       if (v === 'YES' || v === 'NO' || v === 'UNSURE') vote = v;
     }
-    if (reasonMatch) {
+    
+    // Parse reason - try multiple patterns to handle different response formats
+    // Pattern 1: REASON: text (on same line or next line)
+    let reasonMatch = responseText.match(/REASON:\s*([^\n]+)/i);
+    if (reasonMatch && reasonMatch[1]) {
       aiReasoning = reasonMatch[1].trim();
+    } else {
+      // Pattern 2: REASON on one line, text on next line
+      reasonMatch = responseText.match(/REASON:\s*\n\s*([^\n]+)/i);
+      if (reasonMatch && reasonMatch[1]) {
+        aiReasoning = reasonMatch[1].trim();
+      } else {
+        // Pattern 3: Split by REASON: and take first line after it
+        const parts = responseText.split(/REASON:\s*/i);
+        if (parts.length > 1) {
+          const potentialReason = parts[1].split('\n')[0].trim();
+          if (potentialReason && potentialReason.length > 0) {
+            aiReasoning = potentialReason;
+          }
+        }
+      }
     }
+    
+    // Clean up any markdown formatting that might be present
+    if (aiReasoning && aiReasoning !== 'No reason provided.') {
+      aiReasoning = aiReasoning.replace(/^\*+|\*+$/g, '').trim();
+      // Remove any trailing punctuation that might be from parsing
+      aiReasoning = aiReasoning.replace(/^["']|["']$/g, '').trim();
+    }
+    
+    console.log('Parsed vote:', vote, 'reason:', aiReasoning);
 
     // Insert the AI vote - use the author's ID but mark as AI vote
     const { error: insertError } = await supabase
