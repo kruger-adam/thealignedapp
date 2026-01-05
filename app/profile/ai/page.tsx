@@ -105,11 +105,6 @@ export default async function AIProfilePage() {
       for (const userVote of userResponses) {
         const aiData = aiVoteMap.get(userVote.question_id);
         if (aiData) {
-          // Skip SKIP votes
-          if (userVote.vote === 'SKIP' || aiData.vote === 'SKIP') {
-            continue;
-          }
-          
           // Check if one is UNSURE and the other is YES/NO - exclude from calculation
           const userIsUnsure = userVote.vote === 'UNSURE';
           const aiIsUnsure = aiData.vote === 'UNSURE';
