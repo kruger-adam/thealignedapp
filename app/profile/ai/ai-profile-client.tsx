@@ -498,13 +498,13 @@ export function AIProfileClient({
             </Card>
           )}
 
-          {/* Share Your Take */}
+          {/* You Know, AI Doesn't */}
           {shareYourTake.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-violet-600">
                   <MessageSquareShare className="h-5 w-5" />
-                  Share Your Take
+                  You Know, AI Doesn&apos;t
                 </CardTitle>
                 <p className="text-sm text-zinc-500">Questions where you have an opinion but AI is undecided.</p>
               </CardHeader>
