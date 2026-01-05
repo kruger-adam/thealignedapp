@@ -148,7 +148,7 @@ Return vote + reason in the specified format.`;
       const match = responseText.match(pattern);
       if (match && match[1]) {
         // Get just the first sentence/line
-        let extracted = match[1].trim();
+        const extracted = match[1].trim();
         // If it spans multiple lines, take just the first meaningful line
         const firstLine = extracted.split('\n')[0].trim();
         if (firstLine.length > 0) {
