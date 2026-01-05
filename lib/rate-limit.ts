@@ -65,8 +65,18 @@ export async function checkRateLimit(
     };
   }
   
-  // Check hourly limit if configured
-  if (config.hourlyLimit) {
+  // Get user email from profiles table to check for exemptions
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single();
+  
+  const userEmail = profile?.email;
+  const isExemptFromHourlyLimit = userEmail === 'adamkruger94@gmail.com';
+  
+  // Check hourly limit if configured and user is not exempt
+  if (config.hourlyLimit && !isExemptFromHourlyLimit) {
     const { count: hourlyCount } = await supabase
       .from('rate_limits')
       .select('*', { count: 'exact', head: true })
