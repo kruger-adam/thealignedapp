@@ -348,6 +348,10 @@ LEFT JOIN responses r ON q.id = r.question_id
 GROUP BY q.id, q.content, q.author_id, q.created_at;
 
 -- Function to calculate compatibility between two users
+-- Agreement logic:
+-- - Agreements: Both vote the same (YES=YES, NO=NO, UNSURE=UNSURE)
+-- - Disagreements: One votes YES, other votes NO
+-- - Excluded: One has an opinion (YES/NO), other is UNSURE
 CREATE OR REPLACE FUNCTION calculate_compatibility(user_a UUID, user_b UUID)
 RETURNS TABLE (
     compatibility_score NUMERIC,
@@ -369,17 +373,29 @@ BEGIN
         AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
         AND r1.is_anonymous = false AND r2.is_anonymous = false
         AND r1.is_ai = false AND r2.is_ai = false
+        -- Exclude cases where one user voted UNSURE and the other voted YES/NO
+        -- (only include if both voted UNSURE, or neither voted UNSURE)
+        AND NOT (
+            (r1.vote = 'UNSURE' AND r2.vote IN ('YES', 'NO')) OR
+            (r2.vote = 'UNSURE' AND r1.vote IN ('YES', 'NO'))
+        )
+    ),
+    counts AS (
+        SELECT 
+            COUNT(CASE WHEN vote_a = vote_b THEN 1 END) AS agree_count,
+            COUNT(CASE WHEN vote_a != vote_b THEN 1 END) AS disagree_count
+        FROM user_responses
     )
     SELECT 
         CASE 
-            WHEN COUNT(*) > 0 THEN 
-                ROUND((COUNT(CASE WHEN vote_a = vote_b THEN 1 END)::NUMERIC / COUNT(*)) * 100, 1)
+            WHEN (agree_count + disagree_count) > 0 THEN 
+                ROUND((agree_count::NUMERIC / (agree_count + disagree_count)) * 100, 1)
             ELSE 0 
         END,
-        COUNT(*)::INTEGER,
-        COUNT(CASE WHEN vote_a = vote_b THEN 1 END)::INTEGER,
-        COUNT(CASE WHEN vote_a != vote_b THEN 1 END)::INTEGER
-    FROM user_responses;
+        (agree_count + disagree_count)::INTEGER,
+        agree_count::INTEGER,
+        disagree_count::INTEGER
+    FROM counts;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -415,6 +431,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to get divergence (disagreements)
+-- Only shows YES vs NO disagreements, not UNSURE vs YES/NO
 CREATE OR REPLACE FUNCTION get_divergence(user_a UUID, user_b UUID, limit_count INTEGER DEFAULT 10)
 RETURNS TABLE (
     question_id UUID,
@@ -442,6 +459,8 @@ BEGIN
       AND r1.vote != 'SKIP' AND r2.vote != 'SKIP'
       AND r1.is_anonymous = false AND r2.is_anonymous = false
       AND r1.is_ai = false AND r2.is_ai = false
+      -- Only show true disagreements: YES vs NO (exclude UNSURE vs YES/NO)
+      AND r1.vote IN ('YES', 'NO') AND r2.vote IN ('YES', 'NO')
     ORDER BY qs.controversy_score DESC
     LIMIT limit_count;
 END;

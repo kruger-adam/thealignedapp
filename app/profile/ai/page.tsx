@@ -105,7 +105,24 @@ export default async function AIProfilePage() {
       for (const userVote of userResponses) {
         const aiData = aiVoteMap.get(userVote.question_id);
         if (aiData) {
+          // Skip SKIP votes
+          if (userVote.vote === 'SKIP' || aiData.vote === 'SKIP') {
+            continue;
+          }
+          
+          // Check if one is UNSURE and the other is YES/NO - exclude from calculation
+          const userIsUnsure = userVote.vote === 'UNSURE';
+          const aiIsUnsure = aiData.vote === 'UNSURE';
+          const userHasOpinion = userVote.vote === 'YES' || userVote.vote === 'NO';
+          const aiHasOpinion = aiData.vote === 'YES' || aiData.vote === 'NO';
+          
+          if ((userIsUnsure && aiHasOpinion) || (aiIsUnsure && userHasOpinion)) {
+            // One has opinion, other is unsure - don't count as agreement or disagreement
+            continue;
+          }
+          
           if (userVote.vote === aiData.vote) {
+            // Agreement: same vote (YES=YES, NO=NO, or UNSURE=UNSURE)
             agreements++;
             commonGround.push({
               question_id: userVote.question_id,
@@ -113,6 +130,7 @@ export default async function AIProfilePage() {
               shared_vote: userVote.vote as VoteType,
             });
           } else {
+            // Disagreement: different votes (at this point, must be YES vs NO)
             disagreements++;
             divergence.push({
               question_id: userVote.question_id,
