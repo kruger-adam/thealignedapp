@@ -81,13 +81,26 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: content.trim() }),
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.category && data.category !== 'Other') {
-          supabase
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Categorization API returned ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(async (data) => {
+        if (data.category) {
+          // Create a new supabase client for the background update
+          const updateClient = await createClient();
+          const { error } = await updateClient
             .from('questions')
             .update({ category: data.category })
             .eq('id', newQuestion.id);
+          
+          if (error) {
+            console.error('Error updating question category:', error);
+          } else {
+            console.log(`Updated question ${newQuestion.id} category to: ${data.category}`);
+          }
         }
       })
       .catch(err => console.error('Error categorizing question:', err));

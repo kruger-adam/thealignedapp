@@ -75,8 +75,18 @@ Respond with ONLY the category name, nothing else. If the question doesn't clear
     const data = await response.json();
     const rawCategory = data.choices?.[0]?.message?.content?.trim();
     
-    // Validate the category is in our list
-    const category = CATEGORIES.find(c => c.toLowerCase() === rawCategory?.toLowerCase()) || 'Other';
+    // Clean up the category response - remove leading numbers, periods, and extra whitespace
+    const cleanedCategory = rawCategory
+      ?.replace(/^\d+\.?\s*/, '') // Remove leading numbers and periods (e.g., "1. Ethics" -> "Ethics")
+      .trim();
+    
+    // Validate the category is in our list (case-insensitive match)
+    const category = CATEGORIES.find(c => c.toLowerCase() === cleanedCategory?.toLowerCase()) || 'Other';
+    
+    // Log if we couldn't match the category (for debugging)
+    if (category === 'Other' && cleanedCategory && cleanedCategory.toLowerCase() !== 'other') {
+      console.warn(`Could not match category "${cleanedCategory}" (raw: "${rawCategory}") for question. Defaulting to "Other".`);
+    }
     
     return NextResponse.json({ category });
   } catch (error) {
