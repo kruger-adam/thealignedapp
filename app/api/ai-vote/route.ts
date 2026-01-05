@@ -102,7 +102,7 @@ Respond now with your vote and reason (both lines required):`;
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       generationConfig: {
-        maxOutputTokens: 256, // Increased to ensure full response
+        maxOutputTokens: 1024, // High limit to account for thinking tokens
         temperature: 0.7,
       },
     });
