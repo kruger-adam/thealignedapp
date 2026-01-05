@@ -113,23 +113,24 @@ export async function POST(request: NextRequest) {
     // Notify followers in background (skip for anonymous posts)
     if (!isAnonymous) {
       waitUntil(
-        supabase
-          .from('follows')
-          .select('follower_id')
-          .eq('following_id', user.id)
-          .then(async ({ data: followers }) => {
-            if (followers && followers.length > 0) {
-              const notifications = followers.map(f => ({
-                user_id: f.follower_id,
-                type: 'new_question' as const,
-                actor_id: user.id,
-                question_id: newQuestion.id,
-              }));
-              
-              const { error: notifError } = await supabase.from('notifications').insert(notifications);
-              if (notifError) console.error('Error creating notifications:', notifError);
-            }
-          })
+        (async () => {
+          const { data: followers } = await supabase
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', user.id);
+          
+          if (followers && followers.length > 0) {
+            const notifications = followers.map(f => ({
+              user_id: f.follower_id,
+              type: 'new_question' as const,
+              actor_id: user.id,
+              question_id: newQuestion.id,
+            }));
+            
+            const { error: notifError } = await supabase.from('notifications').insert(notifications);
+            if (notifError) console.error('Error creating notifications:', notifError);
+          }
+        })()
       );
     }
 
