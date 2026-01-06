@@ -19,17 +19,47 @@ function getSupabase() {
   );
 }
 
-export async function POST(request: Request) {
+// Helper to log cron execution to database (persists forever, unlike Vercel logs)
+async function logCron(
+  supabase: ReturnType<typeof getSupabase>,
+  status: 'started' | 'success' | 'error',
+  message?: string,
+  metadata?: Record<string, unknown>
+) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('cron_logs').insert({
+      job_name: 'ai-question',
+      status,
+      message,
+      metadata,
+    });
+  } catch (e) {
+    console.error('Failed to write cron log:', e);
+  }
+}
+
+export async function POST(request: Request) {
+  const supabase = getSupabase();
+  
+  try {
+    // Log that cron started (helps debug if it's being triggered at all)
+    await logCron(supabase, 'started', 'Cron job triggered');
+
     // Verify cron secret for security (optional but recommended)
+    // Vercel cron jobs send the secret via Authorization header as "Bearer <secret>"
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check if request is from Vercel cron (they send Authorization: Bearer <CRON_SECRET>)
+    // When manually triggered from Vercel dashboard, it also sends this header
+    if (cronSecret) {
+      const isValidAuth = authHeader === `Bearer ${cronSecret}`;
+      if (!isValidAuth) {
+        await logCron(supabase, 'error', 'Authorization failed', { hasHeader: !!authHeader });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
-
-    const supabase = getSupabase();
     const openai = getOpenAI();
 
     // Get recent questions to avoid duplicates
@@ -161,6 +191,12 @@ Respond with ONLY the question.`
     }
     */
 
+    // Log success
+    await logCron(supabase, 'success', 'Question generated successfully', {
+      questionId: newQuestion.id,
+      questionContent,
+    });
+
     return NextResponse.json({ 
       success: true, 
       question: {
@@ -171,6 +207,8 @@ Respond with ONLY the question.`
 
   } catch (error) {
     console.error('Error in AI question generation:', error);
+    // Log error
+    await logCron(supabase, 'error', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
