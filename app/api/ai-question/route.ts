@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Limit execution time to reduce CPU usage
 export const maxDuration = 60;
 
 // Lazy initialization to avoid build-time errors
-function getOpenAI() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+function getGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+  return new GoogleGenerativeAI(apiKey);
 }
 
 function getSupabase() {
@@ -60,7 +62,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
-    const openai = getOpenAI();
+    
+    // Check for API key
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured');
+      await logCron(supabase, 'error', 'GEMINI_API_KEY not configured');
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
+    }
+    
+    const genAI = getGemini();
 
     // Get recent questions to avoid duplicates
     const { data: recentQuestions } = await supabase
@@ -71,13 +81,8 @@ export async function POST(request: Request) {
 
     const recentQuestionsList = recentQuestions?.map(q => q.content).join('\n') || '';
 
-    // Generate a question using GPT
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a bold AI that asks polarizing yes/no questions to spark debate.
+    // Generate a question using Gemini
+    const prompt = `You are a bold AI that asks polarizing yes/no questions to spark debate.
 
 Your questions should:
 - Be answerable with Yes, No, or Not Sure
@@ -92,18 +97,34 @@ Avoid:
 
 Self-check: Would YOU struggle to pick a side? If not, try again.
 
-Respond with ONLY the question.`
-        },
-        {
-          role: 'user',
-          content: `Generate one interesting yes/no question. Here are recent questions to avoid duplicating:\n\n${recentQuestionsList}\n\nGenerate a NEW, different question:`
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.9, // Higher temperature for more variety
+Generate one interesting yes/no question. Here are recent questions to avoid duplicating:
+
+${recentQuestionsList}
+
+Generate a NEW, different question. Respond with ONLY the question text, nothing else:`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-3-flash-preview',
+      generationConfig: {
+        maxOutputTokens: 1024, // High limit to account for thinking tokens
+        temperature: 0.9, // Higher temperature for more variety
+      },
     });
 
-    const questionContent = completion.choices[0]?.message?.content?.trim();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+
+    // Log token usage for debugging/cost tracking
+    const usageMetadata = response.usageMetadata;
+    if (usageMetadata) {
+      console.log('AI question token usage:', {
+        prompt_tokens: usageMetadata.promptTokenCount,
+        completion_tokens: usageMetadata.candidatesTokenCount,
+        total_tokens: usageMetadata.totalTokenCount,
+      });
+    }
+
+    const questionContent = response.text().trim();
 
     if (!questionContent) {
       console.error('AI did not generate a question');
@@ -195,6 +216,12 @@ Respond with ONLY the question.`
     await logCron(supabase, 'success', 'Question generated successfully', {
       questionId: newQuestion.id,
       questionContent,
+      model: 'gemini-3-flash-preview',
+      tokens: usageMetadata ? {
+        prompt: usageMetadata.promptTokenCount,
+        completion: usageMetadata.candidatesTokenCount,
+        total: usageMetadata.totalTokenCount,
+      } : undefined,
     });
 
     return NextResponse.json({ 
