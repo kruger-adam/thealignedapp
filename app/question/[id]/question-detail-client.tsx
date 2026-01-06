@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useTransition, useMemo, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, Check, HelpCircle, X, Send, Clock, ChevronDown, ChevronUp, Pencil, Lock, Unlock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
+import React, { useState, useTransition, useMemo, useCallback, useEffect } from 'react';
+import { ArrowLeft, Check, HelpCircle, X, Clock, ChevronDown, ChevronUp, Pencil, Lock, Unlock, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,10 +11,11 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
-import { QuestionWithStats, VoteType, Comment, MentionSuggestion, Voter, AI_MENTION } from '@/lib/types';
+import { QuestionWithStats, VoteType, Comment, Voter } from '@/lib/types';
 import { cn, getModelDisplayInfo } from '@/lib/utils';
 import { VoterList } from '@/components/voter-list';
 import { useToast } from '@/components/ui/toast';
+import { CommentInput } from '@/components/comment-input';
 
 interface QuestionDetailClientProps {
   question: QuestionWithStats;
@@ -49,17 +50,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   
   // Comments state
   const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [commentText, setCommentText] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
-  
-  // Mention autocomplete state
-  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
-  const [showMentions, setShowMentions] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
-  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const [mentionedUsers, setMentionedUsers] = useState<MentionSuggestion[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Question editing state
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
@@ -435,309 +425,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     // Convert @[username](id) to @username for readable editing
     const readableContent = comment.content.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
     setEditedCommentContent(readableContent);
-  };
-
-  // Mention search
-  const searchUsers = useCallback(async (query: string) => {
-    if (query.length < 1) {
-      setMentionSuggestions([]);
-      setShowMentions(false);
-      return;
-    }
-    
-    try {
-      const { data: users } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url')
-        .ilike('username', `%${query}%`)
-        .limit(5);
-      
-      const suggestions: MentionSuggestion[] = (users || [])
-        .filter((u) => u.username)
-        .map((u) => ({
-          id: u.id,
-          username: u.username!,
-          avatar_url: u.avatar_url,
-        }));
-      
-      // Add AI to suggestions if query matches
-      const queryLower = query.toLowerCase();
-      if ('ai'.startsWith(queryLower) || queryLower === 'ai') {
-        suggestions.unshift(AI_MENTION);
-      }
-      
-      setMentionSuggestions(suggestions);
-      setShowMentions(suggestions.length > 0);
-      setSelectedMentionIndex(0);
-    } catch (err) {
-      console.error('Error searching users:', err);
-    }
-  }, [supabase]);
-
-  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart || 0;
-    setCommentText(value);
-    
-    const textBeforeCursor = value.substring(0, cursorPos);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-    
-    if (lastAtIndex !== -1) {
-      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
-      if (!textAfterAt.includes(' ')) {
-        setMentionQuery(textAfterAt);
-        setMentionStartIndex(lastAtIndex);
-        searchUsers(textAfterAt);
-        return;
-      }
-    }
-    
-    setShowMentions(false);
-    setMentionQuery('');
-    setMentionStartIndex(-1);
-  };
-
-  const insertMention = (selectedUser: MentionSuggestion) => {
-    if (mentionStartIndex === -1) return;
-    
-    const beforeMention = commentText.substring(0, mentionStartIndex);
-    const afterMention = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
-    const newText = `${beforeMention}${afterMention}`.trim();
-    
-    setCommentText(newText);
-    setMentionedUsers(prev => {
-      if (prev.some(u => u.id === selectedUser.id)) return prev;
-      return [...prev, selectedUser];
-    });
-    setShowMentions(false);
-    setMentionQuery('');
-    setMentionStartIndex(-1);
-    inputRef.current?.focus();
-  };
-
-  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle backspace to remove last chip when input is empty
-    if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
-      e.preventDefault();
-      setMentionedUsers(prev => prev.slice(0, -1));
-      return;
-    }
-    
-    if (!showMentions) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        submitComment();
-      }
-      return;
-    }
-    
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedMentionIndex(prev => prev < mentionSuggestions.length - 1 ? prev + 1 : 0);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedMentionIndex(prev => prev > 0 ? prev - 1 : mentionSuggestions.length - 1);
-        break;
-      case 'Enter':
-      case 'Tab':
-        e.preventDefault();
-        if (mentionSuggestions[selectedMentionIndex]) {
-          insertMention(mentionSuggestions[selectedMentionIndex]);
-        }
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setShowMentions(false);
-        break;
-    }
-  };
-
-  const submitComment = async () => {
-    if (!user || (!commentText.trim() && mentionedUsers.length === 0)) return;
-    
-    setSubmittingComment(true);
-    try {
-      // For AI mentions, just use @AI (no ID needed)
-      const mentionStrings = mentionedUsers.map(u => 
-        u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
-      );
-      const messageText = commentText.trim();
-      const contentToSave = mentionStrings.length > 0 
-        ? messageText ? `${mentionStrings.join(' ')} ${messageText}` : mentionStrings.join(' ')
-        : messageText;
-      
-      const { data: newComment, error } = await supabase
-        .from('comments')
-        .insert({
-          question_id: question.id,
-          user_id: user.id,
-          content: contentToSave,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error inserting comment:', error);
-        setSubmittingComment(false);
-        return;
-      }
-      
-      if (newComment) {
-        // Create notifications (skip AI and self)
-        const notifications: Array<{
-          user_id: string;
-          type: 'mention' | 'comment';
-          actor_id: string;
-          question_id: string;
-          comment_id: string;
-        }> = [];
-        
-        mentionedUsers
-          .filter(u => u.id !== user.id && !u.is_ai)
-          .forEach(mentionedUser => {
-            notifications.push({
-              user_id: mentionedUser.id,
-              type: 'mention',
-              actor_id: user.id,
-              question_id: question.id,
-              comment_id: newComment.id,
-            });
-          });
-        
-        // Notify question author (skip for AI questions which have no author)
-        if (question.author_id && question.author_id !== user.id && !mentionedUsers.some(u => u.id === question.author_id)) {
-          notifications.push({
-            user_id: question.author_id,
-            type: 'comment',
-            actor_id: user.id,
-            question_id: question.id,
-            comment_id: newComment.id,
-          });
-        }
-        
-        if (notifications.length > 0) {
-          supabase.from('notifications').insert(notifications);
-        }
-        
-        setComments(prev => [...prev, {
-          id: newComment.id,
-          user_id: user.id,
-          content: newComment.content,
-          created_at: newComment.created_at,
-          username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
-          avatar_url: user.user_metadata?.avatar_url || null,
-        }]);
-        
-        // Clear input immediately after posting (don't wait for AI)
-        setCommentText('');
-        setMentionedUsers([]);
-        setSubmittingComment(false);
-        
-        // Check if comment mentions @AI
-        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
-        
-        if (hasAIMention) {
-          // Show "AI is thinking..." placeholder
-          const aiPlaceholderId = `ai-thinking-${Date.now()}`;
-          setComments(prev => [...prev, {
-            id: aiPlaceholderId,
-            user_id: user.id,
-            content: '',
-            created_at: new Date().toISOString(),
-            username: 'AI',
-            avatar_url: null,
-            is_ai: true,
-            isThinking: true,
-          }]);
-          
-          // Call the AI API with streaming
-          try {
-            const aiResponse = await fetch('/api/ai-comment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                questionId: question.id,
-                userQuery: contentToSave,
-                userId: user.id,
-              }),
-            });
-            
-            if (aiResponse.ok && aiResponse.body) {
-              const reader = aiResponse.body.getReader();
-              const decoder = new TextDecoder();
-              let fullContent = '';
-              let commentData: { id: string; created_at: string } | null = null;
-              
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value, { stream: true });
-                
-                // Check for comment metadata at end
-                if (chunk.includes('__COMMENT_DATA__:')) {
-                  const parts = chunk.split('__COMMENT_DATA__:');
-                  if (parts[0]) {
-                    fullContent += parts[0].replace(/\n\n$/, '');
-                  }
-                  try {
-                    commentData = JSON.parse(parts[1]);
-                  } catch {
-                    console.error('Failed to parse comment data');
-                  }
-                } else {
-                  fullContent += chunk;
-                }
-                
-                // Update the comment with streamed content
-                const displayContent = fullContent;
-                setComments(prev => prev.map(c => 
-                  c.id === aiPlaceholderId 
-                    ? {
-                        ...c,
-                        id: commentData?.id || aiPlaceholderId,
-                        content: displayContent,
-                        created_at: commentData?.created_at || c.created_at,
-                        isThinking: !commentData,
-                      }
-                    : c
-                ));
-              }
-            } else {
-              // Handle error response
-              let errorMessage = 'Sorry, I couldn\'t respond right now.';
-              try {
-                const errorData = await aiResponse.json();
-                errorMessage = errorData.error || errorMessage;
-              } catch {
-                // Ignore JSON parse error
-              }
-              setComments(prev => prev.map(c => 
-                c.id === aiPlaceholderId 
-                  ? {
-                      ...c,
-                      content: errorMessage,
-                      isThinking: false,
-                      isError: true,
-                    }
-                  : c
-              ));
-            }
-          } catch (aiErr) {
-            console.error('AI comment error:', aiErr);
-            // Remove placeholder on error
-            setComments(prev => prev.filter(c => c.id !== aiPlaceholderId));
-          }
-        }
-        
-        return;
-      }
-    } catch (err) {
-      console.error('Error submitting comment:', err);
-    }
-    setSubmittingComment(false);
   };
 
   // Render comment with clickable mentions
@@ -1309,96 +996,55 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           </div>
 
           {/* Comment form */}
-          {user && canSeeResults ? (
-            <div className="relative mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-700">
-              {/* Mention suggestions */}
-              {showMentions && mentionSuggestions.length > 0 && (
-                <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
-                  {mentionSuggestions.map((suggestionUser, index) => (
-                    <button
-                      key={suggestionUser.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700",
-                        index === selectedMentionIndex && "bg-zinc-100 dark:bg-zinc-700"
-                      )}
-                      onClick={() => insertMention(suggestionUser)}
-                    >
-                      {suggestionUser.is_ai ? (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                          <Bot className="h-4 w-4 text-white" />
-                        </div>
-                      ) : (
-                        <Avatar src={suggestionUser.avatar_url} fallback={suggestionUser.username} size="sm" />
-                      )}
-                      <span className={cn(
-                        "font-medium",
-                        suggestionUser.is_ai 
-                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"
-                          : "text-zinc-900 dark:text-zinc-100"
-                      )}>
-                        {suggestionUser.username}
-                      </span>
-                      {suggestionUser.is_ai && (
-                        <span className="text-xs text-zinc-500">Ask AI anything</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <div 
-                  className="flex flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
-                  onClick={() => inputRef.current?.focus()}
-                >
-                  {mentionedUsers.map((taggedUser) => (
-                    <span
-                      key={taggedUser.id}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium",
-                        taggedUser.is_ai 
-                          ? "bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-                      )}
-                    >
-                      {taggedUser.is_ai ? (
-                        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
-                          <Bot className="h-2.5 w-2.5 text-white" />
-                        </div>
-                      ) : (
-                        <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
-                      )}
-                      <span>{taggedUser.is_ai ? taggedUser.username : `@${taggedUser.username}`}</span>
-                    </span>
-                  ))}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={commentText}
-                    onChange={handleCommentChange}
-                    placeholder={mentionedUsers.length > 0 ? "Add your message..." : "Add a comment... (use @ to mention)"}
-                    className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
-                    onKeyDown={handleMentionKeyDown}
-                  />
-                </div>
-                <Button
-                  onClick={submitComment}
-                  disabled={(!commentText.trim() && mentionedUsers.length === 0) || submittingComment}
-                  className="h-[38px] px-3"
-                >
-                  {submittingComment ? (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+          {canSeeResults && (
+            <div className="mt-6">
+              <CommentInput
+                questionId={question.id}
+                questionAuthorId={question.author_id}
+                onCommentAdded={(comment) => {
+                  setComments(prev => [...prev, comment]);
+                }}
+                onAIThinking={(placeholderId) => {
+                  setComments(prev => [...prev, {
+                    id: placeholderId,
+                    user_id: user?.id || '',
+                    content: '',
+                    created_at: new Date().toISOString(),
+                    username: 'AI',
+                    avatar_url: null,
+                    isThinking: true,
+                    is_ai: true,
+                  }]);
+                }}
+                onAIStreaming={(placeholderId, content) => {
+                  setComments(prev => prev.map(c => 
+                    c.id === placeholderId 
+                      ? { ...c, content, isThinking: true }
+                      : c
+                  ));
+                }}
+                onAIComplete={(placeholderId, commentData, content) => {
+                  setComments(prev => prev.map(c => 
+                    c.id === placeholderId 
+                      ? {
+                          ...c,
+                          id: commentData.id,
+                          content,
+                          created_at: commentData.created_at,
+                          isThinking: false,
+                        }
+                      : c
+                  ));
+                }}
+                onAIError={(placeholderId, error) => {
+                  setComments(prev => prev.map(c => 
+                    c.id === placeholderId 
+                      ? { ...c, content: error, isThinking: false, isError: true }
+                      : c
+                  ));
+                }}
+              />
             </div>
-          ) : (
-            <p className="mt-6 border-t border-zinc-200 pt-4 text-sm text-zinc-500 dark:border-zinc-700">
-              Sign in to comment
-            </p>
           )}
         </CardContent>
       </Card>

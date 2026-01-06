@@ -8,45 +8,54 @@ import { MentionSuggestion, AI_MENTION, Comment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ui/toast';
+import { useAuth } from '@/contexts/auth-context';
+import { GifPicker } from '@/components/gif-picker';
 
 interface CommentInputProps {
   questionId: string;
-  questionAuthorId: string;
-  userId: string;
-  userMetadata: {
-    name?: string;
-    email?: string;
-    avatar_url?: string;
-  };
+  questionAuthorId?: string | null;
   onCommentAdded: (comment: Comment) => void;
-  onAICommentAdded?: (comment: Comment) => void;
+  onCommentCountChange?: (delta: number) => void;
+  // AI streaming callbacks
   onAIThinking?: (placeholderId: string) => void;
   onAIStreaming?: (placeholderId: string, content: string) => void;
+  onAIComplete?: (placeholderId: string, commentData: { id: string; created_at: string }, content: string) => void;
   onAIError?: (placeholderId: string, error: string) => void;
 }
 
 export function CommentInput({
   questionId,
-  questionAuthorId: _questionAuthorId, // Unused - handled by API route
-  userId,
-  userMetadata,
+  questionAuthorId,
   onCommentAdded,
-  onAICommentAdded,
+  onCommentCountChange,
   onAIThinking,
   onAIStreaming,
+  onAIComplete,
   onAIError,
 }: CommentInputProps) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const supabase = useMemo(() => createClient(), []);
+  
+  // Form state
   const [commentText, setCommentText] = useState('');
-  const [mentionedUsers, setMentionedUsers] = useState<MentionSuggestion[]>([]);
-  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
-  const [showMentions, setShowMentions] = useState(false);
-  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<string | null>(null);
+  
+  // Reword state
   const [isRewording, setIsRewording] = useState(false);
   const [rewordSuggestion, setRewordSuggestion] = useState<string | null>(null);
-  const { showToast } = useToast();
+  
+  // Mention autocomplete state
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionedUsers, setMentionedUsers] = useState<MentionSuggestion[]>([]);
+  
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Handle AI reword request
   const handleReword = async () => {
@@ -97,9 +106,6 @@ export function CommentInput({
     inputRef.current?.focus();
   };
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const supabase = useMemo(() => createClient(), []);
-
   // Search users for @mention autocomplete
   const searchUsers = useCallback(async (query: string) => {
     if (query.length < 1) {
@@ -107,45 +113,53 @@ export function CommentInput({
       setShowMentions(false);
       return;
     }
-
+    
     try {
-      const { data: users } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url')
-        .ilike('username', `%${query}%`)
-        .limit(5);
-
-      const suggestions: MentionSuggestion[] = (users || [])
-        .filter((u) => u.username)
-        .map((u) => ({
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?select=id,username,avatar_url&username=ilike.*${encodeURIComponent(query)}*&limit=5`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        },
+      });
+      const users = await res.json();
+      
+      const suggestions: MentionSuggestion[] = users
+        .filter((u: { username: string | null }) => u.username)
+        .map((u: { id: string; username: string; avatar_url: string | null }) => ({
           id: u.id,
-          username: u.username!,
+          username: u.username,
           avatar_url: u.avatar_url,
         }));
-
+      
       // Add AI to suggestions if query matches
       const queryLower = query.toLowerCase();
       if ('ai'.startsWith(queryLower) || queryLower === 'ai') {
         suggestions.unshift(AI_MENTION);
       }
-
+      
       setMentionSuggestions(suggestions);
       setShowMentions(suggestions.length > 0);
       setSelectedMentionIndex(0);
     } catch (err) {
       console.error('Error searching users:', err);
     }
-  }, [supabase]);
+  }, []);
 
-  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle comment input change - detect @mentions
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPos = e.target.selectionStart || 0;
     setCommentText(value);
-
+    
+    // Auto-resize textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+    
     // Find the @ symbol before cursor
     const textBeforeCursor = value.substring(0, cursorPos);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
+    
     if (lastAtIndex !== -1) {
       const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
       if (!textAfterAt.includes(' ')) {
@@ -155,38 +169,60 @@ export function CommentInput({
         return;
       }
     }
-
+    
     setShowMentions(false);
+    setMentionQuery('');
+    setMentionStartIndex(-1);
   };
 
-  const insertMention = (user: MentionSuggestion) => {
-    // Add user to mentioned list if not already there
-    if (!mentionedUsers.some((u) => u.id === user.id)) {
-      setMentionedUsers((prev) => [...prev, user]);
-    }
-
-    // Remove the @query from the text
-    const beforeAt = commentText.substring(0, mentionStartIndex);
-    const afterQuery = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
-    setCommentText(beforeAt + afterQuery);
-
+  // Insert selected mention into comment
+  const insertMention = (selectedUser: MentionSuggestion) => {
+    if (mentionStartIndex === -1) return;
+    
+    const beforeMention = commentText.substring(0, mentionStartIndex);
+    const afterMention = commentText.substring(mentionStartIndex + mentionQuery.length + 1);
+    const newText = `${beforeMention}${afterMention}`.trim();
+    
+    setCommentText(newText);
+    setMentionedUsers(prev => {
+      if (prev.some(u => u.id === selectedUser.id)) return prev;
+      return [...prev, selectedUser];
+    });
     setShowMentions(false);
     setMentionQuery('');
     setMentionStartIndex(-1);
     inputRef.current?.focus();
   };
 
-  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showMentions || mentionSuggestions.length === 0) return;
-
+  // Handle keyboard navigation in mention dropdown
+  const handleMentionKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle backspace to remove last chip when input is empty
+    if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
+      e.preventDefault();
+      setMentionedUsers(prev => prev.slice(0, -1));
+      return;
+    }
+    
+    if (!showMentions) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitComment();
+      }
+      return;
+    }
+    
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedMentionIndex((prev) => (prev < mentionSuggestions.length - 1 ? prev + 1 : 0));
+        setSelectedMentionIndex(prev => 
+          prev < mentionSuggestions.length - 1 ? prev + 1 : 0
+        );
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedMentionIndex((prev) => (prev > 0 ? prev - 1 : mentionSuggestions.length - 1));
+        setSelectedMentionIndex(prev => 
+          prev > 0 ? prev - 1 : mentionSuggestions.length - 1
+        );
         break;
       case 'Enter':
       case 'Tab':
@@ -203,145 +239,205 @@ export function CommentInput({
   };
 
   const submitComment = async () => {
-    if (!commentText.trim() && mentionedUsers.length === 0) return;
-
+    if (!user || (!commentText.trim() && mentionedUsers.length === 0 && !selectedGif)) return;
+    
     setSubmittingComment(true);
     try {
-      const messageText = commentText.trim();
-
-      // Create comment via API route (includes rate limiting)
-      const response = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionId,
-          content: messageText,
-          mentionedUsers: mentionedUsers.map((u) => ({
-            id: u.id,
-            username: u.username,
-            is_ai: u.is_ai,
-          })),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle rate limit error
-        if (response.status === 429) {
-          showToast(data.error || 'Rate limit reached. Please try again later.', 'error');
-        } else {
-          showToast(data.error || 'Failed to post comment', 'error');
-        }
-        setSubmittingComment(false);
-        return;
-      }
-
-      const newComment = data.comment;
-
-      // Build content with mentions for AI check
-      const mentionStrings = mentionedUsers.map((u) =>
+      // Build content: prepend mentions as @[username](id), then add the message
+      const mentionStrings = mentionedUsers.map(u => 
         u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
       );
-      const contentToSave = mentionStrings.length > 0
-        ? messageText
+      const messageText = commentText.trim();
+      let contentToSave = mentionStrings.length > 0 
+        ? messageText 
           ? `${mentionStrings.join(' ')} ${messageText}`
           : mentionStrings.join(' ')
         : messageText;
-
-      // Add the new comment to the list
-      const comment: Comment = {
-        id: newComment.id,
-        user_id: newComment.user_id,
-        content: newComment.content,
-        created_at: newComment.created_at,
-        username: userMetadata.name || userMetadata.email?.split('@')[0] || 'Anonymous',
-        avatar_url: userMetadata.avatar_url || null,
-      };
-      onCommentAdded(comment);
-
-      // Clear input immediately after posting (don't wait for AI)
-      setCommentText('');
-      setMentionedUsers([]);
-      setSubmittingComment(false);
-
-      // Check if comment mentions @AI
-      const hasAIMention = contentToSave.toLowerCase().includes('@ai');
-
-      if (hasAIMention) {
-        // Show "AI is thinking..." placeholder
-        const aiPlaceholderId = `ai-thinking-${Date.now()}`;
-        if (onAIThinking) {
-          onAIThinking(aiPlaceholderId);
+      
+      // Append GIF if selected
+      if (selectedGif) {
+        contentToSave = contentToSave 
+          ? `${contentToSave} [gif:${selectedGif}]`
+          : `[gif:${selectedGif}]`;
+      }
+      
+      // Use Supabase client for authenticated insert
+      const { data: newComment, error } = await supabase
+        .from('comments')
+        .insert({
+          question_id: questionId,
+          user_id: user.id,
+          content: contentToSave,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error inserting comment:', error);
+        setSubmittingComment(false);
+        return;
+      }
+      
+      if (newComment) {
+        // Create notifications
+        const notifications: Array<{
+          user_id: string;
+          type: 'mention' | 'comment';
+          actor_id: string;
+          question_id: string;
+          comment_id: string;
+        }> = [];
+        
+        // Notify mentioned users (skip AI and self)
+        if (mentionedUsers.length > 0) {
+          mentionedUsers
+            .filter(u => u.id !== user.id && !u.is_ai)
+            .forEach(mentionedUser => {
+              notifications.push({
+                user_id: mentionedUser.id,
+                type: 'mention',
+                actor_id: user.id,
+                question_id: questionId,
+                comment_id: newComment.id,
+              });
+            });
         }
-
-        // Call the AI API with streaming
-        try {
-          const aiResponse = await fetch('/api/ai-comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              questionId: questionId,
-              userQuery: contentToSave,
-              userId: userId,
-            }),
+        
+        // Notify question author (if not the commenter, not already mentioned, and not AI question)
+        if (questionAuthorId && questionAuthorId !== user.id && !mentionedUsers.some(u => u.id === questionAuthorId)) {
+          notifications.push({
+            user_id: questionAuthorId,
+            type: 'comment',
+            actor_id: user.id,
+            question_id: questionId,
+            comment_id: newComment.id,
           });
-
-          if (aiResponse.ok && aiResponse.body) {
-            const reader = aiResponse.body.getReader();
-            const decoder = new TextDecoder();
-            let streamedContent = '';
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              const chunk = decoder.decode(value, { stream: true });
+        }
+        
+        // Insert all notifications (fire and forget)
+        if (notifications.length > 0) {
+          supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+            if (notifError) console.error('Error creating notifications:', notifError);
+          });
+        }
+        
+        // Notify followers about the comment
+        supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+          .then(({ data: followers }) => {
+            if (followers && followers.length > 0) {
+              const alreadyNotified = new Set([
+                questionAuthorId,
+                ...mentionedUsers.filter(u => !u.is_ai).map(u => u.id),
+              ]);
               
-              // Check for comment metadata at end of stream
-              if (chunk.includes('__COMMENT_DATA__:')) {
-                const [textPart, dataPart] = chunk.split('__COMMENT_DATA__:');
-                if (textPart.trim()) {
-                  streamedContent += textPart.replace(/\n\n$/, '');
-                  if (onAIStreaming) {
-                    onAIStreaming(aiPlaceholderId, streamedContent);
+              const followerNotifications = followers
+                .filter(f => !alreadyNotified.has(f.follower_id))
+                .map(f => ({
+                  user_id: f.follower_id,
+                  type: 'comment' as const,
+                  actor_id: user.id,
+                  question_id: questionId,
+                  comment_id: newComment.id,
+                }));
+              
+              if (followerNotifications.length > 0) {
+                supabase.from('notifications').insert(followerNotifications);
+              }
+            }
+          });
+        
+        // Call parent callback with new comment
+        onCommentAdded({
+          id: newComment.id,
+          user_id: user.id,
+          content: newComment.content,
+          created_at: newComment.created_at,
+          username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
+          avatar_url: user.user_metadata?.avatar_url || null,
+        });
+        onCommentCountChange?.(1);
+        
+        // Clear input immediately after posting
+        setCommentText('');
+        setMentionedUsers([]);
+        setSelectedGif(null);
+        setRewordSuggestion(null);
+        setSubmittingComment(false);
+        
+        // Reset textarea height
+        if (inputRef.current) {
+          inputRef.current.style.height = 'auto';
+        }
+        
+        // Check if comment mentions @AI
+        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
+        
+        if (hasAIMention) {
+          // Show "AI is thinking..." placeholder
+          const aiPlaceholderId = `ai-thinking-${Date.now()}`;
+          onAIThinking?.(aiPlaceholderId);
+          
+          // Call the AI API with streaming
+          try {
+            const aiResponse = await fetch('/api/ai-comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                questionId: questionId,
+                userQuery: contentToSave,
+                userId: user.id,
+              }),
+            });
+            
+            if (aiResponse.ok && aiResponse.body) {
+              const reader = aiResponse.body.getReader();
+              const decoder = new TextDecoder();
+              let streamedContent = '';
+              
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                streamedContent += chunk;
+                
+                // Check if we received the comment metadata at the end
+                const metadataMatch = streamedContent.match(/\n\n__COMMENT_DATA__:(.+)$/);
+                let displayContent = streamedContent;
+                let commentData: { id: string; created_at: string } | null = null;
+                
+                if (metadataMatch) {
+                  displayContent = streamedContent.replace(/\n\n__COMMENT_DATA__:.+$/, '');
+                  try {
+                    commentData = JSON.parse(metadataMatch[1]);
+                  } catch {
+                    // Ignore parse errors
                   }
                 }
                 
-                // Parse the comment data and finalize
-                try {
-                  const commentData = JSON.parse(dataPart);
-                  if (onAICommentAdded) {
-                    onAICommentAdded({
-                      id: commentData.id,
-                      user_id: userId,
-                      content: streamedContent,
-                      created_at: commentData.created_at,
-                      username: 'AI',
-                      avatar_url: null,
-                      is_ai: true,
-                    });
-                  }
-                } catch {
-                  console.error('Failed to parse comment data');
-                }
-              } else {
-                streamedContent += chunk;
-                if (onAIStreaming) {
-                  onAIStreaming(aiPlaceholderId, streamedContent);
+                if (commentData) {
+                  onAIComplete?.(aiPlaceholderId, commentData, displayContent);
+                  onCommentCountChange?.(1);
+                } else {
+                  onAIStreaming?.(aiPlaceholderId, displayContent);
                 }
               }
+            } else {
+              let errorMessage = 'Sorry, I couldn\'t respond right now.';
+              try {
+                const errorData = await aiResponse.json();
+                errorMessage = errorData.error || errorMessage;
+              } catch {
+                // Ignore parse errors
+              }
+              onAIError?.(aiPlaceholderId, errorMessage);
             }
-          } else {
-            const errorData = await aiResponse.json();
-            if (onAIError) {
-              onAIError(aiPlaceholderId, errorData.error || "Sorry, I couldn't respond right now.");
-            }
-          }
-        } catch (aiErr) {
-          console.error('AI comment error:', aiErr);
-          if (onAIError) {
-            onAIError(aiPlaceholderId, "Sorry, I couldn't respond right now.");
+          } catch (aiError) {
+            console.error('AI comment error:', aiError);
+            onAIError?.(aiPlaceholderId, 'Sorry, I couldn\'t respond right now.');
           }
         }
       }
@@ -351,11 +447,19 @@ export function CommentInput({
     }
   };
 
+  if (!user) {
+    return (
+      <p className="text-sm text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+        Sign in to comment
+      </p>
+    );
+  }
+
   return (
-    <div className="relative space-y-2">
+    <div className="relative pt-2 border-t border-zinc-100 dark:border-zinc-800">
       {/* Reword suggestion */}
       {rewordSuggestion && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/50">
+        <div className="mb-3 rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/50">
           <div className="flex items-start gap-2">
             <Wand2 className="h-4 w-4 mt-0.5 text-violet-600 dark:text-violet-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -389,16 +493,16 @@ export function CommentInput({
         </div>
       )}
 
-      {/* Mention suggestions */}
+      {/* Mention Suggestions Dropdown */}
       {showMentions && mentionSuggestions.length > 0 && (
-        <div className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
           {mentionSuggestions.map((suggestionUser, index) => (
             <button
               key={suggestionUser.id}
               type="button"
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700',
-                index === selectedMentionIndex && 'bg-zinc-100 dark:bg-zinc-700'
+                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700",
+                index === selectedMentionIndex && "bg-zinc-100 dark:bg-zinc-700"
               )}
               onClick={() => insertMention(suggestionUser)}
             >
@@ -407,27 +511,31 @@ export function CommentInput({
                   <Bot className="h-4 w-4 text-white" />
                 </div>
               ) : (
-                <Avatar src={suggestionUser.avatar_url} fallback={suggestionUser.username} size="sm" />
+                <Avatar
+                  src={suggestionUser.avatar_url}
+                  fallback={suggestionUser.username}
+                  size="sm"
+                />
               )}
-              <span
-                className={cn(
-                  'font-medium',
-                  suggestionUser.is_ai
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent'
-                    : 'text-zinc-900 dark:text-zinc-100'
-                )}
-              >
+              <span className={cn(
+                "font-medium",
+                suggestionUser.is_ai 
+                  ? "bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent"
+                  : "text-zinc-900 dark:text-zinc-100"
+              )}>
                 {suggestionUser.username}
               </span>
-              {suggestionUser.is_ai && <span className="text-xs text-zinc-500">Ask AI anything</span>}
+              {suggestionUser.is_ai && (
+                <span className="text-xs text-zinc-500">Ask AI anything</span>
+              )}
             </button>
           ))}
         </div>
       )}
-
+      
       <div className="flex items-center gap-2">
         {/* Input container with inline chips */}
-        <div
+        <div 
           className="flex flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
           onClick={() => inputRef.current?.focus()}
         >
@@ -436,10 +544,10 @@ export function CommentInput({
             <span
               key={taggedUser.id}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium',
-                taggedUser.is_ai
-                  ? 'bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300'
-                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                "inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs font-medium",
+                taggedUser.is_ai 
+                  ? "bg-gradient-to-r from-violet-100 to-indigo-100 text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+                  : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
               )}
             >
               {taggedUser.is_ai ? (
@@ -447,38 +555,38 @@ export function CommentInput({
                   <Bot className="h-2.5 w-2.5 text-white" />
                 </div>
               ) : (
-                <Avatar src={taggedUser.avatar_url} fallback={taggedUser.username} size="xs" />
+                <Avatar
+                  src={taggedUser.avatar_url}
+                  fallback={taggedUser.username}
+                  size="xs"
+                />
               )}
-              <span>{taggedUser.is_ai ? taggedUser.username : `@${taggedUser.username}`}</span>
+              <span>{taggedUser.is_ai ? 'AI' : `@${taggedUser.username}`}</span>
             </span>
           ))}
-          <input
+          {/* Text input - auto-expanding textarea */}
+          <textarea
             ref={inputRef}
-            type="text"
             value={commentText}
             onChange={handleCommentChange}
-            placeholder={mentionedUsers.length > 0 ? 'Add your message...' : 'Add a comment... (use @ to mention)'}
-            className="min-w-[120px] flex-1 border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
-            onKeyDown={(e) => {
-              handleMentionKeyDown(e);
-              if (e.key === 'Enter' && !showMentions) {
-                e.preventDefault();
-                submitComment();
-              }
-              // Remove last chip on backspace when input is empty
-              if (e.key === 'Backspace' && commentText === '' && mentionedUsers.length > 0) {
-                e.preventDefault();
-                setMentionedUsers((prev) => prev.slice(0, -1));
-              }
-            }}
+            placeholder={mentionedUsers.length > 0 ? "Add message..." : "Add a comment..."}
+            className="min-w-[80px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+            onKeyDown={handleMentionKeyDown}
+            rows={1}
+            style={{ height: 'auto', maxHeight: '120px' }}
           />
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
+        
+        {/* Reword button */}
+        <button
+          type="button"
           onClick={handleReword}
           disabled={isRewording || !commentText.trim() || submittingComment}
-          className="flex-shrink-0"
+          className={cn(
+            "h-[38px] px-3 rounded-lg transition-colors flex items-center justify-center",
+            "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600",
+            "disabled:opacity-50 disabled:cursor-not-allowed"
+          )}
           title="AI will suggest a reworded version"
         >
           {isRewording ? (
@@ -486,18 +594,65 @@ export function CommentInput({
           ) : (
             <Wand2 className="h-4 w-4" />
           )}
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={submitComment}
-          disabled={submittingComment || (!commentText.trim() && mentionedUsers.length === 0)}
-          className="flex-shrink-0"
+        </button>
+        
+        {/* GIF button */}
+        <button
+          type="button"
+          onClick={() => setShowGifPicker(!showGifPicker)}
+          className={cn(
+            "h-[38px] px-3 rounded-lg transition-colors flex items-center justify-center",
+            showGifPicker 
+              ? "bg-violet-500 text-white dark:bg-violet-600"
+              : "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+          )}
+          title="Add GIF"
         >
-          <Send className="h-4 w-4" />
+          <span className="text-xs font-bold">GIF</span>
+        </button>
+        
+        {/* Send button */}
+        <Button
+          onClick={submitComment}
+          disabled={(!commentText.trim() && mentionedUsers.length === 0 && !selectedGif) || submittingComment}
+          className="h-[38px] px-3"
+        >
+          {submittingComment ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </Button>
       </div>
+
+      {/* Selected GIF Preview */}
+      {selectedGif && (
+        <div className="relative mt-2 inline-block">
+          <img
+            src={selectedGif}
+            alt="Selected GIF"
+            className="max-h-32 rounded-lg"
+          />
+          <button
+            type="button"
+            onClick={() => setSelectedGif(null)}
+            className="absolute -right-2 -top-2 rounded-full bg-zinc-900 p-1 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* GIF Picker */}
+      {showGifPicker && (
+        <GifPicker
+          onSelect={(gifUrl) => {
+            setSelectedGif(gifUrl);
+            setShowGifPicker(false);
+          }}
+          onClose={() => setShowGifPicker(false)}
+        />
+      )}
     </div>
   );
 }
-
