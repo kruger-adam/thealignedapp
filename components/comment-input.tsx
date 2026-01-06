@@ -493,6 +493,25 @@ export function CommentInput({
         </div>
       )}
 
+      {/* Reword link - appears when there's text */}
+      {commentText.trim() && !rewordSuggestion && (
+        <div className="flex justify-end mb-2 animate-in fade-in duration-200">
+          <button
+            type="button"
+            onClick={handleReword}
+            disabled={isRewording || submittingComment}
+            className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 disabled:opacity-50 transition-colors"
+          >
+            {isRewording ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Wand2 className="h-3 w-3" />
+            )}
+            <span>Reword</span>
+          </button>
+        </div>
+      )}
+
       {/* Mention Suggestions Dropdown */}
       {showMentions && mentionSuggestions.length > 0 && (
         <div className="absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 z-50">
@@ -576,25 +595,6 @@ export function CommentInput({
             style={{ height: 'auto', maxHeight: '120px' }}
           />
         </div>
-        
-        {/* Reword button */}
-        <button
-          type="button"
-          onClick={handleReword}
-          disabled={isRewording || !commentText.trim() || submittingComment}
-          className={cn(
-            "h-[38px] px-3 rounded-lg transition-colors flex items-center justify-center",
-            "bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-          title="AI will suggest a reworded version"
-        >
-          {isRewording ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Wand2 className="h-4 w-4" />
-          )}
-        </button>
         
         {/* GIF button */}
         <button
