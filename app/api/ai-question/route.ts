@@ -48,17 +48,22 @@ async function logTokenUsage(
   model: string,
   inputTokens: number,
   outputTokens: number,
+  totalTokens: number,
   questionId?: string,
   metadata?: Record<string, unknown>
 ) {
+  // Calculate thinking tokens (total - input - output)
+  const thinkingTokens = Math.max(0, totalTokens - inputTokens - outputTokens);
+  
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('ai_token_logs').insert({
       operation,
       model,
       input_tokens: inputTokens,
-      cached_input_tokens: 0,
       output_tokens: outputTokens,
+      thinking_tokens: thinkingTokens,
+      total_tokens: totalTokens,
       question_id: questionId || null,
       metadata,
     });
@@ -183,6 +188,7 @@ Generate a NEW, different question. Respond with ONLY the question text, nothing
         'gemini-3-flash-preview',
         usageMetadata.promptTokenCount || 0,
         usageMetadata.candidatesTokenCount || 0,
+        usageMetadata.totalTokenCount || 0,
         newQuestion.id,
         { questionContent: questionContent.substring(0, 100) }
       );

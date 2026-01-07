@@ -6,12 +6,19 @@ CREATE TABLE IF NOT EXISTS ai_token_logs (
     operation TEXT NOT NULL, -- 'ai-question', 'ai-vote', 'ai-comment', etc.
     model TEXT NOT NULL,
     input_tokens INTEGER NOT NULL DEFAULT 0,
-    cached_input_tokens INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0,
+    thinking_tokens INTEGER NOT NULL DEFAULT 0, -- For models with reasoning/thinking (Gemini, o1, etc.)
+    total_tokens INTEGER NOT NULL DEFAULT 0, -- Total as reported by API
     question_id UUID REFERENCES questions(id) ON DELETE SET NULL,
     metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- If table already exists, add the new columns
+ALTER TABLE ai_token_logs ADD COLUMN IF NOT EXISTS thinking_tokens INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE ai_token_logs ADD COLUMN IF NOT EXISTS total_tokens INTEGER NOT NULL DEFAULT 0;
+-- Remove cached_input_tokens if it exists (not used for Gemini)
+ALTER TABLE ai_token_logs DROP COLUMN IF EXISTS cached_input_tokens;
 
 -- Index for querying by operation and time
 CREATE INDEX IF NOT EXISTS idx_ai_token_logs_operation ON ai_token_logs(operation);

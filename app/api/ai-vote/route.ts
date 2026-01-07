@@ -22,6 +22,37 @@ function getSupabase() {
   );
 }
 
+// Helper to log token usage to database
+async function logTokenUsage(
+  supabase: ReturnType<typeof getSupabase>,
+  operation: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  totalTokens: number,
+  questionId?: string,
+  metadata?: Record<string, unknown>
+) {
+  // Calculate thinking tokens (total - input - output)
+  const thinkingTokens = Math.max(0, totalTokens - inputTokens - outputTokens);
+  
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('ai_token_logs').insert({
+      operation,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      thinking_tokens: thinkingTokens,
+      total_tokens: totalTokens,
+      question_id: questionId || null,
+      metadata,
+    });
+  } catch (e) {
+    console.error('Failed to write token log:', e);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { questionId, questionContent: providedContent, authorId } = await req.json();
@@ -211,6 +242,20 @@ Respond now with your vote and reason (both lines required):`;
     if (insertError) {
       console.error('Error inserting AI vote:', insertError);
       return NextResponse.json({ error: 'Failed to save AI vote' }, { status: 500 });
+    }
+
+    // Log token usage to database
+    if (usageMetadata) {
+      await logTokenUsage(
+        supabase,
+        'ai-vote',
+        'gemini-3-flash-preview',
+        usageMetadata.promptTokenCount || 0,
+        usageMetadata.candidatesTokenCount || 0,
+        usageMetadata.totalTokenCount || 0,
+        questionId,
+        { vote, aiReasoning: aiReasoning.substring(0, 100) }
+      );
     }
 
     console.log(`AI voted ${vote} on question ${questionId}`);
