@@ -9,6 +9,7 @@ import { CategoryPills } from '@/components/category-pills';
 import { Search } from '@/components/search';
 import { LandingPage } from '@/components/landing-page';
 import { OnboardingFlow } from '@/components/onboarding';
+import { AICountdown } from '@/components/ai-countdown';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { FEATURES } from '@/lib/features';
@@ -555,6 +556,9 @@ export default function FeedPage() {
           </div>
         </div>
         <CreateQuestion onQuestionCreated={fetchQuestions} />
+        
+        {/* AI Question Countdown */}
+        <AICountdown />
         
         {/* Category pills */}
         <CategoryPills 
