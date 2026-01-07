@@ -76,17 +76,54 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
   // Active streak - voted today, streak is solid
   if (streakStatus === 'active') {
     return (
-      <div
-        className="relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 dark:from-orange-900/40 dark:to-amber-900/40"
-        title={`${streak} day voting streak!`}
-      >
-        <Flame className="h-4 w-4 text-orange-500 animate-flame-flicker" />
-        <span className="text-sm font-bold text-orange-600 dark:text-orange-400 tabular-nums">
-          {streak}
-        </span>
-        {/* Glow effect for high streaks */}
-        {streak >= 7 && (
-          <div className="absolute inset-0 -z-10 animate-pulse rounded-full bg-orange-400/20 blur-md" />
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          onClick={() => setShowTooltip(!showTooltip)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 transition-all hover:from-orange-200 hover:to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 dark:hover:from-orange-900/60 dark:hover:to-amber-900/60"
+          aria-label={`${streak} day voting streak`}
+        >
+          <Flame className="h-4 w-4 text-orange-500 animate-flame-flicker" />
+          <span className="text-sm font-bold text-orange-600 dark:text-orange-400 tabular-nums">
+            {streak}
+          </span>
+          {/* Glow effect for high streaks */}
+          {streak >= 7 && (
+            <div className="absolute inset-0 -z-10 animate-pulse rounded-full bg-orange-400/20 blur-md" />
+          )}
+        </button>
+
+        {/* Active streak tooltip */}
+        {showTooltip && (
+          <div
+            ref={tooltipRef}
+            className="absolute right-0 top-full z-50 mt-2 w-52 animate-in slide-in-from-top-2"
+          >
+            <div className="rounded-xl border border-orange-200 bg-white p-3 shadow-lg dark:border-orange-800 dark:bg-zinc-900">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/50 dark:to-amber-900/50">
+                  <Flame className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                    {streak} day{streak !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    voting streak 🔥
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 p-2 dark:from-emerald-950/30 dark:to-green-950/30">
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  ✓ You&apos;ve voted today — keep it up!
+                </p>
+              </div>
+            </div>
+            {/* Arrow */}
+            <div className="absolute -top-1.5 right-4 h-3 w-3 rotate-45 border-l border-t border-orange-200 bg-white dark:border-orange-800 dark:bg-zinc-900" />
+          </div>
         )}
       </div>
     );
