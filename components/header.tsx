@@ -19,9 +19,11 @@ function isInAppBrowser(): boolean {
   return /FBAN|FBAV|Instagram|Messenger|LinkedIn|Twitter|MicroMessenger|Line|WhatsApp/i.test(ua);
 }
 
-// Helper to check if a streak is still valid based on last vote date
-function isStreakValid(lastVoteDate: string | null | undefined): boolean {
-  if (!lastVoteDate) return false;
+// Helper to get streak status based on last vote date
+type StreakStatus = 'active' | 'at-risk' | 'expired' | 'none';
+
+function getStreakStatus(streak: number, lastVoteDate: string | null | undefined): StreakStatus {
+  if (streak === 0 || !lastVoteDate) return 'none';
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -31,8 +33,14 @@ function isStreakValid(lastVoteDate: string | null | undefined): boolean {
   
   const lastVote = new Date(lastVoteDate + 'T00:00:00');
   
-  // Streak is valid if last vote was today or yesterday
-  return lastVote >= yesterday;
+  // Voted today - streak is solid
+  if (lastVote.getTime() === today.getTime()) return 'active';
+  
+  // Voted yesterday but not today - streak at risk
+  if (lastVote.getTime() === yesterday.getTime()) return 'at-risk';
+  
+  // More than 1 day ago - streak expired
+  return 'expired';
 }
 
 // Streak indicator component
@@ -60,16 +68,13 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
     }
   }, [showTooltip]);
 
-  // Check if streak is actually valid (user voted today or yesterday)
-  const hasStreak = streak > 0 && isStreakValid(lastVoteDate);
+  const streakStatus = getStreakStatus(streak, lastVoteDate);
 
-  if (hasStreak) {
-    // Active streak - show flame with count
+  // Active streak - voted today, streak is solid
+  if (streakStatus === 'active') {
     return (
-      <Link
-        href={`#`}
-        onClick={(e) => e.preventDefault()}
-        className="relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 transition-all hover:from-orange-200 hover:to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 dark:hover:from-orange-900/60 dark:hover:to-amber-900/60"
+      <div
+        className="relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 dark:from-orange-900/40 dark:to-amber-900/40"
         title={`${streak} day voting streak!`}
       >
         <Flame className="h-4 w-4 text-orange-500 animate-flame-flicker" />
@@ -80,11 +85,67 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
         {streak >= 7 && (
           <div className="absolute inset-0 -z-10 animate-pulse rounded-full bg-orange-400/20 blur-md" />
         )}
-      </Link>
+      </div>
     );
   }
 
-  // No streak - show icy indicator with tooltip
+  // At-risk streak - voted yesterday, needs to vote today
+  if (streakStatus === 'at-risk') {
+    return (
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          onClick={() => setShowTooltip(!showTooltip)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="group relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 transition-all hover:from-orange-200 hover:to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 dark:hover:from-orange-900/60 dark:hover:to-amber-900/60"
+          aria-label="Streak at risk - vote today to keep it!"
+        >
+          <Flame className="h-4 w-4 text-orange-400 animate-flame-dying" />
+          <span className="text-sm font-bold text-orange-500 dark:text-orange-400 tabular-nums">
+            {streak}
+          </span>
+          {/* Warning pulse ring */}
+          <div className="absolute inset-0 -z-10 animate-ping rounded-full bg-orange-400/30" style={{ animationDuration: '2s' }} />
+        </button>
+
+        {/* At-risk tooltip */}
+        {showTooltip && (
+          <div
+            ref={tooltipRef}
+            className="absolute right-0 top-full z-50 mt-2 w-56 animate-in slide-in-from-top-2"
+          >
+            <div className="rounded-xl border border-orange-200 bg-white p-3 shadow-lg dark:border-orange-800 dark:bg-zinc-900">
+              <div className="flex items-start gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/50 dark:to-amber-900/50">
+                  <Flame className="h-4 w-4 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {streak} day streak at risk!
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    Vote on a question today to keep your streak alive 🔥
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 p-2 dark:from-amber-950/30 dark:to-orange-950/30">
+                <span className="text-xs text-amber-700 dark:text-amber-300">
+                  ⏰ Don&apos;t let your streak freeze!
+                </span>
+              </div>
+            </div>
+            {/* Arrow */}
+            <div className="absolute -top-1.5 right-4 h-3 w-3 rotate-45 border-l border-t border-orange-200 bg-white dark:border-orange-800 dark:bg-zinc-900" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Expired or no streak - show icy indicator with tooltip
+  const isExpired = streakStatus === 'expired';
+  
   return (
     <div className="relative">
       <button
@@ -93,7 +154,7 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         className="group flex items-center rounded-full bg-gradient-to-r from-sky-100 to-blue-100 p-1.5 transition-all hover:from-sky-200 hover:to-blue-200 dark:from-sky-900/40 dark:to-blue-900/40 dark:hover:from-sky-900/60 dark:hover:to-blue-900/60"
-        aria-label="Start a voting streak"
+        aria-label={isExpired ? "Streak frozen - start a new one!" : "Start a voting streak"}
       >
         <Snowflake className="h-4 w-4 text-sky-500 transition-transform group-hover:rotate-45 group-hover:scale-110" />
       </button>
@@ -111,10 +172,12 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
               </div>
               <div>
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  No streak yet!
+                  {isExpired ? 'Your streak froze! 🥶' : 'No streak yet!'}
                 </p>
                 <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  Vote on a question today to ignite your streak 🔥
+                  {isExpired 
+                    ? 'Vote today to start a new streak!' 
+                    : 'Vote on a question today to ignite your streak 🔥'}
                 </p>
               </div>
             </div>

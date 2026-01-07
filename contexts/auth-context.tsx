@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import posthog from 'posthog-js';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/lib/types';
 
@@ -234,6 +235,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Redirect to landing page
     window.location.href = '/';
   };
+
+  // Show loading splash screen while auth is initializing
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Image
+            src="/logo-transparent.png"
+            alt="Aligned"
+            width={80}
+            height={80}
+            className="animate-logo-pulse"
+            priority
+          />
+          <span className="text-lg font-medium text-zinc-400">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut }}>

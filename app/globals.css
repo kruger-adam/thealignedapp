@@ -572,8 +572,37 @@ body {
   animation: flame-flicker 2s ease-in-out infinite;
 }
 
+/* Dying flame animation for at-risk streaks */
+@keyframes flame-dying {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.7;
+    filter: drop-shadow(0 0 1px rgba(249, 115, 22, 0.3));
+  }
+  25% {
+    transform: scale(0.85) rotate(-5deg);
+    opacity: 0.5;
+    filter: drop-shadow(0 0 0px rgba(249, 115, 22, 0));
+  }
+  50% {
+    transform: scale(0.95) rotate(3deg);
+    opacity: 0.8;
+    filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.4));
+  }
+  75% {
+    transform: scale(0.8) rotate(-3deg);
+    opacity: 0.4;
+    filter: drop-shadow(0 0 0px rgba(249, 115, 22, 0));
+  }
+}
+
+.animate-flame-dying {
+  animation: flame-dying 1.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-flame-flicker {
+  .animate-flame-flicker,
+  .animate-flame-dying {
     animation: none;
   }
 }
