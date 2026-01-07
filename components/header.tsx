@@ -47,7 +47,7 @@ function getStreakStatus(streak: number, lastVoteDate: string | null | undefined
 }
 
 // Streak indicator component
-function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDate: string | null | undefined }) {
+function StreakIndicator({ streak, lastVoteDate, longestStreak }: { streak: number; lastVoteDate: string | null | undefined; longestStreak: number }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -184,7 +184,9 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
   }
 
   // Expired or no streak - show icy indicator with tooltip
-  const isExpired = streakStatus === 'expired';
+  // Check if they ever had a streak (even if current is 0)
+  const hadStreakBefore = longestStreak > 0;
+  const showFrozenMessage = streakStatus === 'expired' || hadStreakBefore;
   
   return (
     <div className="relative">
@@ -194,7 +196,7 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         className="group flex items-center rounded-full bg-gradient-to-r from-sky-100 to-blue-100 p-1.5 transition-all hover:from-sky-200 hover:to-blue-200 dark:from-sky-900/40 dark:to-blue-900/40 dark:hover:from-sky-900/60 dark:hover:to-blue-900/60"
-        aria-label={isExpired ? "Streak frozen - start a new one!" : "Start a voting streak"}
+        aria-label={showFrozenMessage ? "Streak frozen - start a new one!" : "Start a voting streak"}
       >
         <Snowflake className="h-4 w-4 text-sky-500 transition-transform group-hover:rotate-45 group-hover:scale-110" />
       </button>
@@ -212,16 +214,26 @@ function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDat
               </div>
               <div>
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {isExpired ? 'Your streak froze! 🥶' : 'No streak yet!'}
+                  {showFrozenMessage ? 'Your streak froze! 🥶' : 'No streak yet!'}
                 </p>
                 <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  {isExpired 
+                  {showFrozenMessage 
                     ? 'Vote today to start a new streak!' 
                     : 'Vote on a question today to ignite your streak 🔥'}
                 </p>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 p-2 dark:from-orange-950/30 dark:to-amber-950/30">
+            {hadStreakBefore && (
+              <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-zinc-50 to-slate-50 p-2 dark:from-zinc-800/50 dark:to-slate-800/50">
+                <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Your best: {longestStreak} day{longestStreak !== 1 ? 's' : ''} 🏆
+                </span>
+              </div>
+            )}
+            <div className={cn(
+              "flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 p-2 dark:from-orange-950/30 dark:to-amber-950/30",
+              hadStreakBefore ? "mt-1.5" : "mt-2"
+            )}>
               <Flame className="h-3.5 w-3.5 text-orange-500" />
               <span className="text-xs text-orange-700 dark:text-orange-300">
                 Daily votes = daily streak!
@@ -293,7 +305,7 @@ export function Header() {
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
             <>
-              <StreakIndicator streak={profile?.vote_streak ?? 0} lastVoteDate={profile?.last_vote_date} />
+              <StreakIndicator streak={profile?.vote_streak ?? 0} lastVoteDate={profile?.last_vote_date} longestStreak={profile?.longest_vote_streak ?? 0} />
               <NotificationsDropdown />
               <Link href={`/profile/${user.id}`} className="ml-1">
                 <Avatar
