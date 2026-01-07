@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export type MinVotes = 0 | 5 | 10 | 25;
 export type TimePeriod = 'all' | 'day' | 'week' | 'month';
 export type PollStatus = 'all' | 'active' | 'expired';
+export type AuthorType = 'all' | 'human' | 'ai';
 
 interface FeedFiltersProps {
   minVotes: MinVotes;
@@ -17,6 +18,8 @@ interface FeedFiltersProps {
   onUnansweredChange: (value: boolean) => void;
   pollStatus: PollStatus;
   onPollStatusChange: (status: PollStatus) => void;
+  authorType: AuthorType;
+  onAuthorTypeChange: (type: AuthorType) => void;
   isLoggedIn: boolean;
 }
 
@@ -40,6 +43,12 @@ const pollStatusOptions: { value: PollStatus; label: string }[] = [
   { value: 'expired', label: 'Closed' },
 ];
 
+const authorTypeOptions: { value: AuthorType; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'human', label: 'Human' },
+  { value: 'ai', label: 'AI' },
+];
+
 export function FeedFilters({ 
   minVotes,
   onMinVotesChange,
@@ -49,13 +58,15 @@ export function FeedFilters({
   onUnansweredChange,
   pollStatus,
   onPollStatusChange,
+  authorType,
+  onAuthorTypeChange,
   isLoggedIn,
 }: FeedFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   
   // Count active filters (category is now handled by pills, not counted here)
-  const activeFilterCount = (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0) + (pollStatus !== 'all' ? 1 : 0);
+  const activeFilterCount = (minVotes > 0 ? 1 : 0) + (timePeriod !== 'all' ? 1 : 0) + (unansweredOnly ? 1 : 0) + (pollStatus !== 'all' ? 1 : 0) + (authorType !== 'all' ? 1 : 0);
   
   // Close on click outside
   useEffect(() => {
@@ -97,6 +108,7 @@ export function FeedFilters({
                     onTimePeriodChange('all');
                     onUnansweredChange(false);
                     onPollStatusChange('all');
+                    onAuthorTypeChange('all');
                   }}
                   className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 >
@@ -164,6 +176,29 @@ export function FeedFilters({
                     className={cn(
                       'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors',
                       pollStatus === value
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Author type filter */}
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Created By
+              </label>
+              <div className="flex gap-2">
+                {authorTypeOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => onAuthorTypeChange(value)}
+                    className={cn(
+                      'flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors',
+                      authorType === value
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                         : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
                     )}

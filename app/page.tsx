@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { FEATURES } from '@/lib/features';
 import { QuestionWithStats, SortOption, VoteType, Category } from '@/lib/types';
-import { MinVotes, TimePeriod, PollStatus } from '@/components/feed-filters';
+import { MinVotes, TimePeriod, PollStatus, AuthorType } from '@/components/feed-filters';
 
 const PAGE_SIZE = 15;
 const ONBOARDING_TARGET_VOTES = 10;
@@ -32,6 +32,7 @@ export default function FeedPage() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [pollStatus, setPollStatus] = useState<PollStatus>('all');
+  const [authorType, setAuthorType] = useState<AuthorType>('all');
   const supabase = useMemo(() => createClient(), []);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -200,6 +201,10 @@ export default function FeedPage() {
           filters.push(`expires_at=not.is.null`);
           filters.push(`expires_at=lte.${now}`);
         }
+      }
+      
+      if (authorType !== 'all') {
+        filters.push(`is_ai=eq.${authorType === 'ai'}`);
       }
       
       // Build URL
@@ -418,7 +423,7 @@ export default function FeedPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
+  }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
 
   // Reset and fetch when sort changes or user changes
   useEffect(() => {
@@ -430,7 +435,7 @@ export default function FeedPage() {
   useEffect(() => {
     fetchQuestions(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus]);
+  }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
 
   // Load more when user scrolls to bottom
   const loadMore = useCallback(() => {
@@ -551,6 +556,8 @@ export default function FeedPage() {
               onUnansweredChange={setUnansweredOnly}
               pollStatus={pollStatus}
               onPollStatusChange={setPollStatus}
+              authorType={authorType}
+              onAuthorTypeChange={setAuthorType}
               isLoggedIn={!!user}
             />
           </div>
