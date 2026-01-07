@@ -19,8 +19,24 @@ function isInAppBrowser(): boolean {
   return /FBAN|FBAV|Instagram|Messenger|LinkedIn|Twitter|MicroMessenger|Line|WhatsApp/i.test(ua);
 }
 
+// Helper to check if a streak is still valid based on last vote date
+function isStreakValid(lastVoteDate: string | null | undefined): boolean {
+  if (!lastVoteDate) return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const lastVote = new Date(lastVoteDate + 'T00:00:00');
+  
+  // Streak is valid if last vote was today or yesterday
+  return lastVote >= yesterday;
+}
+
 // Streak indicator component
-function StreakIndicator({ streak }: { streak: number }) {
+function StreakIndicator({ streak, lastVoteDate }: { streak: number; lastVoteDate: string | null | undefined }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -44,7 +60,8 @@ function StreakIndicator({ streak }: { streak: number }) {
     }
   }, [showTooltip]);
 
-  const hasStreak = streak > 0;
+  // Check if streak is actually valid (user voted today or yesterday)
+  const hasStreak = streak > 0 && isStreakValid(lastVoteDate);
 
   if (hasStreak) {
     // Active streak - show flame with count
@@ -173,7 +190,7 @@ export function Header() {
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
             <>
-              <StreakIndicator streak={profile?.vote_streak ?? 0} />
+              <StreakIndicator streak={profile?.vote_streak ?? 0} lastVoteDate={profile?.last_vote_date} />
               <NotificationsDropdown />
               <Link href={`/profile/${user.id}`} className="ml-1">
                 <Avatar
