@@ -41,6 +41,32 @@ async function logCron(
   }
 }
 
+// Helper to log token usage to database
+async function logTokenUsage(
+  supabase: ReturnType<typeof getSupabase>,
+  operation: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  questionId?: string,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('ai_token_logs').insert({
+      operation,
+      model,
+      input_tokens: inputTokens,
+      cached_input_tokens: 0,
+      output_tokens: outputTokens,
+      question_id: questionId || null,
+      metadata,
+    });
+  } catch (e) {
+    console.error('Failed to write token log:', e);
+  }
+}
+
 export async function POST(request: Request) {
   const supabase = getSupabase();
   
@@ -148,6 +174,19 @@ Generate a NEW, different question. Respond with ONLY the question text, nothing
     }
 
     console.log('AI generated question:', questionContent, 'ID:', newQuestion.id);
+
+    // Log token usage to database
+    if (usageMetadata) {
+      await logTokenUsage(
+        supabase,
+        'ai-question',
+        'gemini-3-flash-preview',
+        usageMetadata.promptTokenCount || 0,
+        usageMetadata.candidatesTokenCount || 0,
+        newQuestion.id,
+        { questionContent: questionContent.substring(0, 100) }
+      );
+    }
 
     // Get base URL from request or environment
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
