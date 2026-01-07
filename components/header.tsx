@@ -25,21 +25,24 @@ type StreakStatus = 'active' | 'at-risk' | 'expired' | 'none';
 function getStreakStatus(streak: number, lastVoteDate: string | null | undefined): StreakStatus {
   if (streak === 0 || !lastVoteDate) return 'none';
   
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Parse the last vote date (comes as YYYY-MM-DD from DB, stored in UTC)
+  const lastVoteDateStr = lastVoteDate.split('T')[0];
+  const [year, month, day] = lastVoteDateStr.split('-').map(Number);
+  // Create date at noon UTC to avoid timezone edge cases
+  const lastVoteMs = Date.UTC(year, month - 1, day, 12, 0, 0);
   
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  // Calculate days difference from now
+  const now = Date.now();
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysDiff = Math.floor((now - lastVoteMs) / msPerDay);
   
-  const lastVote = new Date(lastVoteDate + 'T00:00:00');
+  // Voted within the last ~24 hours (today or late yesterday) - streak is solid
+  if (daysDiff <= 0) return 'active';
   
-  // Voted today - streak is solid
-  if (lastVote.getTime() === today.getTime()) return 'active';
+  // Voted 1-2 days ago - streak at risk (need to vote today)
+  if (daysDiff === 1) return 'at-risk';
   
-  // Voted yesterday but not today - streak at risk
-  if (lastVote.getTime() === yesterday.getTime()) return 'at-risk';
-  
-  // More than 1 day ago - streak expired
+  // More than 2 days ago - streak expired
   return 'expired';
 }
 
