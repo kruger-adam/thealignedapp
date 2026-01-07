@@ -531,3 +531,49 @@ body {
 .safe-area-inset-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Splash loading screen pulse animation */
+@keyframes logo-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+}
+
+.animate-logo-pulse {
+  animation: logo-pulse 1.5s ease-in-out infinite;
+}
+
+/* Flame flicker animation for streak indicator */
+@keyframes flame-flicker {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.4));
+  }
+  25% {
+    transform: scale(1.05) rotate(-2deg);
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.6));
+  }
+  50% {
+    transform: scale(0.98) rotate(1deg);
+    filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.5));
+  }
+  75% {
+    transform: scale(1.03) rotate(-1deg);
+    filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.7));
+  }
+}
+
+.animate-flame-flicker {
+  animation: flame-flicker 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flame-flicker {
+    animation: none;
+  }
+}

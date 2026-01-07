@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogIn, Home, ExternalLink } from 'lucide-react';
+import { LogIn, Home, ExternalLink, Flame, Snowflake } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -17,6 +17,103 @@ function isInAppBrowser(): boolean {
   const ua = navigator.userAgent || navigator.vendor || '';
   // Check for common in-app browser signatures
   return /FBAN|FBAV|Instagram|Messenger|LinkedIn|Twitter|MicroMessenger|Line|WhatsApp/i.test(ua);
+}
+
+// Streak indicator component
+function StreakIndicator({ streak }: { streak: number }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        tooltipRef.current &&
+        buttonRef.current &&
+        !tooltipRef.current.contains(e.target as Node) &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setShowTooltip(false);
+      }
+    };
+
+    if (showTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showTooltip]);
+
+  const hasStreak = streak > 0;
+
+  if (hasStreak) {
+    // Active streak - show flame with count
+    return (
+      <Link
+        href={`#`}
+        onClick={(e) => e.preventDefault()}
+        className="relative flex items-center gap-0.5 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 px-2 py-1 transition-all hover:from-orange-200 hover:to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 dark:hover:from-orange-900/60 dark:hover:to-amber-900/60"
+        title={`${streak} day voting streak!`}
+      >
+        <Flame className="h-4 w-4 text-orange-500 animate-flame-flicker" />
+        <span className="text-sm font-bold text-orange-600 dark:text-orange-400 tabular-nums">
+          {streak}
+        </span>
+        {/* Glow effect for high streaks */}
+        {streak >= 7 && (
+          <div className="absolute inset-0 -z-10 animate-pulse rounded-full bg-orange-400/20 blur-md" />
+        )}
+      </Link>
+    );
+  }
+
+  // No streak - show icy indicator with tooltip
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        onClick={() => setShowTooltip(!showTooltip)}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="group flex items-center rounded-full bg-gradient-to-r from-sky-100 to-blue-100 p-1.5 transition-all hover:from-sky-200 hover:to-blue-200 dark:from-sky-900/40 dark:to-blue-900/40 dark:hover:from-sky-900/60 dark:hover:to-blue-900/60"
+        aria-label="Start a voting streak"
+      >
+        <Snowflake className="h-4 w-4 text-sky-500 transition-transform group-hover:rotate-45 group-hover:scale-110" />
+      </button>
+
+      {/* Tooltip */}
+      {showTooltip && (
+        <div
+          ref={tooltipRef}
+          className="absolute right-0 top-full z-50 mt-2 w-56 animate-in slide-in-from-top-2"
+        >
+          <div className="rounded-xl border border-sky-200 bg-white p-3 shadow-lg dark:border-sky-800 dark:bg-zinc-900">
+            <div className="flex items-start gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/50 dark:to-blue-900/50">
+                <Snowflake className="h-4 w-4 text-sky-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  No streak yet!
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  Vote on a question today to ignite your streak 🔥
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 p-2 dark:from-orange-950/30 dark:to-amber-950/30">
+              <Flame className="h-3.5 w-3.5 text-orange-500" />
+              <span className="text-xs text-orange-700 dark:text-orange-300">
+                Daily votes = daily streak!
+              </span>
+            </div>
+          </div>
+          {/* Arrow */}
+          <div className="absolute -top-1.5 right-4 h-3 w-3 rotate-45 border-l border-t border-sky-200 bg-white dark:border-sky-800 dark:bg-zinc-900" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Header() {
@@ -76,6 +173,7 @@ export function Header() {
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
             <>
+              <StreakIndicator streak={profile?.vote_streak ?? 0} />
               <NotificationsDropdown />
               <Link href={`/profile/${user.id}`} className="ml-1">
                 <Avatar
