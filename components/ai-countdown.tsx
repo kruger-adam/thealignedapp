@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 // The cron job runs at 12:00 PM Toronto time (America/Toronto)
 const CRON_HOUR = 12; // 12:00 PM
-const CRON_MINUTE = 0;
 const CRON_TIMEZONE = 'America/Toronto';
 
 // How long to show "just dropped" message after posting (in minutes)
@@ -14,75 +13,89 @@ const JUST_DROPPED_DURATION = 5;
 function getNextCronTime(): Date {
   const now = new Date();
   
-  // Get current time in Toronto
-  const torontoFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: CRON_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  // Get current Toronto time components
+  const torontoTime = new Date(now.toLocaleString('en-US', { timeZone: CRON_TIMEZONE }));
   
-  const parts = torontoFormatter.formatToParts(now);
-  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '0';
+  // Create target time for today at CRON_HOUR in Toronto
+  const targetToday = new Date(torontoTime);
+  targetToday.setHours(CRON_HOUR, 0, 0, 0);
   
-  const torontoHour = parseInt(getPart('hour'));
-  const torontoMinute = parseInt(getPart('minute'));
+  // Calculate the offset between Toronto time and UTC
+  // by comparing the Toronto-interpreted time with actual now
+  const torontoOffset = torontoTime.getTime() - now.getTime();
   
-  // Create today's cron time in Toronto
-  // We need to construct the date properly
-  const torontoYear = parseInt(getPart('year'));
-  const torontoMonth = parseInt(getPart('month')) - 1; // 0-indexed
-  const torontoDay = parseInt(getPart('day'));
+  // Convert target Toronto time back to UTC
+  let targetUTC = new Date(targetToday.getTime() - torontoOffset);
   
-  // Create a date string for today at cron time in Toronto
-  const cronDateStr = `${torontoYear}-${String(torontoMonth + 1).padStart(2, '0')}-${String(torontoDay).padStart(2, '0')}T${String(CRON_HOUR).padStart(2, '0')}:${String(CRON_MINUTE).padStart(2, '0')}:00`;
-  
-  // Parse this as Toronto time and convert to UTC
-  // Use a trick: create the date and adjust for timezone offset
-  const cronTimeToday = new Date(cronDateStr);
-  
-  // Get the offset between Toronto and UTC at this time
-  const torontoOffset = getTimezoneOffset(CRON_TIMEZONE, cronTimeToday);
-  const utcCronTime = new Date(cronTimeToday.getTime() + torontoOffset);
-  
-  // Check if we've passed today's cron time
-  const currentTorontoMinutes = torontoHour * 60 + torontoMinute;
-  const cronMinutes = CRON_HOUR * 60 + CRON_MINUTE;
-  
-  if (currentTorontoMinutes >= cronMinutes) {
-    // Already passed today, use tomorrow
-    utcCronTime.setDate(utcCronTime.getDate() + 1);
+  // If we've already passed today's cron time, move to tomorrow
+  if (now >= targetUTC) {
+    targetUTC = new Date(targetUTC.getTime() + 24 * 60 * 60 * 1000);
   }
   
-  return utcCronTime;
+  return targetUTC;
 }
 
-function getTimezoneOffset(timezone: string, date: Date): number {
-  // Get the offset in minutes for a timezone at a specific date
-  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
-  return (utcDate.getTime() - tzDate.getTime());
+interface TimeComponents {
+  hours: number;
+  minutes: number;
+  seconds: number;
 }
 
-function formatTimeRemaining(ms: number): string {
-  if (ms <= 0) return '0m';
+function getTimeComponents(ms: number): TimeComponents {
+  if (ms <= 0) return { hours: 0, minutes: 0, seconds: 0 };
   
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  } else {
-    return `${seconds}s`;
-  }
+  return { hours, minutes, seconds };
+}
+
+// Flip clock digit component
+function FlipDigit({ value, label }: { value: number; label: string }) {
+  const display = String(value).padStart(2, '0');
+  
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative flex gap-0.5">
+        {display.split('').map((digit, i) => (
+          <div
+            key={i}
+            className="relative h-10 w-7 overflow-hidden rounded-md bg-gradient-to-b from-zinc-800 to-zinc-900 shadow-lg dark:from-zinc-700 dark:to-zinc-800"
+          >
+            {/* Top half */}
+            <div className="absolute inset-x-0 top-0 h-1/2 overflow-hidden border-b border-zinc-700/50 bg-gradient-to-b from-zinc-800 to-zinc-850 dark:from-zinc-700 dark:to-zinc-750">
+              <span className="absolute inset-0 flex items-end justify-center pb-px text-lg font-bold tabular-nums text-white">
+                {digit}
+              </span>
+            </div>
+            {/* Bottom half */}
+            <div className="absolute inset-x-0 bottom-0 h-1/2 overflow-hidden bg-gradient-to-b from-zinc-850 to-zinc-900 dark:from-zinc-750 dark:to-zinc-800">
+              <span className="absolute inset-0 flex items-start justify-center pt-px text-lg font-bold tabular-nums text-zinc-100">
+                {digit}
+              </span>
+            </div>
+            {/* Center line shine */}
+            <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-zinc-600/50 to-transparent" />
+          </div>
+        ))}
+      </div>
+      <span className="mt-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// Separator between digit groups
+function Separator({ urgent }: { urgent: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1.5 px-1 pb-4">
+      <div className={`h-1.5 w-1.5 rounded-full ${urgent ? 'bg-amber-500 animate-pulse' : 'bg-zinc-500'}`} />
+      <div className={`h-1.5 w-1.5 rounded-full ${urgent ? 'bg-amber-500 animate-pulse' : 'bg-zinc-500'}`} />
+    </div>
+  );
 }
 
 export function AICountdown() {
@@ -96,24 +109,24 @@ export function AICountdown() {
       const remaining = nextCron.getTime() - now.getTime();
       
       // Check if we're within the "just dropped" window
-      // This is JUST_DROPPED_DURATION minutes after the cron time
-      const msSinceCron = -remaining; // Negative remaining means we're past cron time
+      // We need to check if we're within JUST_DROPPED_DURATION minutes AFTER the last cron
+      const msInDay = 24 * 60 * 60 * 1000;
+      const msSinceCron = msInDay - remaining;
+      
       if (msSinceCron >= 0 && msSinceCron < JUST_DROPPED_DURATION * 60 * 1000) {
         setJustDropped(true);
-        setTimeRemaining(remaining);
       } else {
         setJustDropped(false);
-        setTimeRemaining(remaining);
       }
+      
+      setTimeRemaining(remaining);
     }
 
     // Initial update
     updateCountdown();
 
-    // Update every second when close, every minute otherwise
-    const interval = setInterval(() => {
-      updateCountdown();
-    }, 1000);
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -124,45 +137,41 @@ export function AICountdown() {
   }
 
   const isUrgent = timeRemaining > 0 && timeRemaining < 60 * 60 * 1000; // Less than 1 hour
+  const { hours, minutes, seconds } = getTimeComponents(timeRemaining);
 
   if (justDropped) {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 px-4 py-2.5 dark:from-violet-500/20 dark:to-fuchsia-500/20">
-        <Sparkles className="h-4 w-4 text-violet-500 animate-pulse" />
-        <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
+      <div className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10 px-4 py-3 dark:from-violet-500/20 dark:via-fuchsia-500/20 dark:to-violet-500/20">
+        <Sparkles className="h-5 w-5 text-violet-500 animate-pulse" />
+        <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">
           New AI question just dropped!
         </span>
-        <Sparkles className="h-4 w-4 text-fuchsia-500 animate-pulse" />
+        <Sparkles className="h-5 w-5 text-fuchsia-500 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition-all ${
+    <div className={`flex flex-col items-center rounded-xl px-4 py-3 transition-all ${
       isUrgent 
-        ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20' 
-        : 'bg-zinc-100 dark:bg-zinc-800/50'
+        ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 dark:from-amber-500/20 dark:via-orange-500/20 dark:to-amber-500/20' 
+        : 'bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-800/80 dark:via-zinc-800/50 dark:to-zinc-800/80'
     }`}>
-      <Bot className={`h-4 w-4 ${
+      <span className={`mb-2 text-xs font-medium tracking-wide ${
         isUrgent 
-          ? 'text-amber-600 dark:text-amber-400 animate-pulse' 
+          ? 'text-amber-700 dark:text-amber-300' 
           : 'text-zinc-500 dark:text-zinc-400'
-      }`} />
-      <span className={`text-sm ${
-        isUrgent 
-          ? 'font-medium text-amber-700 dark:text-amber-300' 
-          : 'text-zinc-600 dark:text-zinc-400'
       }`}>
-        Next AI question in{' '}
-        <span className={`font-semibold tabular-nums ${
-          isUrgent 
-            ? 'text-amber-800 dark:text-amber-200' 
-            : 'text-zinc-700 dark:text-zinc-300'
-        }`}>
-          {formatTimeRemaining(timeRemaining)}
-        </span>
+        🤖 Next AI question in
       </span>
+      
+      <div className="flex items-center">
+        <FlipDigit value={hours} label="hours" />
+        <Separator urgent={isUrgent} />
+        <FlipDigit value={minutes} label="mins" />
+        <Separator urgent={isUrgent} />
+        <FlipDigit value={seconds} label="secs" />
+      </div>
     </div>
   );
 }
-
