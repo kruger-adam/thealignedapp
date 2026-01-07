@@ -14,25 +14,32 @@ import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { FEATURES } from '@/lib/features';
 import { QuestionWithStats, SortOption, VoteType, Category } from '@/lib/types';
-import { MinVotes, TimePeriod, PollStatus, AuthorType } from '@/components/feed-filters';
+import { useFeedPreferences } from '@/hooks/use-feed-preferences';
 
 const PAGE_SIZE = 15;
 const ONBOARDING_TARGET_VOTES = 10;
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
+  const {
+    preferences,
+    isInitialized: prefsInitialized,
+    setSortBy,
+    setCategoryFilter,
+    setMinVotes,
+    setTimePeriod,
+    setPollStatus,
+    setAuthorType,
+  } = useFeedPreferences();
+  
+  const { sortBy, categoryFilter, minVotes, timePeriod, pollStatus, authorType } = preferences;
+  
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [categoryFilter, setCategoryFilter] = useState<Category | null>(null);
-  const [minVotes, setMinVotes] = useState<MinVotes>(0);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [unansweredOnly, setUnansweredOnly] = useState(false);
-  const [pollStatus, setPollStatus] = useState<PollStatus>('all');
-  const [authorType, setAuthorType] = useState<AuthorType>('all');
   const supabase = useMemo(() => createClient(), []);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -108,7 +115,7 @@ export default function FeedPage() {
   const handleOnboardingCategorySelect = useCallback((category: Category) => {
     setOnboardingCategory(category);
     setCategoryFilter(category);
-  }, []);
+  }, [setCategoryFilter]);
 
   // Filters are always applied before pagination in fetchQuestions now
   // So we just use questions directly - no need for additional client-side filtering
@@ -425,15 +432,19 @@ export default function FeedPage() {
     }
   }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
 
-  // Reset and fetch when sort changes or user changes
+  // Reset and fetch when sort changes or user changes (wait for preferences to load)
   useEffect(() => {
-    fetchQuestions(false);
+    if (prefsInitialized) {
+      fetchQuestions(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, sortBy]);
+  }, [user, sortBy, prefsInitialized]);
 
   // Refetch when filters change (filters require fetching all data to apply correctly)
   useEffect(() => {
-    fetchQuestions(false);
+    if (prefsInitialized) {
+      fetchQuestions(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
 
