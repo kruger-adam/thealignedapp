@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LogIn, Home, ExternalLink, Flame, Snowflake } from 'lucide-react';
+import { LogIn, ExternalLink, Flame, Snowflake } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -250,7 +249,6 @@ function StreakIndicator({ streak, lastVoteDate, longestStreak }: { streak: numb
 
 export function Header() {
   const { user, profile, loading, signInWithGoogle } = useAuth();
-  const pathname = usePathname();
   const [showInAppWarning, setShowInAppWarning] = useState(false);
   const [isInApp, setIsInApp] = useState(false);
 
@@ -286,21 +284,7 @@ export function Header() {
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-1">
-          <Link href="/">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'gap-1.5',
-                pathname === '/' && 'bg-zinc-100 dark:bg-zinc-800'
-              )}
-            >
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Feed</span>
-            </Button>
-          </Link>
-
+        <nav className="flex items-center gap-2">
           {loading ? (
             <div className="ml-2 h-8 w-8 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
           ) : user ? (
