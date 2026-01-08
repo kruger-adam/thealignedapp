@@ -14,15 +14,14 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q');
 
     if (!query || query.trim().length < 2) {
-      return NextResponse.json({ results: [] });
+      return NextResponse.json({ questions: [], users: [] });
     }
 
     const supabase = getSupabase();
     const searchTerm = query.trim();
 
-    // Use full-text search with websearch syntax
-    // This handles phrases, AND/OR operators, etc.
-    const { data: results, error } = await supabase
+    // Search questions using full-text search
+    const questionsPromise = supabase
       .from('questions')
       .select(`
         id,
@@ -40,10 +39,27 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (error) {
-      console.error('Search error:', error);
+    // Search users by username
+    const usersPromise = supabase
+      .from('profiles')
+      .select(`
+        id,
+        username,
+        avatar_url,
+        created_at
+      `)
+      .ilike('username', `%${searchTerm}%`)
+      .order('username', { ascending: true })
+      .limit(10);
+
+    const [questionsResult, usersResult] = await Promise.all([questionsPromise, usersPromise]);
+
+    let questions = questionsResult.data || [];
+    
+    // Fallback to ilike search for questions if full-text search fails
+    if (questionsResult.error) {
+      console.error('Question search error:', questionsResult.error);
       
-      // Fallback to ilike search if full-text search fails
       const { data: fallbackResults, error: fallbackError } = await supabase
         .from('questions')
         .select(`
@@ -59,15 +75,21 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (fallbackError) {
-        console.error('Fallback search error:', fallbackError);
-        return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+      if (!fallbackError) {
+        questions = fallbackResults || [];
       }
-
-      return NextResponse.json({ results: fallbackResults || [] });
     }
 
-    return NextResponse.json({ results: results || [] });
+    if (usersResult.error) {
+      console.error('User search error:', usersResult.error);
+    }
+
+    return NextResponse.json({ 
+      questions,
+      users: usersResult.data || [],
+      // Keep backwards compatibility
+      results: questions
+    });
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

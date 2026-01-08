@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-interface SearchResult {
+interface QuestionResult {
   id: string;
   content: string;
   created_at: string;
@@ -16,10 +16,18 @@ interface SearchResult {
   image_url: string | null;
 }
 
+interface UserResult {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
 export function Search() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [questions, setQuestions] = useState<QuestionResult[]>([]);
+  const [users, setUsers] = useState<UserResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +36,8 @@ export function Search() {
   // Debounced search
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([]);
+      setQuestions([]);
+      setUsers([]);
       setHasSearched(false);
       return;
     }
@@ -39,10 +48,12 @@ export function Search() {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
-        setResults(data.results || []);
+        setQuestions(data.questions || []);
+        setUsers(data.users || []);
       } catch (err) {
         console.error('Search error:', err);
-        setResults([]);
+        setQuestions([]);
+        setUsers([]);
       }
       setIsLoading(false);
     }, 300);
@@ -94,7 +105,8 @@ export function Search() {
   const handleClose = useCallback(() => {
     setIsOpen(false);
     setQuery('');
-    setResults([]);
+    setQuestions([]);
+    setUsers([]);
     setHasSearched(false);
   }, []);
 
@@ -156,15 +168,61 @@ export function Search() {
                 </div>
               )}
 
-              {hasSearched && !isLoading && results.length === 0 && (
+              {hasSearched && !isLoading && questions.length === 0 && users.length === 0 && (
                 <div className="px-4 py-8 text-center text-sm text-zinc-500">
-                  No questions found for &quot;{query}&quot;
+                  No results found for &quot;{query}&quot;
                 </div>
               )}
 
-              {results.length > 0 && (
+              {/* User Results */}
+              {users.length > 0 && (
                 <div className="py-2">
-                  {results.map((result) => (
+                  <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Users
+                  </div>
+                  {users.map((user) => (
+                    <Link
+                      key={user.id}
+                      href={`/profile/${user.id}`}
+                      onClick={handleClose}
+                      className="flex gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    >
+                      {/* Avatar */}
+                      {user.avatar_url ? (
+                        <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                          <Image
+                            src={user.avatar_url}
+                            alt={user.username || ''}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                          <User className="h-5 w-5 text-zinc-400" />
+                        </div>
+                      )}
+
+                      {/* Username */}
+                      <div className="flex flex-1 items-center min-w-0">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                          {user.username}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Question Results */}
+              {questions.length > 0 && (
+                <div className="py-2">
+                  {users.length > 0 && (
+                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Questions
+                    </div>
+                  )}
+                  {questions.map((result) => (
                     <Link
                       key={result.id}
                       href={`/question/${result.id}`}
