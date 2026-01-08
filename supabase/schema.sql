@@ -564,7 +564,7 @@ CREATE INDEX idx_follows_following_id ON follows(following_id);
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK (type IN ('mention', 'follow', 'new_question', 'vote', 'comment')),
+    type TEXT NOT NULL CHECK (type IN ('mention', 'follow', 'new_question', 'vote', 'comment', 'reply')),
     actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
     comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
