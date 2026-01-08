@@ -95,3 +95,4 @@ Once you've set up an alternative, you can remove the cron from `vercel.json`:
 
 Your `/api/ai-question` endpoint will still work - it just won't be automatically triggered by Vercel anymore.
 
+

@@ -73,3 +73,4 @@ SELECT cron.schedule(
 -- SELECT cron.unschedule('daily-ai-question');
 -- SELECT cron.schedule('daily-ai-question', '0 12 * * *', $$SELECT trigger_ai_question()$$);
 
+

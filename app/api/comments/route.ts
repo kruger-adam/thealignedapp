@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, recordRateLimit } from '@/lib/rate-limit';
 import { MentionSuggestion } from '@/lib/types';
+import { notifyMention } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -129,6 +130,47 @@ export async function POST(request: NextRequest) {
       supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
         if (notifError) console.error('Error creating notifications:', notifError);
       });
+    }
+
+    // Send email notifications to mentioned users (fire and forget)
+    const usersToEmailNotify = (mentionedUsers || []).filter(
+      (u: MentionSuggestion) => u.id !== user.id && !u.is_ai
+    );
+    
+    if (usersToEmailNotify.length > 0) {
+      // Fetch mentioned users' profiles (email + notification preferences) and commenter's username
+      const userIds = usersToEmailNotify.map((u: MentionSuggestion) => u.id);
+      
+      Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, email, username, notification_preferences')
+          .in('id', userIds),
+        supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single()
+      ]).then(async ([mentionedProfilesResult, commenterResult]) => {
+        const mentionedProfiles = mentionedProfilesResult.data || [];
+        const commenterUsername = commenterResult.data?.username || 'Someone';
+        
+        for (const profile of mentionedProfiles) {
+          // Check if user has mention email notifications enabled
+          const prefs = profile.notification_preferences as { mention?: boolean } | null;
+          if (prefs?.mention === false) continue;
+          
+          if (profile.email) {
+            notifyMention({
+              mentionedUserEmail: profile.email,
+              mentionedUsername: profile.username || 'there',
+              mentionerUsername: commenterUsername,
+              commentContent: contentToSave,
+              questionId,
+            }).catch((err) => console.error('Failed to send mention email:', err));
+          }
+        }
+      }).catch((err) => console.error('Error fetching profiles for email notifications:', err));
     }
 
     return NextResponse.json({

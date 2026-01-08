@@ -47,7 +47,7 @@ async function sendSMS(message: string): Promise<boolean> {
 /**
  * Send email notification via Resend
  */
-async function sendEmail(subject: string, body: string): Promise<boolean> {
+async function sendEmail(subject: string, body: string, to?: string): Promise<boolean> {
   if (!resend) {
     console.log('Resend not configured, skipping email');
     return false;
@@ -56,7 +56,7 @@ async function sendEmail(subject: string, body: string): Promise<boolean> {
   try {
     await resend.emails.send({
       from: 'Consensus App <notifications@resend.dev>',
-      to: ADMIN_EMAIL,
+      to: to || ADMIN_EMAIL,
       subject,
       text: body,
     });
@@ -93,5 +93,37 @@ export async function notifyNewSignup(user: NewUserInfo): Promise<void> {
   if (!smsSent) {
     console.log('SMS not sent - check Twilio configuration');
   }
+}
+
+interface MentionNotificationInfo {
+  mentionedUserEmail: string;
+  mentionedUsername: string;
+  mentionerUsername: string;
+  commentContent: string;
+  questionId: string;
+}
+
+/**
+ * Send email notification when a user is mentioned in a comment
+ */
+export async function notifyMention(info: MentionNotificationInfo): Promise<boolean> {
+  const { mentionedUserEmail, mentionedUsername, mentionerUsername, commentContent, questionId } = info;
+  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://consensus.app';
+  const questionUrl = `${baseUrl}/question/${questionId}`;
+  
+  const subject = `@${mentionerUsername} mentioned you in a comment`;
+  const body = `Hey ${mentionedUsername}!
+
+${mentionerUsername} mentioned you in a comment:
+
+"${commentContent}"
+
+View the conversation: ${questionUrl}
+
+---
+You're receiving this because you were mentioned. You can update your notification preferences in your profile settings.`;
+
+  return sendEmail(subject, body, mentionedUserEmail);
 }
 
