@@ -17,6 +17,7 @@ interface NotificationPreferences {
   new_question: boolean;
   vote_on_your_question: boolean;
   comment_on_your_question: boolean;
+  thread_reply: boolean;
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -26,6 +27,7 @@ const defaultPreferences: NotificationPreferences = {
   new_question: true,
   vote_on_your_question: true,
   comment_on_your_question: true,
+  thread_reply: true,
 };
 
 const preferenceLabels: Record<keyof NotificationPreferences, { label: string; description: string }> = {
@@ -35,6 +37,7 @@ const preferenceLabels: Record<keyof NotificationPreferences, { label: string; d
   new_question: { label: 'New questions', description: 'When people you follow post new questions' },
   vote_on_your_question: { label: 'Votes on your questions', description: 'When someone votes on your question' },
   comment_on_your_question: { label: 'Comments on your questions', description: 'When someone comments on your question' },
+  thread_reply: { label: 'Thread replies', description: 'When someone replies in a conversation you participated in' },
 };
 
 // Map a notification to its preference key
@@ -61,6 +64,8 @@ function getPreferenceKey(notification: Notification, userId: string): keyof Not
         return 'comment_on_your_question';
       }
       return 'follow_activity';
+    case 'reply':
+      return 'thread_reply';
     default:
       return 'mention'; // Fallback
   }
@@ -346,6 +351,13 @@ export function NotificationsDropdown() {
           <>
             <span className="font-medium">{actorName}</span>
             {' commented on a question'}
+          </>
+        );
+      case 'reply':
+        return (
+          <>
+            <span className="font-medium">{actorName}</span>
+            {' replied in a conversation you joined'}
           </>
         );
       default:

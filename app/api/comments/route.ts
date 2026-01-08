@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Create notifications
     const notifications: Array<{
       user_id: string;
-      type: 'mention' | 'comment';
+      type: 'mention' | 'comment' | 'reply';
       actor_id: string;
       question_id: string;
       comment_id: string;
@@ -124,6 +124,80 @@ export async function POST(request: NextRequest) {
         question_id: questionId,
         comment_id: newComment.id,
       });
+    }
+
+    // Notify previous commenters (thread reply notifications)
+    // Skip: self, question author (already notified), mentioned users (already notified)
+    const alreadyNotifiedIds = new Set([
+      user.id,
+      ...(question.author_id ? [question.author_id] : []),
+      ...mentionedUserIds,
+    ]);
+
+    // Get previous commenters on this question
+    const { data: previousComments } = await supabase
+      .from('comments')
+      .select('user_id')
+      .eq('question_id', questionId)
+      .neq('user_id', user.id);
+
+    // Get unique previous commenter IDs
+    const previousCommenterIds = [...new Set(
+      (previousComments || [])
+        .map(c => c.user_id)
+        .filter(id => !alreadyNotifiedIds.has(id))
+    )];
+
+    if (previousCommenterIds.length > 0) {
+      // Check for recent reply notifications to avoid spam
+      // Don't notify if they've already been notified for a reply on this question in the last hour
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
+      const { data: recentNotifications } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .eq('question_id', questionId)
+        .eq('type', 'reply')
+        .eq('actor_id', user.id)
+        .gte('created_at', oneHourAgo)
+        .in('user_id', previousCommenterIds);
+
+      const recentlyNotifiedIds = new Set(
+        (recentNotifications || []).map(n => n.user_id)
+      );
+
+      // Also check user preferences for thread_reply
+      const { data: commenterProfiles } = await supabase
+        .from('profiles')
+        .select('id, notification_preferences')
+        .in('id', previousCommenterIds);
+
+      const profilePrefsMap = new Map(
+        (commenterProfiles || []).map(p => [p.id, p.notification_preferences])
+      );
+
+      for (const commenterId of previousCommenterIds) {
+        // Skip if recently notified
+        if (recentlyNotifiedIds.has(commenterId)) {
+          console.log(`[comments] Skipping reply notification for ${commenterId} - recently notified`);
+          continue;
+        }
+
+        // Check thread_reply preference (default to true if not set)
+        const prefs = profilePrefsMap.get(commenterId) as { thread_reply?: boolean } | null;
+        if (prefs?.thread_reply === false) {
+          console.log(`[comments] Skipping reply notification for ${commenterId} - disabled in preferences`);
+          continue;
+        }
+
+        notifications.push({
+          user_id: commenterId,
+          type: 'reply',
+          actor_id: user.id,
+          question_id: questionId,
+          comment_id: newComment.id,
+        });
+      }
     }
 
     // Background work: notifications and emails
