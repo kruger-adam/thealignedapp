@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify question exists and get title for email
+    // Verify question exists and get content for email
     const { data: question } = await supabase
       .from('questions')
-      .select('id, author_id, title')
+      .select('id, author_id, content')
       .eq('id', questionId)
       .single();
 
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
                 commenterUsername,
                 commentContent: contentToSave,
                 questionId,
-                questionTitle: question.title,
+                questionTitle: question.content,
               });
             } catch (err) {
               console.error('Failed to send comment email to author:', err);
