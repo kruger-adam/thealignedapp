@@ -515,9 +515,10 @@ export function ProfileClient({
             <p className="py-8 text-center text-zinc-500">No questions created yet.</p>
           ) : (
             createdQuestions.map((question) => (
-              <div
+              <Link
                 key={question.id}
-                className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+                href={`/question/${question.id}`}
+                className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50"
               >
                 <div className="rounded-full bg-zinc-100 p-2 dark:bg-zinc-800">
                   <HelpCircle className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
@@ -539,7 +540,7 @@ export function ProfileClient({
                     })}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </div>
