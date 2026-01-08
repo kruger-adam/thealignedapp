@@ -160,12 +160,13 @@ export async function POST(request: NextRequest) {
         const commenterUsername = commenterResult.data?.username || 'Someone';
         
         for (const profile of mentionedProfiles) {
-          // Check if user has mention email notifications enabled
-          const prefs = profile.notification_preferences as { mention?: boolean } | null;
-          console.log(`[comments] Profile ${profile.username} - email: ${profile.email ? 'yes' : 'no'}, mention pref: ${prefs?.mention}`);
+          // Check if user has email mention notifications enabled
+          const prefs = profile.notification_preferences as { email_mention?: boolean } | null;
+          console.log(`[comments] Profile ${profile.username} - email: ${profile.email ? 'yes' : 'no'}, email_mention pref: ${prefs?.email_mention}`);
           
-          if (prefs?.mention === false) {
-            console.log(`[comments] Skipping ${profile.username} - mention notifications disabled`);
+          // Default to true if not set, only skip if explicitly false
+          if (prefs?.email_mention === false) {
+            console.log(`[comments] Skipping ${profile.username} - email mention notifications disabled`);
             continue;
           }
           

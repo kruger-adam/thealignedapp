@@ -55,7 +55,7 @@ async function sendEmail(subject: string, body: string, to?: string): Promise<bo
 
   try {
     await resend.emails.send({
-      from: 'Consensus App <notifications@resend.dev>',
+      from: 'Aligned <notifications@resend.dev>',
       to: to || ADMIN_EMAIL,
       subject,
       text: body,
@@ -66,6 +66,15 @@ async function sendEmail(subject: string, body: string, to?: string): Promise<bo
     console.error('Failed to send email:', error);
     return false;
   }
+}
+
+/**
+ * Format comment content for email display
+ * Converts @[username](id) to @username for readability
+ */
+function formatContentForEmail(content: string): string {
+  // Replace @[username](uuid) with @username
+  return content.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
 }
 
 /**
@@ -111,20 +120,25 @@ export async function notifyMention(info: MentionNotificationInfo): Promise<bool
   
   console.log(`[notifyMention] Sending email to ${mentionedUserEmail} (${mentionedUsername}) - mentioned by ${mentionerUsername}`);
   
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://consensus.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aligned.so';
   const questionUrl = `${baseUrl}/question/${questionId}`;
+  const preferencesUrl = `${baseUrl}/preferences/email`;
+  
+  // Format content to be human-readable (remove UUIDs from mentions)
+  const formattedContent = formatContentForEmail(commentContent);
   
   const subject = `@${mentionerUsername} mentioned you in a comment`;
   const body = `Hey ${mentionedUsername}!
 
 ${mentionerUsername} mentioned you in a comment:
 
-"${commentContent}"
+"${formattedContent}"
 
 View the conversation: ${questionUrl}
 
 ---
-You're receiving this because you were mentioned. You can update your notification preferences in your profile settings.`;
+You're receiving this because you were mentioned.
+Manage email preferences: ${preferencesUrl}`;
 
   const result = await sendEmail(subject, body, mentionedUserEmail);
   console.log(`[notifyMention] Email send result: ${result ? 'success' : 'failed'}`);
