@@ -3,7 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, recordRateLimit } from '@/lib/rate-limit';
 import { MentionSuggestion } from '@/lib/types';
-import { notifyMention } from '@/lib/notifications';
+import { notifyMention, notifyComment } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify question exists
+    // Verify question exists and get title for email
     const { data: question } = await supabase
       .from('questions')
-      .select('id, author_id')
+      .select('id, author_id, title')
       .eq('id', questionId)
       .single();
 
@@ -187,6 +187,57 @@ export async function POST(request: NextRequest) {
             } catch (err) {
               console.error('Failed to send mention email:', err);
             }
+          }
+        }
+      }
+
+      // Send email to question author if someone commented on their poll
+      // (skip if author is commenter or already mentioned)
+      const shouldNotifyAuthor = question.author_id && 
+        question.author_id !== user.id && 
+        !mentionedUserIds.includes(question.author_id);
+      
+      if (shouldNotifyAuthor) {
+        console.log(`[comments] Checking if poll author should receive email`);
+        
+        // Fetch author's profile and commenter's username (if not already fetched)
+        const [authorResult, commenterForAuthorResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('email, username, notification_preferences')
+            .eq('id', question.author_id)
+            .single(),
+          supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single()
+        ]);
+        
+        const authorProfile = authorResult.data;
+        const commenterUsername = commenterForAuthorResult.data?.username || 'Someone';
+        
+        if (authorProfile) {
+          const prefs = authorProfile.notification_preferences as { email_comment?: boolean } | null;
+          console.log(`[comments] Author ${authorProfile.username} - email: ${authorProfile.email ? 'yes' : 'no'}, email_comment pref: ${prefs?.email_comment}`);
+          
+          // Default to true if not set, only skip if explicitly false
+          if (prefs?.email_comment !== false && authorProfile.email) {
+            console.log(`[comments] Sending comment email to poll author ${authorProfile.email}`);
+            try {
+              await notifyComment({
+                authorEmail: authorProfile.email,
+                authorUsername: authorProfile.username || 'there',
+                commenterUsername,
+                commentContent: contentToSave,
+                questionId,
+                questionTitle: question.title,
+              });
+            } catch (err) {
+              console.error('Failed to send comment email to author:', err);
+            }
+          } else if (prefs?.email_comment === false) {
+            console.log(`[comments] Skipping author ${authorProfile.username} - comment notifications disabled`);
           }
         }
       }

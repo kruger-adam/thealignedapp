@@ -145,3 +145,47 @@ Manage email preferences: ${preferencesUrl}`;
   return result;
 }
 
+interface CommentNotificationInfo {
+  authorEmail: string;
+  authorUsername: string;
+  commenterUsername: string;
+  commentContent: string;
+  questionId: string;
+  questionTitle?: string;
+}
+
+/**
+ * Send email notification when someone comments on a poll you created
+ */
+export async function notifyComment(info: CommentNotificationInfo): Promise<boolean> {
+  const { authorEmail, authorUsername, commenterUsername, commentContent, questionId, questionTitle } = info;
+  
+  console.log(`[notifyComment] Sending email to ${authorEmail} (${authorUsername}) - comment by ${commenterUsername}`);
+  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aligned.so';
+  const questionUrl = `${baseUrl}/question/${questionId}`;
+  const preferencesUrl = `${baseUrl}/preferences/email`;
+  
+  // Format content to be human-readable (remove UUIDs from mentions)
+  const formattedContent = formatContentForEmail(commentContent);
+  
+  const pollReference = questionTitle ? `"${questionTitle}"` : 'your poll';
+  
+  const subject = `${commenterUsername} commented on ${pollReference}`;
+  const body = `Hey ${authorUsername}!
+
+${commenterUsername} left a comment on ${pollReference}:
+
+"${formattedContent}"
+
+View the conversation: ${questionUrl}
+
+---
+You're receiving this because someone commented on your poll.
+Manage email preferences: ${preferencesUrl}`;
+
+  const result = await sendEmail(subject, body, authorEmail);
+  console.log(`[notifyComment] Email send result: ${result ? 'success' : 'failed'}`);
+  return result;
+}
+
