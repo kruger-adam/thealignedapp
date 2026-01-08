@@ -137,6 +137,8 @@ export async function POST(request: NextRequest) {
       (u: MentionSuggestion) => u.id !== user.id && !u.is_ai
     );
     
+    console.log(`[comments] Users to email notify: ${usersToEmailNotify.length}`, usersToEmailNotify.map((u: MentionSuggestion) => u.username));
+    
     if (usersToEmailNotify.length > 0) {
       // Fetch mentioned users' profiles (email + notification preferences) and commenter's username
       const userIds = usersToEmailNotify.map((u: MentionSuggestion) => u.id);
@@ -152,15 +154,23 @@ export async function POST(request: NextRequest) {
           .eq('id', user.id)
           .single()
       ]).then(async ([mentionedProfilesResult, commenterResult]) => {
+        console.log('[comments] Fetched profiles for email:', mentionedProfilesResult.data?.length, 'commenter:', commenterResult.data?.username);
+        
         const mentionedProfiles = mentionedProfilesResult.data || [];
         const commenterUsername = commenterResult.data?.username || 'Someone';
         
         for (const profile of mentionedProfiles) {
           // Check if user has mention email notifications enabled
           const prefs = profile.notification_preferences as { mention?: boolean } | null;
-          if (prefs?.mention === false) continue;
+          console.log(`[comments] Profile ${profile.username} - email: ${profile.email ? 'yes' : 'no'}, mention pref: ${prefs?.mention}`);
+          
+          if (prefs?.mention === false) {
+            console.log(`[comments] Skipping ${profile.username} - mention notifications disabled`);
+            continue;
+          }
           
           if (profile.email) {
+            console.log(`[comments] Sending mention email to ${profile.email}`);
             notifyMention({
               mentionedUserEmail: profile.email,
               mentionedUsername: profile.username || 'there',

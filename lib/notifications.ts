@@ -109,6 +109,8 @@ interface MentionNotificationInfo {
 export async function notifyMention(info: MentionNotificationInfo): Promise<boolean> {
   const { mentionedUserEmail, mentionedUsername, mentionerUsername, commentContent, questionId } = info;
   
+  console.log(`[notifyMention] Sending email to ${mentionedUserEmail} (${mentionedUsername}) - mentioned by ${mentionerUsername}`);
+  
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://consensus.app';
   const questionUrl = `${baseUrl}/question/${questionId}`;
   
@@ -124,6 +126,8 @@ View the conversation: ${questionUrl}
 ---
 You're receiving this because you were mentioned. You can update your notification preferences in your profile settings.`;
 
-  return sendEmail(subject, body, mentionedUserEmail);
+  const result = await sendEmail(subject, body, mentionedUserEmail);
+  console.log(`[notifyMention] Email send result: ${result ? 'success' : 'failed'}`);
+  return result;
 }
 

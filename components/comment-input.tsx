@@ -243,85 +243,39 @@ export function CommentInput({
     
     setSubmittingComment(true);
     try {
-      // Build content: prepend mentions as @[username](id), then add the message
-      const mentionStrings = mentionedUsers.map(u => 
-        u.is_ai ? '@AI' : `@[${u.username}](${u.id})`
-      );
+      // Build content: plain text + GIF (mentions will be prepended by API)
       const messageText = commentText.trim();
-      let contentToSave = mentionStrings.length > 0 
-        ? messageText 
-          ? `${mentionStrings.join(' ')} ${messageText}`
-          : mentionStrings.join(' ')
-        : messageText;
+      let content = messageText;
       
       // Append GIF if selected
       if (selectedGif) {
-        contentToSave = contentToSave 
-          ? `${contentToSave} [gif:${selectedGif}]`
+        content = content 
+          ? `${content} [gif:${selectedGif}]`
           : `[gif:${selectedGif}]`;
       }
       
-      // Use Supabase client for authenticated insert
-      const { data: newComment, error } = await supabase
-        .from('comments')
-        .insert({
-          question_id: questionId,
-          user_id: user.id,
-          content: contentToSave,
-        })
-        .select()
-        .single();
+      // Call API route to create comment (handles notifications + email)
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          content: content || ' ', // API requires content, send space if only mentions
+          mentionedUsers,
+        }),
+      });
       
-      if (error) {
-        console.error('Error inserting comment:', error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error creating comment:', errorData.error);
         setSubmittingComment(false);
         return;
       }
       
+      const { comment: newComment } = await response.json();
+      
       if (newComment) {
-        // Create notifications
-        const notifications: Array<{
-          user_id: string;
-          type: 'mention' | 'comment';
-          actor_id: string;
-          question_id: string;
-          comment_id: string;
-        }> = [];
-        
-        // Notify mentioned users (skip AI and self)
-        if (mentionedUsers.length > 0) {
-          mentionedUsers
-            .filter(u => u.id !== user.id && !u.is_ai)
-            .forEach(mentionedUser => {
-              notifications.push({
-                user_id: mentionedUser.id,
-                type: 'mention',
-                actor_id: user.id,
-                question_id: questionId,
-                comment_id: newComment.id,
-              });
-            });
-        }
-        
-        // Notify question author (if not the commenter, not already mentioned, and not AI question)
-        if (questionAuthorId && questionAuthorId !== user.id && !mentionedUsers.some(u => u.id === questionAuthorId)) {
-          notifications.push({
-            user_id: questionAuthorId,
-            type: 'comment',
-            actor_id: user.id,
-            question_id: questionId,
-            comment_id: newComment.id,
-          });
-        }
-        
-        // Insert all notifications (fire and forget)
-        if (notifications.length > 0) {
-          supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
-            if (notifError) console.error('Error creating notifications:', notifError);
-          });
-        }
-        
-        // Notify followers about the comment
+        // Notify followers about the comment (still done client-side for now)
         supabase
           .from('follows')
           .select('follower_id')
