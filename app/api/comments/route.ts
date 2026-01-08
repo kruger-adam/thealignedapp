@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, recordRateLimit } from '@/lib/rate-limit';
 import { MentionSuggestion } from '@/lib/types';
@@ -125,35 +126,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Insert all notifications (fire and forget)
-    if (notifications.length > 0) {
-      supabase.from('notifications').insert(notifications).then(({ error: notifError }) => {
+    // Background work: notifications and emails
+    // Use waitUntil to keep the function alive until this completes
+    const backgroundWork = async () => {
+      // Insert all in-app notifications
+      if (notifications.length > 0) {
+        const { error: notifError } = await supabase.from('notifications').insert(notifications);
         if (notifError) console.error('Error creating notifications:', notifError);
-      });
-    }
+      }
 
-    // Send email notifications to mentioned users (fire and forget)
-    const usersToEmailNotify = (mentionedUsers || []).filter(
-      (u: MentionSuggestion) => u.id !== user.id && !u.is_ai
-    );
-    
-    console.log(`[comments] Users to email notify: ${usersToEmailNotify.length}`, usersToEmailNotify.map((u: MentionSuggestion) => u.username));
-    
-    if (usersToEmailNotify.length > 0) {
-      // Fetch mentioned users' profiles (email + notification preferences) and commenter's username
-      const userIds = usersToEmailNotify.map((u: MentionSuggestion) => u.id);
+      // Send email notifications to mentioned users
+      const usersToEmailNotify = (mentionedUsers || []).filter(
+        (u: MentionSuggestion) => u.id !== user.id && !u.is_ai
+      );
       
-      Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, email, username, notification_preferences')
-          .in('id', userIds),
-        supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
-      ]).then(async ([mentionedProfilesResult, commenterResult]) => {
+      console.log(`[comments] Users to email notify: ${usersToEmailNotify.length}`, usersToEmailNotify.map((u: MentionSuggestion) => u.username));
+      
+      if (usersToEmailNotify.length > 0) {
+        // Fetch mentioned users' profiles (email + notification preferences) and commenter's username
+        const userIds = usersToEmailNotify.map((u: MentionSuggestion) => u.id);
+        
+        const [mentionedProfilesResult, commenterResult] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, email, username, notification_preferences')
+            .in('id', userIds),
+          supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single()
+        ]);
+        
         console.log('[comments] Fetched profiles for email:', mentionedProfilesResult.data?.length, 'commenter:', commenterResult.data?.username);
         
         const mentionedProfiles = mentionedProfilesResult.data || [];
@@ -172,17 +176,24 @@ export async function POST(request: NextRequest) {
           
           if (profile.email) {
             console.log(`[comments] Sending mention email to ${profile.email}`);
-            notifyMention({
-              mentionedUserEmail: profile.email,
-              mentionedUsername: profile.username || 'there',
-              mentionerUsername: commenterUsername,
-              commentContent: contentToSave,
-              questionId,
-            }).catch((err) => console.error('Failed to send mention email:', err));
+            try {
+              await notifyMention({
+                mentionedUserEmail: profile.email,
+                mentionedUsername: profile.username || 'there',
+                mentionerUsername: commenterUsername,
+                commentContent: contentToSave,
+                questionId,
+              });
+            } catch (err) {
+              console.error('Failed to send mention email:', err);
+            }
           }
         }
-      }).catch((err) => console.error('Error fetching profiles for email notifications:', err));
-    }
+      }
+    };
+
+    // Keep function alive until background work completes
+    waitUntil(backgroundWork());
 
     return NextResponse.json({
       success: true,
