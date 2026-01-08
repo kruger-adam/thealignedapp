@@ -5,6 +5,7 @@ import { Search as SearchIcon, X, Loader2, Clock, Bot, User } from 'lucide-react
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 
 interface QuestionResult {
   id: string;
@@ -187,23 +188,11 @@ export function Search() {
                       onClick={handleClose}
                       className="flex gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                     >
-                      {/* Avatar */}
-                      {user.avatar_url ? (
-                        <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                          <Image
-                            src={user.avatar_url}
-                            alt={user.username || ''}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                          <User className="h-5 w-5 text-zinc-400" />
-                        </div>
-                      )}
-
-                      {/* Username */}
+                      <Avatar
+                        src={user.avatar_url}
+                        fallback={user.username || ''}
+                        size="md"
+                      />
                       <div className="flex flex-1 items-center min-w-0">
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                           {user.username}
