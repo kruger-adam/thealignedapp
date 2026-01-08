@@ -134,12 +134,16 @@ export async function POST(request: NextRequest) {
       ...mentionedUserIds,
     ]);
 
+    console.log(`[comments] Thread reply check - questionId: ${questionId}, currentUser: ${user.id}, alreadyNotifiedIds:`, [...alreadyNotifiedIds]);
+
     // Get previous commenters on this question
-    const { data: previousComments } = await supabase
+    const { data: previousComments, error: prevCommentsError } = await supabase
       .from('comments')
       .select('user_id')
       .eq('question_id', questionId)
       .neq('user_id', user.id);
+
+    console.log(`[comments] Previous comments query - found: ${previousComments?.length || 0}, error: ${prevCommentsError?.message || 'none'}`);
 
     // Get unique previous commenter IDs
     const previousCommenterIds = [...new Set(
@@ -147,6 +151,8 @@ export async function POST(request: NextRequest) {
         .map(c => c.user_id)
         .filter(id => !alreadyNotifiedIds.has(id))
     )];
+
+    console.log(`[comments] Previous commenter IDs to notify:`, previousCommenterIds);
 
     if (previousCommenterIds.length > 0) {
       // Check for recent reply notifications to avoid spam
@@ -197,16 +203,26 @@ export async function POST(request: NextRequest) {
           question_id: questionId,
           comment_id: newComment.id,
         });
+        console.log(`[comments] Added reply notification for ${commenterId}`);
       }
     }
+
+    console.log(`[comments] Total notifications to insert: ${notifications.length}, types:`, notifications.map(n => n.type));
 
     // Background work: notifications and emails
     // Use waitUntil to keep the function alive until this completes
     const backgroundWork = async () => {
       // Insert all in-app notifications
       if (notifications.length > 0) {
+        console.log(`[comments] Inserting ${notifications.length} notifications...`);
         const { error: notifError } = await supabase.from('notifications').insert(notifications);
-        if (notifError) console.error('Error creating notifications:', notifError);
+        if (notifError) {
+          console.error('[comments] Error creating notifications:', notifError);
+        } else {
+          console.log(`[comments] Successfully inserted ${notifications.length} notifications`);
+        }
+      } else {
+        console.log('[comments] No notifications to insert');
       }
 
       // Send email notifications to mentioned users
