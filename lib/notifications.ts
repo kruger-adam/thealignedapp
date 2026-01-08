@@ -55,7 +55,7 @@ async function sendEmail(subject: string, body: string, to?: string): Promise<bo
 
   try {
     await resend.emails.send({
-      from: 'Aligned <notifications@resend.dev>',
+      from: 'Aligned <no-reply@thealignedapp.com>',
       to: to || ADMIN_EMAIL,
       subject,
       text: body,
