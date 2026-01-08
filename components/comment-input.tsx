@@ -327,7 +327,7 @@ export function CommentInput({
         }
         
         // Check if comment mentions @AI
-        const hasAIMention = contentToSave.toLowerCase().includes('@ai');
+        const hasAIMention = mentionedUsers.some(u => u.is_ai);
         
         if (hasAIMention) {
           // Show "AI is thinking..." placeholder
@@ -341,7 +341,7 @@ export function CommentInput({
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 questionId: questionId,
-                userQuery: contentToSave,
+                userQuery: newComment.content,
                 userId: user.id,
               }),
             });
