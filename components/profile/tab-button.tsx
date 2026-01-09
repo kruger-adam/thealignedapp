@@ -21,8 +21,8 @@ export function TabButton({ active, onClick, icon: Icon, label }: TabButtonProps
           : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
       )}
     >
-      <Icon className="h-4 w-4" />
-      {label}
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="hidden sm:inline">{label}</span>
     </Button>
   );
 }
