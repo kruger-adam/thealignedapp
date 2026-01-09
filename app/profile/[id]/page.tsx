@@ -133,28 +133,28 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     const { data: commonData } = await supabase.rpc('get_common_ground', {
       user_a: user.id,
       user_b: profile.id,
-      limit_count: 5,
+      limit_count: 100,
     });
     commonGround = commonData;
 
     const { data: divergeData } = await supabase.rpc('get_divergence', {
       user_a: user.id,
       user_b: profile.id,
-      limit_count: 5,
+      limit_count: 100,
     });
     divergence = divergeData;
 
     const { data: askData } = await supabase.rpc('get_ask_them_about', {
       user_a: user.id,
       user_b: profile.id,
-      limit_count: 5,
+      limit_count: 100,
     });
     askThemAbout = askData;
 
     const { data: shareData } = await supabase.rpc('get_share_your_take', {
       user_a: user.id,
       user_b: profile.id,
-      limit_count: 5,
+      limit_count: 100,
     });
     shareYourTake = shareData;
   }

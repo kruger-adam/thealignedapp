@@ -16,19 +16,26 @@ import {
   UserMinus,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
-  ChevronRight,
   Lock,
   Flame,
   Lightbulb,
   MessageSquareShare,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
+import { 
+  StatBox, 
+  TabButton, 
+  CommonGroundCard, 
+  DivergenceCard, 
+  AskThemAboutCard, 
+  ShareYourTakeCard 
+} from '@/components/profile';
 import { Profile, VoteType, Compatibility, CommonGround, Divergence, AskThemAbout, ShareYourTake } from '@/lib/types';
+import { voteConfig } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -100,12 +107,6 @@ interface ProfileClientProps {
 type Tab = 'stances' | 'questions' | 'history' | 'comparison';
 type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
-const voteConfig = {
-  YES: { icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Yes' },
-  NO: { icon: XIcon, color: 'text-rose-600', bg: 'bg-rose-100 dark:bg-rose-900/30', label: 'No' },
-  UNSURE: { icon: HelpCircle, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Not Sure' },
-};
-
 export function ProfileClient({
   profile,
   isOwnProfile,
@@ -136,11 +137,6 @@ export function ProfileClient({
   const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
   const [followList, setFollowList] = useState<FollowUser[]>([]);
   const [loadingFollowList, setLoadingFollowList] = useState(false);
-  
-  // Pagination for comparison lists
-  const [commonGroundPage, setCommonGroundPage] = useState(0);
-  const [divergencePage, setDivergencePage] = useState(0);
-  const PAGE_SIZE = 5;
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
     if (showFollowList === type) {
@@ -551,241 +547,34 @@ export function ProfileClient({
           {history.length === 0 ? (
             <p className="py-8 text-center text-zinc-500">No vote history yet.</p>
           ) : (
-            history.map((item) => <HistoryItem key={item.id} item={item} />)
+            history.map((item) => <HistoryItemComponent key={item.id} item={item} />)
           )}
         </div>
       )}
 
       {activeTab === 'comparison' && (
         <div className="space-y-6">
-          {/* Common Ground */}
-          {(() => {
-            const filteredCommon = commonGround || [];
-            const startIdx = commonGroundPage * PAGE_SIZE;
-            const endIdx = Math.min(startIdx + PAGE_SIZE, filteredCommon.length);
-            const pageItems = filteredCommon.slice(startIdx, endIdx);
-            const totalPages = Math.ceil(filteredCommon.length / PAGE_SIZE);
-            
-            if (filteredCommon.length === 0) return null;
-            
-            return (
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-emerald-600">
-                      <Heart className="h-5 w-5" />
-                      Common Ground
-                    </CardTitle>
-                    {filteredCommon.length > PAGE_SIZE && (
-                      <div className="flex items-center gap-2 text-xs text-zinc-500">
-                        <span>{startIdx + 1}-{endIdx} of {filteredCommon.length}</span>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCommonGroundPage(p => p - 1)}
-                            disabled={commonGroundPage === 0}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setCommonGroundPage(p => p + 1)}
-                            disabled={commonGroundPage >= totalPages - 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-zinc-500">Questions where you both voted the same way.</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {pageItems.map((item) => (
-                      <Link
-                        key={item.question_id}
-                        href={`/question/${item.question_id}`}
-                        className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40"
-                      >
-                        <div className={cn('rounded-full p-1.5', voteConfig[item.shared_vote].bg)}>
-                          {(() => {
-                            const Icon = voteConfig[item.shared_vote].icon;
-                            return <Icon className={cn('h-4 w-4', voteConfig[item.shared_vote].color)} />;
-                          })()}
-                        </div>
-                        <p className="flex-1 text-sm">{item.content}</p>
-                        <span className="text-xs text-zinc-500">
-                          {Math.round(item.controversy_score)}% split
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Divergence */}
-          {(() => {
-            const filteredDiverge = divergence || [];
-            const startIdx = divergencePage * PAGE_SIZE;
-            const endIdx = Math.min(startIdx + PAGE_SIZE, filteredDiverge.length);
-            const pageItems = filteredDiverge.slice(startIdx, endIdx);
-            const totalPages = Math.ceil(filteredDiverge.length / PAGE_SIZE);
-            
-            if (filteredDiverge.length === 0) return null;
-            
-            return (
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-rose-600">
-                      <Swords className="h-5 w-5" />
-                      Where You Differ
-                    </CardTitle>
-                    {filteredDiverge.length > PAGE_SIZE && (
-                      <div className="flex items-center gap-2 text-xs text-zinc-500">
-                        <span>{startIdx + 1}-{endIdx} of {filteredDiverge.length}</span>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDivergencePage(p => p - 1)}
-                            disabled={divergencePage === 0}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDivergencePage(p => p + 1)}
-                            disabled={divergencePage >= totalPages - 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-zinc-500">Questions where you took opposite stances.</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {pageItems.map((item) => (
-                      <Link
-                        key={item.question_id}
-                        href={`/question/${item.question_id}`}
-                        className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 transition-colors hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40"
-                      >
-                        <div className="flex w-24 flex-shrink-0 flex-col gap-0.5">
-                          <span className="flex items-center gap-1 text-xs">
-                            <span className="w-8 font-medium">You:</span>
-                            <span className={voteConfig[item.vote_a].color}>
-                              {voteConfig[item.vote_a].label}
-                            </span>
-                          </span>
-                          <span className="flex items-center gap-1 text-xs">
-                            <span className="w-8 font-medium">They:</span>
-                            <span className={voteConfig[item.vote_b].color}>
-                              {voteConfig[item.vote_b].label}
-                            </span>
-                          </span>
-                        </div>
-                        <p className="flex-1 text-sm">{item.content}</p>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Ask Them About */}
-          {(() => {
-            const items = askThemAbout || [];
-            if (items.length === 0) return null;
-            
-            return (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-blue-600">
-                    <Lightbulb className="h-5 w-5" />
-                    Ask Them About
-                  </CardTitle>
-                  <p className="text-sm text-zinc-500">Questions where you&apos;re undecided but they have an opinion.</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {items.map((item) => (
-                      <Link
-                        key={item.question_id}
-                        href={`/question/${item.question_id}`}
-                        className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 transition-colors hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40"
-                      >
-                        <div className={cn('rounded-full p-1.5', voteConfig[item.their_vote].bg)}>
-                          {(() => {
-                            const Icon = voteConfig[item.their_vote].icon;
-                            return <Icon className={cn('h-4 w-4', voteConfig[item.their_vote].color)} />;
-                          })()}
-                        </div>
-                        <p className="flex-1 text-sm">{item.content}</p>
-                        <span className="text-xs text-zinc-500">
-                          They said {voteConfig[item.their_vote].label}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Share Your Take */}
-          {(() => {
-            const items = shareYourTake || [];
-            if (items.length === 0) return null;
-            
-            return (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-violet-600">
-                    <MessageSquareShare className="h-5 w-5" />
-                    Share Your Take
-                  </CardTitle>
-                  <p className="text-sm text-zinc-500">Questions where you have an opinion but they&apos;re undecided.</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {items.map((item) => (
-                      <Link
-                        key={item.question_id}
-                        href={`/question/${item.question_id}`}
-                        className="flex items-center gap-3 rounded-lg bg-violet-50 p-3 transition-colors hover:bg-violet-100 dark:bg-violet-950/30 dark:hover:bg-violet-900/40"
-                      >
-                        <div className={cn('rounded-full p-1.5', voteConfig[item.your_vote].bg)}>
-                          {(() => {
-                            const Icon = voteConfig[item.your_vote].icon;
-                            return <Icon className={cn('h-4 w-4', voteConfig[item.your_vote].color)} />;
-                          })()}
-                        </div>
-                        <p className="flex-1 text-sm">{item.content}</p>
-                        <span className="text-xs text-zinc-500">
-                          You said {voteConfig[item.your_vote].label}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+          <CommonGroundCard 
+            items={commonGround || []} 
+            icon={Heart} 
+          />
+          
+          <DivergenceCard 
+            items={divergence || []} 
+            icon={Swords}
+            labelB="They"
+          />
+          
+          <AskThemAboutCard 
+            items={askThemAbout || []} 
+            icon={Lightbulb}
+            theyLabel="They"
+          />
+          
+          <ShareYourTakeCard 
+            items={shareYourTake || []} 
+            icon={MessageSquareShare}
+          />
 
           {/* Empty state when no comparison data at all */}
           {(!commonGround || commonGround.length === 0) && 
@@ -797,59 +586,6 @@ export function ProfileClient({
         </div>
       )}
     </div>
-  );
-}
-
-function StatBox({
-  label,
-  value,
-  icon: Icon,
-  className,
-  tooltip,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  className?: string;
-  tooltip?: string;
-}) {
-  return (
-    <div className="text-center" title={tooltip}>
-      <div className={cn('mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800', className)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ElementType;
-  label: string;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      className={cn(
-        'flex-1 gap-1.5',
-        active
-          ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-100'
-          : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-      )}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </Button>
   );
 }
 
@@ -874,7 +610,7 @@ function StanceItem({ response }: { response: ResponseWithQuestion }) {
   );
 }
 
-function HistoryItem({ item }: { item: HistoryItem }) {
+function HistoryItemComponent({ item }: { item: HistoryItem }) {
   if (!item.question) return null;
 
   const isInitialVote = !item.previous_vote;
@@ -919,5 +655,3 @@ function HistoryItem({ item }: { item: HistoryItem }) {
     </div>
   );
 }
-
-

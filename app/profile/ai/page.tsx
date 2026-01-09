@@ -74,8 +74,8 @@ export default async function AIProfilePage() {
   const divergence: Array<{
     question_id: string;
     content: string;
-    user_vote: VoteType;
-    ai_vote: VoteType;
+    vote_a: VoteType;
+    vote_b: VoteType;
   }> = [];
   const askThemAbout: Array<{
     question_id: string;
@@ -155,8 +155,8 @@ export default async function AIProfilePage() {
             divergence.push({
               question_id: userVote.question_id,
               content: aiData.content,
-              user_vote: userVote.vote as VoteType,
-              ai_vote: aiData.vote,
+              vote_a: userVote.vote as VoteType,
+              vote_b: aiData.vote,
             });
           }
         }
