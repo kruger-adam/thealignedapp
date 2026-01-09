@@ -36,6 +36,7 @@ export default function UsersPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('most_followers');
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
   const [followLoadingStates, setFollowLoadingStates] = useState<Record<string, boolean>>({});
@@ -104,6 +105,9 @@ export default function UsersPage() {
       }
 
       setHasMore(data.hasMore);
+      if (data.total !== undefined) {
+        setTotalCount(data.total);
+      }
     } catch (err) {
       console.error('Fetch error:', err);
     }
@@ -230,7 +234,9 @@ export default function UsersPage() {
         </div>
         <div className="flex items-center justify-between mt-2">
           <p className="text-sm text-zinc-500">
-            Find interesting people to follow
+            {totalCount !== null 
+              ? `${totalCount.toLocaleString()} ${totalCount === 1 ? 'member' : 'members'}`
+              : 'Find interesting people to follow'}
           </p>
           <div className="relative" ref={sortDropdownRef}>
             <button
