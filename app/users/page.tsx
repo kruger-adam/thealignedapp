@@ -35,7 +35,7 @@ export default function UsersPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const [sortBy, setSortBy] = useState<SortOption>('most_followers');
+  const [sortBy, setSortBy] = useState<SortOption>('most_votes');
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
