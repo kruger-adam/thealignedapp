@@ -532,6 +532,14 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Add bottom padding on mobile to prevent FAB from covering content */
+/* FAB is 56px (h-14) + 24px bottom offset = 80px, plus some breathing room */
+@media (max-width: 1023px) {
+  .pb-fab-safe {
+    padding-bottom: 96px;
+  }
+}
+
 /* Splash loading screen pulse animation */
 @keyframes logo-pulse {
   0%, 100% {

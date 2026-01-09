@@ -239,6 +239,8 @@ export function CommentInput({
   };
 
   const submitComment = async () => {
+    // Prevent double submission - check submittingComment first
+    if (submittingComment) return;
     if (!user || (!commentText.trim() && mentionedUsers.length === 0 && !selectedGif)) return;
     
     setSubmittingComment(true);
