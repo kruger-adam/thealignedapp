@@ -59,7 +59,7 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
                 AI
               </span>
               {voter.voted_at && (
-                <span className="text-[10px] text-violet-400 dark:text-violet-500 leading-tight">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
                   {getTimeAgo(new Date(voter.voted_at))}
                 </span>
               )}
@@ -78,11 +78,7 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
           <div className="flex flex-col">
             <span className={`text-xs ${colors.text} leading-tight`}>{voter.username}</span>
             {voter.voted_at && (
-              <span className={`text-[10px] leading-tight ${
-                voteType === 'YES' ? 'text-emerald-400 dark:text-emerald-500' :
-                voteType === 'NO' ? 'text-rose-400 dark:text-rose-500' :
-                'text-amber-400 dark:text-amber-500'
-              }`}>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
                 {getTimeAgo(new Date(voter.voted_at))}
               </span>
             )}
