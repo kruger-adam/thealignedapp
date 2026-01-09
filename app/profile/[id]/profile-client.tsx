@@ -1033,14 +1033,15 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
     year: 'numeric',
   });
 
-  // Render comment content with mentions as clickable styled chips
+  // Render comment content with mentions and GIFs
   const renderCommentContent = (content: string) => {
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
+    // Match @[username](id), @username, and [gif:url] formats
+    const combinedRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)|\[gif:(https?:\/\/[^\]]+)\]/g;
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
     let match;
     
-    while ((match = mentionRegex.exec(content)) !== null) {
+    while ((match = combinedRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
         parts.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex, match.index)}</span>);
       }
@@ -1086,6 +1087,18 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
             </span>
           );
         }
+      } else if (match[4]) {
+        // GIF format [gif:url]
+        const gifUrl = match[4];
+        parts.push(
+          <img
+            key={`gif-${match.index}`}
+            src={gifUrl}
+            alt="GIF"
+            className="mt-2 max-w-full rounded-lg"
+            style={{ maxHeight: '120px' }}
+          />
+        );
       }
       
       lastIndex = match.index + match[0].length;
