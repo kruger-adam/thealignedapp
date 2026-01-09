@@ -73,6 +73,44 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   
   const { count: responsesCount } = await responsesCountQuery;
 
+  // Get vote breakdown counts for stats
+  let yesCountQuery = supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('is_ai', false)
+    .eq('vote', 'YES');
+  
+  let noCountQuery = supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('is_ai', false)
+    .eq('vote', 'NO');
+  
+  let unsureCountQuery = supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('is_ai', false)
+    .eq('vote', 'UNSURE');
+  
+  if (!isOwnProfile) {
+    yesCountQuery = yesCountQuery.eq('is_anonymous', false);
+    noCountQuery = noCountQuery.eq('is_anonymous', false);
+    unsureCountQuery = unsureCountQuery.eq('is_anonymous', false);
+  }
+  
+  const [
+    { count: yesCount },
+    { count: noCount },
+    { count: unsureCount },
+  ] = await Promise.all([
+    yesCountQuery,
+    noCountQuery,
+    unsureCountQuery,
+  ]);
+
   // Transform responses to handle Supabase's array return for single relations
   const responses = (rawResponses || []).map((r) => ({
     id: r.id as string,
@@ -104,6 +142,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .from('response_history')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', profile.id);
+
+  // Get count of vote changes (where previous_vote is not null)
+  const { count: changedVotesCount } = await supabase
+    .from('response_history')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .not('previous_vote', 'is', null);
 
   // Transform history
   const history = (rawHistory || []).map((h) => ({
@@ -142,12 +187,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   
   const { count: questionsCount } = await questionsCountQuery;
 
-  // Calculate stats
-  const totalVotes = responses.length;
-  const yesCount = responses.filter(r => r.vote === 'YES').length;
-  const noCount = responses.filter(r => r.vote === 'NO').length;
-  const unsureCount = responses.filter(r => r.vote === 'UNSURE').length;
-  const changedVotes = history.filter(h => h.previous_vote !== null).length;
+  // Calculate stats (using counts from database, not limited array)
+  const totalVotes = responsesCount || 0;
+  const changedVotes = changedVotesCount || 0;
   const voteStreak = profile.vote_streak ?? 0;
   const longestStreak = profile.longest_vote_streak ?? 0;
 
@@ -229,9 +271,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       history={history}
       stats={{
         totalVotes,
-        yesCount,
-        noCount,
-        unsureCount,
+        yesCount: yesCount || 0,
+        noCount: noCount || 0,
+        unsureCount: unsureCount || 0,
         changedVotes,
         voteStreak,
         longestStreak,
