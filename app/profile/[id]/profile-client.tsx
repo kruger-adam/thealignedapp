@@ -20,6 +20,7 @@ import {
   Flame,
   Lightbulb,
   MessageSquareShare,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -340,6 +341,17 @@ export function ProfileClient({
                         </Link>
                       ))}
                     </div>
+                  )}
+                  
+                  {/* Discover people link - only show on own profile in Following section */}
+                  {isOwnProfile && showFollowList === 'following' && (
+                    <Link
+                      href="/users"
+                      className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                    >
+                      <Users className="h-4 w-4" />
+                      Discover people to follow
+                    </Link>
                   )}
                 </div>
               )}
