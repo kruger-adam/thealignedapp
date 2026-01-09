@@ -1033,7 +1033,7 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
     year: 'numeric',
   });
 
-  // Render comment content with mentions as styled chips
+  // Render comment content with mentions as clickable styled chips
   const renderCommentContent = (content: string) => {
     const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
     const parts: (string | React.ReactElement)[] = [];
@@ -1050,45 +1050,39 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
         const username = match[1];
         const userId = match[2];
         parts.push(
-          <span
+          <Link
             key={`${match.index}-${userId}`}
-            className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+            href={`/profile/${userId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-800/60"
           >
-            <Avatar
-              src={null}
-              fallback={username}
-              size="xs"
-            />
-            <span>{username}</span>
-          </span>
+            @{username}
+          </Link>
         );
       } else if (match[3]) {
         // Simple @username format
         const username = match[3];
         if (username.toLowerCase() === 'ai') {
           parts.push(
-            <span
+            <Link
               key={`${match.index}-ai`}
-              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+              href="/profile/ai"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-violet-700 hover:opacity-80 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
             >
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
                 <Bot className="h-2.5 w-2.5 text-white" />
               </span>
               <span>AI</span>
-            </span>
+            </Link>
           );
         } else {
           parts.push(
             <span
               key={`${match.index}-${username}`}
-              className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+              className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
             >
-              <Avatar
-                src={null}
-                fallback={username}
-                size="xs"
-              />
-              <span>{username}</span>
+              @{username}
             </span>
           );
         }
@@ -1104,10 +1098,14 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
     return parts.length > 0 ? <>{parts}</> : content;
   };
 
+  const handleCardClick = () => {
+    window.location.href = `/question/${comment.question!.id}`;
+  };
+
   return (
-    <Link
-      href={`/question/${comment.question.id}`}
-      className="block rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+    <div
+      onClick={handleCardClick}
+      className="block cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <div className="flex items-start gap-3">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
@@ -1125,6 +1123,6 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
           </p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
