@@ -16,6 +16,7 @@ interface User {
   avatar_url: string | null;
   created_at: string;
   follower_count: number;
+  vote_count: number;
   is_following: boolean;
   is_current_user: boolean;
 }
@@ -299,7 +300,10 @@ export default function UsersPage() {
                       {u.username || 'Anonymous'}
                     </p>
                     <p className="text-xs text-zinc-500">
-                      {u.follower_count} {u.follower_count === 1 ? 'follower' : 'followers'}
+                      {sortBy === 'most_votes' 
+                        ? `${u.vote_count} ${u.vote_count === 1 ? 'vote' : 'votes'}`
+                        : `${u.follower_count} ${u.follower_count === 1 ? 'follower' : 'followers'}`
+                      }
                     </p>
                   </div>
                 </Link>
