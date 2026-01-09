@@ -56,6 +56,24 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
     };
   }, []);
 
+  // Auto-scroll to selected category on mount
+  useEffect(() => {
+    if (selected && scrollRef.current) {
+      const selectedButton = scrollRef.current.querySelector(
+        `[data-category="${selected}"]`
+      ) as HTMLElement | null;
+      if (selectedButton) {
+        selectedButton.scrollIntoView({ 
+          behavior: 'instant', 
+          inline: 'center', 
+          block: 'nearest' 
+        });
+        // Update arrows after scroll
+        setTimeout(updateArrows, 0);
+      }
+    }
+  }, []); // Only run on mount
+
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollRef.current;
     if (!el) return;
@@ -114,6 +132,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         {CATEGORIES.map(({ value, emoji }) => (
           <button
             key={value}
+            data-category={value}
             onClick={() => handleClick(value)}
             className={cn(
               'shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-[0.97]',
