@@ -368,7 +368,7 @@ export function ProfileClient({
     setQuestionsLoading(false);
   };
 
-  // Load more history
+  // Load more history (only vote changes, not initial votes)
   const loadMoreHistory = async () => {
     if (historyLoading || !historyHasMore) return;
     
@@ -387,6 +387,7 @@ export function ProfileClient({
           )
         `)
         .eq('user_id', profile.id)
+        .not('previous_vote', 'is', null)
         .order('changed_at', { ascending: false })
         .range(history.length, history.length + pagination.history.limit - 1);
       
