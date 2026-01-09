@@ -54,11 +54,12 @@ export async function GET(request: NextRequest) {
       followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
     });
 
-    // Get vote counts for each user
+    // Get vote counts for each user (excluding AI votes)
     const { data: voteCounts } = await supabase
       .from('responses')
       .select('user_id')
-      .in('user_id', userIds);
+      .in('user_id', userIds)
+      .eq('is_ai', false);
 
     // Count votes per user
     const voteCountMap: Record<string, number> = {};
