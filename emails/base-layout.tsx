@@ -40,7 +40,7 @@ export function BaseLayout({
               <Row>
                 <Column style={logoColumn}>
                   <Img
-                    src={`${baseUrl}/logo-transparent.png`}
+                    src={`${baseUrl}/logo-email.png`}
                     width="36"
                     height="36"
                     alt="Aligned"
