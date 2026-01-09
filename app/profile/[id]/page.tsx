@@ -120,7 +120,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     question: Array.isArray(r.question) ? r.question[0] : r.question,
   }));
 
-  // Fetch response history for timeline
+  // Fetch response history for timeline - only vote changes (not initial votes)
   const { data: rawHistory } = await supabase
     .from('response_history')
     .select(`
@@ -134,21 +134,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       )
     `)
     .eq('user_id', profile.id)
+    .not('previous_vote', 'is', null)
     .order('changed_at', { ascending: false })
     .limit(HISTORY_LIMIT);
 
-  // Get total count for history
+  // Get total count for history (only vote changes)
   const { count: historyCount } = await supabase
-    .from('response_history')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', profile.id);
-
-  // Get count of vote changes (where previous_vote is not null)
-  const { count: changedVotesCount } = await supabase
     .from('response_history')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', profile.id)
     .not('previous_vote', 'is', null);
+
+  // Get count of vote changes (where previous_vote is not null) - same as historyCount now
+  const changedVotesCount = historyCount;
 
   // Transform history
   const history = (rawHistory || []).map((h) => ({

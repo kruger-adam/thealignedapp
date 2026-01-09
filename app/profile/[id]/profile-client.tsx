@@ -5,7 +5,6 @@ import {
   Check,
   X as XIcon,
   HelpCircle,
-  Clock,
   TrendingUp,
   Heart,
   Swords,
@@ -620,14 +619,12 @@ export function ProfileClient({
           icon={HelpCircle}
           label={`Questions (${pagination.questions.total})`}
         />
-        {isOwnProfile && (
-          <TabButton
-            active={activeTab === 'history'}
-            onClick={() => setActiveTab('history')}
-            icon={Clock}
-            label="History"
-          />
-        )}
+        <TabButton
+          active={activeTab === 'history'}
+          onClick={() => setActiveTab('history')}
+          icon={RotateCcw}
+          label="Changes"
+        />
         {compatibility && (
           <TabButton
             active={activeTab === 'comparison'}
@@ -776,7 +773,7 @@ export function ProfileClient({
       {activeTab === 'history' && (
         <div className="space-y-2">
           {history.length === 0 ? (
-            <p className="py-8 text-center text-zinc-500">No vote history yet.</p>
+            <p className="py-8 text-center text-zinc-500">No vote changes yet.</p>
           ) : (
             history.map((item) => <HistoryItemComponent key={item.id} item={item} />)
           )}
@@ -872,9 +869,8 @@ function StanceItem({ response }: { response: ResponseWithQuestion }) {
 }
 
 function HistoryItemComponent({ item }: { item: HistoryItem }) {
-  if (!item.question) return null;
+  if (!item.question || !item.previous_vote) return null;
 
-  const isInitialVote = !item.previous_vote;
   const date = new Date(item.changed_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -893,24 +889,15 @@ function HistoryItemComponent({ item }: { item: HistoryItem }) {
         <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
           <span>{date}</span>
           <span>•</span>
-          {isInitialVote ? (
-            <span>
-              Voted{' '}
-              <span className={voteConfig[item.new_vote].color}>
-                {voteConfig[item.new_vote].label}
-              </span>
+          <span>
+            <span className={voteConfig[item.previous_vote].color}>
+              {voteConfig[item.previous_vote].label}
             </span>
-          ) : (
-            <span>
-              <span className={voteConfig[item.previous_vote!].color}>
-                {voteConfig[item.previous_vote!].label}
-              </span>
-              {' → '}
-              <span className={voteConfig[item.new_vote].color}>
-                {voteConfig[item.new_vote].label}
-              </span>
+            {' → '}
+            <span className={voteConfig[item.new_vote].color}>
+              {voteConfig[item.new_vote].label}
             </span>
-          )}
+          </span>
         </div>
       </div>
     </div>
