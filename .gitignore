@@ -40,9 +40,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# service worker (generated at build time)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/workbox-*.js
+public/workbox-*.js.map
 .tmp.driveupload/
 
 # personal development scripts
 scripts/cpu-killer*
 scripts/*cpukiller*
 scripts/README-CPU-KILLER.md
+
+# Capacitor build artifacts (keep ios/ and android/ for native configs)
+ios/App/App/public/
+android/app/src/main/assets/public/

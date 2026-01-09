@@ -176,6 +176,7 @@ export interface Voter {
   vote: VoteType;
   is_ai?: boolean;
   ai_reasoning?: string | null;
+  voted_at?: string;
 }
 
 export interface Notification {

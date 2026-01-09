@@ -1,12 +1,15 @@
 {
+  "id": "/",
   "name": "Aligned",
   "short_name": "Aligned",
   "description": "Discover what people really think",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#18181b",
   "orientation": "portrait-primary",
+  "categories": ["social", "lifestyle"],
   "icons": [
     {
       "src": "/logo-transparent.png",
@@ -22,5 +25,3 @@
     }
   ]
 }
-
-

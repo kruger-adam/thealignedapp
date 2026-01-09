@@ -233,11 +233,12 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     
     setLoadingVoters(true);
     try {
-      // Fetch all votes (including anonymous and AI)
+      // Fetch all votes (including anonymous and AI), sorted by most recent first
       const { data: responses, error } = await supabase
         .from('responses')
-        .select('vote, user_id, is_anonymous, is_ai, ai_reasoning')
-        .eq('question_id', question.id);
+        .select('vote, user_id, is_anonymous, is_ai, ai_reasoning, created_at')
+        .eq('question_id', question.id)
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching voters:', error);
@@ -269,6 +270,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           vote: r.vote as VoteType,
           is_ai: true,
           ai_reasoning: r.ai_reasoning,
+          voted_at: r.created_at,
         }));
         
         // Fetch profiles for public voters only
@@ -290,6 +292,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             avatar_url: profileMap[r.user_id]?.avatar_url || null,
             vote: r.vote as VoteType,
             is_ai: false,
+            voted_at: r.created_at,
           }));
         }
         

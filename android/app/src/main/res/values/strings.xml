@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aligned</string>
+    <string name="title_activity_main">Aligned</string>
+    <string name="package_name">com.aligned.app</string>
+    <string name="custom_url_scheme">com.aligned.app</string>
+</resources>

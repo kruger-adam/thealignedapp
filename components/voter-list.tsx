@@ -10,6 +10,15 @@ interface VoterListProps {
   anonymousCounts: { YES: number; NO: number; UNSURE: number };
 }
 
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return date.toLocaleDateString();
+}
+
 export function VoterList({ voters, anonymousCounts }: VoterListProps) {
   const yesVoters = voters.filter(v => v.vote === 'YES');
   const noVoters = voters.filter(v => v.vote === 'NO');
@@ -45,9 +54,16 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
               <Bot className="h-3 w-3 text-white" />
             </div>
-            <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-              AI
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent leading-tight">
+                AI
+              </span>
+              {voter.voted_at && (
+                <span className="text-[10px] text-violet-400 dark:text-violet-500 leading-tight">
+                  {getTimeAgo(new Date(voter.voted_at))}
+                </span>
+              )}
+            </div>
           </div>
         </Link>
       );
@@ -59,7 +75,18 @@ export function VoterList({ voters, anonymousCounts }: VoterListProps) {
           className={`flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 transition-colors ${colors.bg} ${colors.hoverBg}`}
         >
           <Avatar src={voter.avatar_url} fallback={voter.username || ''} size="sm" className="h-5 w-5" />
-          <span className={`text-xs ${colors.text}`}>{voter.username}</span>
+          <div className="flex flex-col">
+            <span className={`text-xs ${colors.text} leading-tight`}>{voter.username}</span>
+            {voter.voted_at && (
+              <span className={`text-[10px] leading-tight ${
+                voteType === 'YES' ? 'text-emerald-400 dark:text-emerald-500' :
+                voteType === 'NO' ? 'text-rose-400 dark:text-rose-500' :
+                'text-amber-400 dark:text-amber-500'
+              }`}>
+                {getTimeAgo(new Date(voter.voted_at))}
+              </span>
+            )}
+          </div>
         </div>
       </Link>
     );

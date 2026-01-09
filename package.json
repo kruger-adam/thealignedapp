@@ -6,11 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android",
+    "native:ios": "npm run build && npm run cap:sync && npm run cap:ios",
+    "native:android": "npm run build && npm run cap:sync && npm run cap:android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@google/generative-ai": "^0.24.1",
     "@react-email/components": "^1.0.4",
+    "@serwist/next": "^9.5.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@vercel/functions": "^1.4.0",
@@ -35,6 +45,7 @@
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "^15.5.9",
+    "serwist": "^9.5.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
