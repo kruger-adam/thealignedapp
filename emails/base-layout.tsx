@@ -6,6 +6,8 @@ import {
   Img,
   Link,
   Preview,
+  Row,
+  Column,
   Section,
   Text,
 } from '@react-email/components';
@@ -35,7 +37,20 @@ export function BaseLayout({
           {/* Header */}
           <Section style={header}>
             <Link href={baseUrl} style={logoLink}>
-              <Text style={logoText}>Aligned</Text>
+              <Row>
+                <Column style={logoColumn}>
+                  <Img
+                    src={`${baseUrl}/logo-transparent.png`}
+                    width="36"
+                    height="36"
+                    alt="Aligned"
+                    style={logoImage}
+                  />
+                </Column>
+                <Column>
+                  <Text style={logoText}>Aligned</Text>
+                </Column>
+              </Row>
             </Link>
           </Section>
 
@@ -91,12 +106,22 @@ const logoLink = {
   textDecoration: 'none',
 };
 
+const logoColumn = {
+  width: '44px',
+  verticalAlign: 'middle' as const,
+};
+
+const logoImage = {
+  borderRadius: '6px',
+};
+
 const logoText = {
   color: '#fafafa',
   fontSize: '20px',
   fontWeight: '600' as const,
   margin: '0',
   letterSpacing: '-0.02em',
+  verticalAlign: 'middle' as const,
 };
 
 const content = {
