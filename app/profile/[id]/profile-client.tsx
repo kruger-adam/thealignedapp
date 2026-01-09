@@ -568,7 +568,6 @@ export function ProfileClient({
           <AskThemAboutCard 
             items={askThemAbout || []} 
             icon={Lightbulb}
-            theyLabel="They"
           />
           
           <ShareYourTakeCard 

@@ -334,16 +334,11 @@ export function AIProfileClient({
           <AskThemAboutCard 
             items={askThemAbout} 
             icon={Lightbulb}
-            title="Ask AI About"
-            description="Questions where you're undecided but AI has an opinion."
-            theyLabel="AI"
           />
           
           <ShareYourTakeCard 
             items={shareYourTake} 
             icon={MessageSquareShare}
-            title="You Know, AI Doesn't"
-            description="Questions where you have an opinion but AI is undecided."
           />
 
           {/* Empty state */}

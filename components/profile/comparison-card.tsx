@@ -149,18 +149,14 @@ export function DivergenceCard({ items, icon: Icon, labelA = 'You', labelB = 'Th
 interface AskThemAboutCardProps {
   items: AskThemAboutItem[];
   icon: React.ElementType;
-  title?: string;
-  description?: string;
-  theyLabel?: string;
 }
 
 export function AskThemAboutCard({ 
   items, 
   icon: Icon, 
-  title = 'Ask Them About',
-  description = "Questions where you're undecided but they have an opinion.",
-  theyLabel = 'They'
 }: AskThemAboutCardProps) {
+  const title = 'Ask Them About';
+  const description = "Questions where you're undecided but they have an opinion.";
   const pagination = usePagination(items);
 
   if (items.length === 0) return null;
@@ -195,7 +191,7 @@ export function AskThemAboutCard({
                 </div>
                 <p className="flex-1 text-sm">{item.content}</p>
                 <span className="text-xs text-zinc-500">
-                  {theyLabel} said {config.label}
+                  They said {config.label}
                 </span>
               </Link>
             );
@@ -206,20 +202,18 @@ export function AskThemAboutCard({
   );
 }
 
-// Share Your Take Card
+// You Know, They Don't Card
 interface ShareYourTakeCardProps {
   items: ShareYourTakeItem[];
   icon: React.ElementType;
-  title?: string;
-  description?: string;
 }
 
 export function ShareYourTakeCard({ 
   items, 
   icon: Icon,
-  title = 'Share Your Take',
-  description = "Questions where you have an opinion but they're undecided."
 }: ShareYourTakeCardProps) {
+  const title = "You Know, They Don't";
+  const description = "Questions where you have an opinion but they're undecided.";
   const pagination = usePagination(items);
 
   if (items.length === 0) return null;
