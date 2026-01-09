@@ -1,5 +1,8 @@
 import twilio from 'twilio';
 import { Resend } from 'resend';
+import { MentionEmail } from '@/emails/mention-email';
+import { CommentEmail } from '@/emails/comment-email';
+import { NewSignupEmail } from '@/emails/new-signup-email';
 
 // Twilio configuration
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -45,30 +48,6 @@ async function sendSMS(message: string): Promise<boolean> {
 }
 
 /**
- * Send email notification via Resend
- */
-async function sendEmail(subject: string, body: string, to?: string): Promise<boolean> {
-  if (!resend) {
-    console.log('Resend not configured, skipping email');
-    return false;
-  }
-
-  try {
-    await resend.emails.send({
-      from: 'Aligned <no-reply@thealignedapp.com>',
-      to: to || ADMIN_EMAIL,
-      subject,
-      text: body,
-    });
-    console.log('Email notification sent successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to send email:', error);
-    return false;
-  }
-}
-
-/**
  * Format comment content for email display
  * Converts @[username](id) to @username for readability
  */
@@ -89,15 +68,28 @@ export async function notifyNewSignup(user: NewUserInfo): Promise<void> {
   });
 
   const smsMessage = `🎉 New Consensus signup!\n${user.username}\n${user.email}\n${time}`;
-  
-  const emailSubject = `🎉 New Consensus Signup: ${user.username}`;
-  const emailBody = `A new user just signed up for Consensus!\n\nUsername: ${user.username}\nEmail: ${user.email}\nTime: ${time}`;
 
   // Try SMS first (preferred)
   const smsSent = await sendSMS(smsMessage);
   
-  // Also send email as backup/record
-  await sendEmail(emailSubject, emailBody);
+  // Also send branded email as backup/record
+  if (resend) {
+    try {
+      await resend.emails.send({
+        from: 'Aligned <no-reply@thealignedapp.com>',
+        to: ADMIN_EMAIL,
+        subject: `🎉 New Signup: ${user.username}`,
+        react: NewSignupEmail({
+          username: user.username,
+          email: user.email,
+          signupTime: time,
+        }),
+      });
+      console.log('Admin signup email sent successfully');
+    } catch (error) {
+      console.error('Failed to send admin signup email:', error);
+    }
+  }
   
   if (!smsSent) {
     console.log('SMS not sent - check Twilio configuration');
@@ -118,6 +110,11 @@ interface MentionNotificationInfo {
 export async function notifyMention(info: MentionNotificationInfo): Promise<boolean> {
   const { mentionedUserEmail, mentionedUsername, mentionerUsername, commentContent, questionId } = info;
   
+  if (!resend) {
+    console.log('Resend not configured, skipping email');
+    return false;
+  }
+  
   console.log(`[notifyMention] Sending email to ${mentionedUserEmail} (${mentionedUsername}) - mentioned by ${mentionerUsername}`);
   
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aligned.so';
@@ -127,22 +124,25 @@ export async function notifyMention(info: MentionNotificationInfo): Promise<bool
   // Format content to be human-readable (remove UUIDs from mentions)
   const formattedContent = formatContentForEmail(commentContent);
   
-  const subject = `@${mentionerUsername} mentioned you in a comment`;
-  const body = `Hey ${mentionedUsername}!
-
-${mentionerUsername} mentioned you in a comment:
-
-"${formattedContent}"
-
-View the conversation: ${questionUrl}
-
----
-You're receiving this because you were mentioned.
-Manage email preferences: ${preferencesUrl}`;
-
-  const result = await sendEmail(subject, body, mentionedUserEmail);
-  console.log(`[notifyMention] Email send result: ${result ? 'success' : 'failed'}`);
-  return result;
+  try {
+    await resend.emails.send({
+      from: 'Aligned <no-reply@thealignedapp.com>',
+      to: mentionedUserEmail,
+      subject: `@${mentionerUsername} mentioned you in a comment`,
+      react: MentionEmail({
+        mentionedUsername,
+        mentionerUsername,
+        commentContent: formattedContent,
+        questionUrl,
+        preferencesUrl,
+      }),
+    });
+    console.log(`[notifyMention] Email sent successfully`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send mention email:', error);
+    return false;
+  }
 }
 
 interface CommentNotificationInfo {
@@ -160,6 +160,11 @@ interface CommentNotificationInfo {
 export async function notifyComment(info: CommentNotificationInfo): Promise<boolean> {
   const { authorEmail, authorUsername, commenterUsername, commentContent, questionId, questionTitle } = info;
   
+  if (!resend) {
+    console.log('Resend not configured, skipping email');
+    return false;
+  }
+  
   console.log(`[notifyComment] Sending email to ${authorEmail} (${authorUsername}) - comment by ${commenterUsername}`);
   
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aligned.so';
@@ -171,21 +176,24 @@ export async function notifyComment(info: CommentNotificationInfo): Promise<bool
   
   const pollReference = questionTitle ? `"${questionTitle}"` : 'your poll';
   
-  const subject = `${commenterUsername} commented on ${pollReference}`;
-  const body = `Hey ${authorUsername}!
-
-${commenterUsername} left a comment on ${pollReference}:
-
-"${formattedContent}"
-
-View the conversation: ${questionUrl}
-
----
-You're receiving this because someone commented on your poll.
-Manage email preferences: ${preferencesUrl}`;
-
-  const result = await sendEmail(subject, body, authorEmail);
-  console.log(`[notifyComment] Email send result: ${result ? 'success' : 'failed'}`);
-  return result;
+  try {
+    await resend.emails.send({
+      from: 'Aligned <no-reply@thealignedapp.com>',
+      to: authorEmail,
+      subject: `${commenterUsername} commented on ${pollReference}`,
+      react: CommentEmail({
+        authorUsername,
+        commenterUsername,
+        commentContent: formattedContent,
+        questionTitle,
+        questionUrl,
+        preferencesUrl,
+      }),
+    });
+    console.log(`[notifyComment] Email sent successfully`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send comment email:', error);
+    return false;
+  }
 }
-

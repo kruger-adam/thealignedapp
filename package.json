@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@vercel/functions": "^1.4.0",
+    "@react-email/components": "^1.0.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
+    "@vercel/functions": "^1.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
