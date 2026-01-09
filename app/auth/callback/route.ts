@@ -35,11 +35,16 @@ export async function GET(request: Request) {
     if (!error && data?.session?.user) {
       const user = data.session.user;
       
+      // Check if this is a new signup by seeing if user was created in the last 60 seconds
+      const userCreatedAt = new Date(user.created_at);
+      const now = new Date();
+      const isNewSignup = (now.getTime() - userCreatedAt.getTime()) < 60000; // 60 seconds
+      
       // Check if profile exists - might be missing if user was "soft deleted"
       // (profile deleted but auth user remained)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, username')
         .eq('id', user.id)
         .single();
       
@@ -71,6 +76,16 @@ export async function GET(request: Request) {
             signupTime: new Date(),
           }).catch((err) => console.error('Failed to send signup notification:', err));
         }
+      } else if (isNewSignup) {
+        // Profile was created by the database trigger, but this is still a new signup
+        console.log('New user signup detected, sending notification...');
+        const username = profile.username || user.user_metadata?.name || user.email?.split('@')[0] || 'user';
+        
+        notifyNewSignup({
+          email: user.email!,
+          username,
+          signupTime: userCreatedAt,
+        }).catch((err) => console.error('Failed to send signup notification:', err));
       }
       
       return NextResponse.redirect(`${origin}${next}`);
