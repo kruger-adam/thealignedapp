@@ -54,6 +54,18 @@ export async function GET(request: NextRequest) {
       followerCountMap[f.following_id] = (followerCountMap[f.following_id] || 0) + 1;
     });
 
+    // Get vote counts for each user
+    const { data: voteCounts } = await supabase
+      .from('responses')
+      .select('user_id')
+      .in('user_id', userIds);
+
+    // Count votes per user
+    const voteCountMap: Record<string, number> = {};
+    (voteCounts || []).forEach(v => {
+      voteCountMap[v.user_id] = (voteCountMap[v.user_id] || 0) + 1;
+    });
+
     // Get which users the current user is following (if logged in)
     let followingSet = new Set<string>();
     if (user) {
@@ -73,13 +85,16 @@ export async function GET(request: NextRequest) {
       avatar_url: profile.avatar_url,
       created_at: profile.created_at,
       follower_count: followerCountMap[profile.id] || 0,
+      vote_count: voteCountMap[profile.id] || 0,
       is_following: followingSet.has(profile.id),
       is_current_user: user?.id === profile.id,
     }));
 
-    // Sort by followers if requested (done after fetching since we need the counts)
+    // Sort by followers or votes if requested (done after fetching since we need the counts)
     if (sort === 'most_followers') {
       users.sort((a, b) => b.follower_count - a.follower_count);
+    } else if (sort === 'most_votes') {
+      users.sort((a, b) => b.vote_count - a.vote_count);
     }
 
     // Check if there are more results

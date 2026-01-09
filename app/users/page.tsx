@@ -20,7 +20,7 @@ interface User {
   is_current_user: boolean;
 }
 
-type SortOption = 'newest' | 'most_followers' | 'alphabetical';
+type SortOption = 'newest' | 'most_followers' | 'most_votes' | 'alphabetical';
 
 const PAGE_SIZE = 20;
 
@@ -44,6 +44,7 @@ export default function UsersPage() {
 
   const sortOptions: { value: SortOption; label: string }[] = [
     { value: 'most_followers', label: 'Most Followers' },
+    { value: 'most_votes', label: 'Most Votes' },
     { value: 'newest', label: 'Newest Members' },
     { value: 'alphabetical', label: 'A-Z' },
   ];
