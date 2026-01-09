@@ -870,7 +870,14 @@ function StanceItem({ response }: { response: ResponseWithQuestion }) {
 }
 
 function HistoryItemComponent({ item }: { item: HistoryItem }) {
-  if (!item.question || !item.previous_vote) return null;
+  // Skip if missing required data or if vote types are invalid
+  if (!item.question || !item.previous_vote || !item.new_vote) return null;
+  
+  const prevConfig = voteConfig[item.previous_vote];
+  const newConfig = voteConfig[item.new_vote];
+  
+  // Skip if vote types don't exist in config (safety check)
+  if (!prevConfig || !newConfig) return null;
 
   const date = new Date(item.changed_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -891,12 +898,12 @@ function HistoryItemComponent({ item }: { item: HistoryItem }) {
           <span>{date}</span>
           <span>•</span>
           <span>
-            <span className={voteConfig[item.previous_vote].color}>
-              {voteConfig[item.previous_vote].label}
+            <span className={prevConfig.color}>
+              {prevConfig.label}
             </span>
             {' → '}
-            <span className={voteConfig[item.new_vote].color}>
-              {voteConfig[item.new_vote].label}
+            <span className={newConfig.color}>
+              {newConfig.label}
             </span>
           </span>
         </div>
