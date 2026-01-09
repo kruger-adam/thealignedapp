@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Users,
   Loader2,
+  Bot,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -1032,11 +1033,76 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
     year: 'numeric',
   });
 
-  // Truncate comment if too long
-  const maxLength = 150;
-  const truncatedContent = comment.content.length > maxLength 
-    ? comment.content.substring(0, maxLength) + '...' 
-    : comment.content;
+  // Render comment content with mentions as styled chips
+  const renderCommentContent = (content: string) => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)|@(\w+)/g;
+    const parts: (string | React.ReactElement)[] = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = mentionRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex, match.index)}</span>);
+      }
+      
+      if (match[1] && match[2]) {
+        // @[username](id) format
+        const username = match[1];
+        const userId = match[2];
+        parts.push(
+          <span
+            key={`${match.index}-${userId}`}
+            className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+          >
+            <Avatar
+              src={null}
+              fallback={username}
+              size="xs"
+            />
+            <span>{username}</span>
+          </span>
+        );
+      } else if (match[3]) {
+        // Simple @username format
+        const username = match[3];
+        if (username.toLowerCase() === 'ai') {
+          parts.push(
+            <span
+              key={`${match.index}-ai`}
+              className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-indigo-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-violet-700 dark:from-violet-900/40 dark:to-indigo-900/40 dark:text-violet-300"
+            >
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                <Bot className="h-2.5 w-2.5 text-white" />
+              </span>
+              <span>AI</span>
+            </span>
+          );
+        } else {
+          parts.push(
+            <span
+              key={`${match.index}-${username}`}
+              className="inline-flex items-center gap-1 rounded-full bg-blue-100 py-0.5 pl-0.5 pr-1.5 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+            >
+              <Avatar
+                src={null}
+                fallback={username}
+                size="xs"
+              />
+              <span>{username}</span>
+            </span>
+          );
+        }
+      }
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    if (lastIndex < content.length) {
+      parts.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex)}</span>);
+    }
+    
+    return parts.length > 0 ? <>{parts}</> : content;
+  };
 
   return (
     <Link
@@ -1048,18 +1114,15 @@ function CommentItem({ comment }: { comment: CommentWithQuestion }) {
           <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-zinc-900 dark:text-zinc-100">
-            {truncatedContent}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-zinc-500">{date}</span>
-            <span className="text-xs text-zinc-400">•</span>
-            <span className="text-xs text-zinc-500 truncate">
-              on: {comment.question.content.length > 60 
-                ? comment.question.content.substring(0, 60) + '...' 
-                : comment.question.content}
-            </span>
+          <div className="text-sm text-zinc-900 dark:text-zinc-100">
+            {renderCommentContent(comment.content)}
           </div>
+          <div className="mt-2 text-xs text-zinc-500">
+            <span>{date}</span>
+          </div>
+          <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+            {comment.question.content}
+          </p>
         </div>
       </div>
     </Link>
