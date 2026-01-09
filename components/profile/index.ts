@@ -6,4 +6,5 @@ export {
   AskThemAboutCard, 
   ShareYourTakeCard 
 } from './comparison-card';
+export { AgreementRankings } from './agreement-rankings';
 

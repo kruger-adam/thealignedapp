@@ -35,7 +35,8 @@ import {
   CommonGroundCard, 
   DivergenceCard, 
   AskThemAboutCard, 
-  ShareYourTakeCard 
+  ShareYourTakeCard,
+  AgreementRankings,
 } from '@/components/profile';
 import { Profile, VoteType, Compatibility, CommonGround, Divergence, AskThemAbout, ShareYourTake } from '@/lib/types';
 import { voteConfig } from '@/lib/constants';
@@ -129,7 +130,7 @@ interface ProfileClientProps {
   };
 }
 
-type Tab = 'stances' | 'questions' | 'comments' | 'history' | 'comparison';
+type Tab = 'stances' | 'questions' | 'comments' | 'history' | 'comparison' | 'rankings';
 type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 export function ProfileClient({
@@ -703,6 +704,12 @@ export function ProfileClient({
             label="Compare"
           />
         )}
+        <TabButton
+          active={activeTab === 'rankings'}
+          onClick={() => setActiveTab('rankings')}
+          icon={Users}
+          label="Rankings"
+        />
       </div>
 
       {/* Tab Content */}
@@ -955,6 +962,13 @@ export function ProfileClient({
             <p className="py-8 text-center text-zinc-500">No comparison data yet. Vote on more questions to see how you compare!</p>
           )}
         </div>
+      )}
+
+      {activeTab === 'rankings' && (
+        <AgreementRankings 
+          profileUserId={profile.id} 
+          profileUsername={profile.username}
+        />
       )}
     </div>
   );
