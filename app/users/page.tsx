@@ -237,7 +237,7 @@ export default function UsersPage() {
               onClick={() => setShowSortDropdown(!showSortDropdown)}
               className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
             >
-              <span>Sorted by</span>
+              <span className="hidden sm:inline">Sorted by</span>
               <span className="font-medium text-zinc-700 dark:text-zinc-300">
                 {sortOptions.find(s => s.value === sortBy)?.label}
               </span>
