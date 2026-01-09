@@ -26,6 +26,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   const isOwnProfile = user?.id === profile.id;
 
+  // Pagination limits
+  const RESPONSES_LIMIT = 30;
+  const QUESTIONS_LIMIT = 20;
+  const HISTORY_LIMIT = 50;
+
   // Fetch user's responses with questions
   // If viewing someone else's profile, exclude their anonymous votes
   // Always exclude AI votes (is_ai = false)
@@ -45,7 +50,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     `)
     .eq('user_id', profile.id)
     .eq('is_ai', false)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .limit(RESPONSES_LIMIT);
   
   // Only filter out anonymous votes when viewing someone else's profile
   if (!isOwnProfile) {
@@ -53,6 +59,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
   
   const { data: rawResponses } = await responsesQuery;
+
+  // Get total count for responses (for pagination)
+  let responsesCountQuery = supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('is_ai', false);
+  
+  if (!isOwnProfile) {
+    responsesCountQuery = responsesCountQuery.eq('is_anonymous', false);
+  }
+  
+  const { count: responsesCount } = await responsesCountQuery;
 
   // Transform responses to handle Supabase's array return for single relations
   const responses = (rawResponses || []).map((r) => ({
@@ -78,7 +97,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     `)
     .eq('user_id', profile.id)
     .order('changed_at', { ascending: false })
-    .limit(50);
+    .limit(HISTORY_LIMIT);
+
+  // Get total count for history
+  const { count: historyCount } = await supabase
+    .from('response_history')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id);
 
   // Transform history
   const history = (rawHistory || []).map((h) => ({
@@ -95,7 +120,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     .from('questions')
     .select('id, content, created_at, is_anonymous')
     .eq('author_id', profile.id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(QUESTIONS_LIMIT);
   
   // Only filter out anonymous questions when viewing someone else's profile
   if (!isOwnProfile) {
@@ -103,6 +129,18 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
   
   const { data: createdQuestions } = await questionsQuery;
+
+  // Get total count for questions
+  let questionsCountQuery = supabase
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('author_id', profile.id);
+  
+  if (!isOwnProfile) {
+    questionsCountQuery = questionsCountQuery.eq('is_anonymous', false);
+  }
+  
+  const { count: questionsCount } = await questionsCountQuery;
 
   // Calculate stats
   const totalVotes = responses.length;
@@ -210,6 +248,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         following: followingCount || 0,
       }}
       isFollowing={isFollowing}
+      pagination={{
+        responses: {
+          total: responsesCount || 0,
+          limit: RESPONSES_LIMIT,
+        },
+        questions: {
+          total: questionsCount || 0,
+          limit: QUESTIONS_LIMIT,
+        },
+        history: {
+          total: historyCount || 0,
+          limit: HISTORY_LIMIT,
+        },
+      }}
     />
   );
 }

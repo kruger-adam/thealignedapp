@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Check,
   X as XIcon,
@@ -14,7 +14,9 @@ import {
   MessageSquare,
   Lightbulb,
   MessageSquareShare,
+  Loader2,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,6 +63,11 @@ interface CreatedQuestion {
   image_url?: string;
 }
 
+interface PaginationInfo {
+  total: number;
+  limit: number;
+}
+
 interface AIProfileClientProps {
   profile: AIProfile;
   responses: ResponseWithQuestion[];
@@ -100,6 +107,10 @@ interface AIProfileClientProps {
   }>;
   currentUserId?: string;
   createdQuestions: CreatedQuestion[];
+  pagination: {
+    responses: PaginationInfo;
+    questions: PaginationInfo;
+  };
 }
 
 type Tab = 'stances' | 'questions' | 'comparison';
@@ -107,7 +118,7 @@ type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 export function AIProfileClient({
   profile,
-  responses,
+  responses: initialResponses,
   stats,
   compatibility,
   commonGround,
@@ -115,10 +126,97 @@ export function AIProfileClient({
   askThemAbout,
   shareYourTake,
   currentUserId,
-  createdQuestions,
+  createdQuestions: initialQuestions,
+  pagination,
 }: AIProfileClientProps) {
+  const supabase = useMemo(() => createClient(), []);
   const [activeTab, setActiveTab] = useState<Tab>(compatibility ? 'comparison' : 'stances');
   const [stanceFilter, setStanceFilter] = useState<StanceFilter>('all');
+
+  // Pagination state for responses/votes
+  const [responses, setResponses] = useState<ResponseWithQuestion[]>(initialResponses);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [responsesHasMore, setResponsesHasMore] = useState(
+    initialResponses.length < pagination.responses.total
+  );
+
+  // Pagination state for questions
+  const [createdQuestions, setCreatedQuestions] = useState<CreatedQuestion[]>(initialQuestions);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionsHasMore, setQuestionsHasMore] = useState(
+    initialQuestions.length < pagination.questions.total
+  );
+
+  // Load more responses/votes
+  const loadMoreResponses = async () => {
+    if (responsesLoading || !responsesHasMore) return;
+    
+    setResponsesLoading(true);
+    try {
+      const { data: rawResponses } = await supabase
+        .from('responses')
+        .select(`
+          id,
+          vote,
+          updated_at,
+          ai_reasoning,
+          ai_model,
+          question:questions (
+            id,
+            content,
+            created_at,
+            author_id
+          )
+        `)
+        .eq('is_ai', true)
+        .order('updated_at', { ascending: false })
+        .range(responses.length, responses.length + pagination.responses.limit - 1);
+      
+      if (rawResponses && rawResponses.length > 0) {
+        const newResponses = rawResponses.map((r) => ({
+          id: r.id as string,
+          vote: r.vote as VoteType,
+          updated_at: r.updated_at as string,
+          ai_reasoning: r.ai_reasoning as string | null,
+          ai_model: r.ai_model as string | null,
+          question: Array.isArray(r.question) ? r.question[0] : r.question,
+        }));
+        
+        setResponses(prev => [...prev, ...newResponses]);
+        setResponsesHasMore(responses.length + newResponses.length < pagination.responses.total);
+      } else {
+        setResponsesHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more AI responses:', err);
+    }
+    setResponsesLoading(false);
+  };
+
+  // Load more questions
+  const loadMoreQuestions = async () => {
+    if (questionsLoading || !questionsHasMore) return;
+    
+    setQuestionsLoading(true);
+    try {
+      const { data: newQuestions } = await supabase
+        .from('questions')
+        .select('id, content, created_at, image_url')
+        .eq('is_ai', true)
+        .order('created_at', { ascending: false })
+        .range(createdQuestions.length, createdQuestions.length + pagination.questions.limit - 1);
+      
+      if (newQuestions && newQuestions.length > 0) {
+        setCreatedQuestions(prev => [...prev, ...newQuestions]);
+        setQuestionsHasMore(createdQuestions.length + newQuestions.length < pagination.questions.total);
+      } else {
+        setQuestionsHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more AI questions:', err);
+    }
+    setQuestionsLoading(false);
+  };
 
   const filteredResponses = responses.filter(
     (r) => stanceFilter === 'all' || r.vote === stanceFilter
@@ -224,7 +322,7 @@ export function AIProfileClient({
           active={activeTab === 'questions'}
           onClick={() => setActiveTab('questions')}
           icon={Sparkles}
-          label={`Questions (${createdQuestions.length})`}
+          label={`Questions (${pagination.questions.total})`}
         />
         {compatibility && (
           <TabButton
@@ -268,6 +366,37 @@ export function AIProfileClient({
                 <AIStanceItem key={response.id} response={response} />
               ))}
             </div>
+          )}
+
+          {/* Load More Button */}
+          {stanceFilter === 'all' && responsesHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreResponses}
+                disabled={responsesLoading}
+                className="gap-2"
+              >
+                {responsesLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.responses.total - responses.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {stanceFilter === 'all' && !responsesHasMore && responses.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
           )}
         </div>
       )}
@@ -313,6 +442,37 @@ export function AIProfileClient({
                 </Card>
               </Link>
             ))
+          )}
+
+          {/* Load More Button */}
+          {questionsHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreQuestions}
+                disabled={questionsLoading}
+                className="gap-2"
+              >
+                {questionsLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.questions.total - createdQuestions.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {!questionsHasMore && createdQuestions.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
           )}
         </div>
       )}

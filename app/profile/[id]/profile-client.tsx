@@ -21,6 +21,7 @@ import {
   Lightbulb,
   MessageSquareShare,
   Users,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,6 +78,11 @@ interface FollowUser {
   avatar_url: string | null;
 }
 
+interface PaginationInfo {
+  total: number;
+  limit: number;
+}
+
 interface ProfileClientProps {
   profile: Profile;
   isOwnProfile: boolean;
@@ -103,6 +109,11 @@ interface ProfileClientProps {
     following: number;
   };
   isFollowing: boolean;
+  pagination: {
+    responses: PaginationInfo;
+    questions: PaginationInfo;
+    history: PaginationInfo;
+  };
 }
 
 type Tab = 'stances' | 'questions' | 'history' | 'comparison';
@@ -111,8 +122,8 @@ type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 export function ProfileClient({
   profile,
   isOwnProfile,
-  responses,
-  history,
+  responses: initialResponses,
+  history: initialHistory,
   stats,
   compatibility,
   commonGround,
@@ -120,9 +131,10 @@ export function ProfileClient({
   askThemAbout,
   shareYourTake,
   currentUserId,
-  createdQuestions,
+  createdQuestions: initialQuestions,
   followCounts,
   isFollowing: initialIsFollowing,
+  pagination,
 }: ProfileClientProps) {
   const { signOut, user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
@@ -138,6 +150,27 @@ export function ProfileClient({
   const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
   const [followList, setFollowList] = useState<FollowUser[]>([]);
   const [loadingFollowList, setLoadingFollowList] = useState(false);
+
+  // Pagination state for responses/votes
+  const [responses, setResponses] = useState<ResponseWithQuestion[]>(initialResponses);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [responsesHasMore, setResponsesHasMore] = useState(
+    initialResponses.length < pagination.responses.total
+  );
+
+  // Pagination state for questions
+  const [createdQuestions, setCreatedQuestions] = useState<CreatedQuestion[]>(initialQuestions);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionsHasMore, setQuestionsHasMore] = useState(
+    initialQuestions.length < pagination.questions.total
+  );
+
+  // Pagination state for history
+  const [history, setHistory] = useState<HistoryItem[]>(initialHistory);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyHasMore, setHistoryHasMore] = useState(
+    initialHistory.length < pagination.history.total
+  );
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
     if (showFollowList === type) {
@@ -252,6 +285,130 @@ export function ProfileClient({
       console.error('Error following/unfollowing:', err);
     }
     setFollowLoading(false);
+  };
+
+  // Load more responses/votes
+  const loadMoreResponses = async () => {
+    if (responsesLoading || !responsesHasMore) return;
+    
+    setResponsesLoading(true);
+    try {
+      let query = supabase
+        .from('responses')
+        .select(`
+          id,
+          vote,
+          updated_at,
+          is_anonymous,
+          question:questions (
+            id,
+            content,
+            created_at,
+            author_id
+          )
+        `)
+        .eq('user_id', profile.id)
+        .eq('is_ai', false)
+        .order('updated_at', { ascending: false })
+        .range(responses.length, responses.length + pagination.responses.limit - 1);
+      
+      if (!isOwnProfile) {
+        query = query.eq('is_anonymous', false);
+      }
+      
+      const { data: rawResponses } = await query;
+      
+      if (rawResponses && rawResponses.length > 0) {
+        const newResponses = rawResponses.map((r) => ({
+          id: r.id as string,
+          vote: r.vote as VoteType,
+          updated_at: r.updated_at as string,
+          is_anonymous: r.is_anonymous as boolean,
+          question: Array.isArray(r.question) ? r.question[0] : r.question,
+        }));
+        
+        setResponses(prev => [...prev, ...newResponses]);
+        setResponsesHasMore(responses.length + newResponses.length < pagination.responses.total);
+      } else {
+        setResponsesHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more responses:', err);
+    }
+    setResponsesLoading(false);
+  };
+
+  // Load more questions
+  const loadMoreQuestions = async () => {
+    if (questionsLoading || !questionsHasMore) return;
+    
+    setQuestionsLoading(true);
+    try {
+      let query = supabase
+        .from('questions')
+        .select('id, content, created_at, is_anonymous')
+        .eq('author_id', profile.id)
+        .order('created_at', { ascending: false })
+        .range(createdQuestions.length, createdQuestions.length + pagination.questions.limit - 1);
+      
+      if (!isOwnProfile) {
+        query = query.eq('is_anonymous', false);
+      }
+      
+      const { data: newQuestions } = await query;
+      
+      if (newQuestions && newQuestions.length > 0) {
+        setCreatedQuestions(prev => [...prev, ...newQuestions]);
+        setQuestionsHasMore(createdQuestions.length + newQuestions.length < pagination.questions.total);
+      } else {
+        setQuestionsHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more questions:', err);
+    }
+    setQuestionsLoading(false);
+  };
+
+  // Load more history
+  const loadMoreHistory = async () => {
+    if (historyLoading || !historyHasMore) return;
+    
+    setHistoryLoading(true);
+    try {
+      const { data: rawHistory } = await supabase
+        .from('response_history')
+        .select(`
+          id,
+          previous_vote,
+          new_vote,
+          changed_at,
+          question:questions (
+            id,
+            content
+          )
+        `)
+        .eq('user_id', profile.id)
+        .order('changed_at', { ascending: false })
+        .range(history.length, history.length + pagination.history.limit - 1);
+      
+      if (rawHistory && rawHistory.length > 0) {
+        const newHistory = rawHistory.map((h) => ({
+          id: h.id as string,
+          previous_vote: h.previous_vote as VoteType | null,
+          new_vote: h.new_vote as VoteType,
+          changed_at: h.changed_at as string,
+          question: Array.isArray(h.question) ? h.question[0] : h.question,
+        }));
+        
+        setHistory(prev => [...prev, ...newHistory]);
+        setHistoryHasMore(history.length + newHistory.length < pagination.history.total);
+      } else {
+        setHistoryHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more history:', err);
+    }
+    setHistoryLoading(false);
   };
 
   // Filter responses by stance
@@ -461,7 +618,7 @@ export function ProfileClient({
           active={activeTab === 'questions'}
           onClick={() => setActiveTab('questions')}
           icon={HelpCircle}
-          label={`Questions (${createdQuestions.length})`}
+          label={`Questions (${pagination.questions.total})`}
         />
         {isOwnProfile && (
           <TabButton
@@ -514,6 +671,37 @@ export function ProfileClient({
               ))}
             </div>
           )}
+
+          {/* Load More Button */}
+          {stanceFilter === 'all' && responsesHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreResponses}
+                disabled={responsesLoading}
+                className="gap-2"
+              >
+                {responsesLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.responses.total - responses.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {stanceFilter === 'all' && !responsesHasMore && responses.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
+          )}
         </div>
       )}
 
@@ -551,6 +739,37 @@ export function ProfileClient({
               </Link>
             ))
           )}
+
+          {/* Load More Button */}
+          {questionsHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreQuestions}
+                disabled={questionsLoading}
+                className="gap-2"
+              >
+                {questionsLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.questions.total - createdQuestions.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {!questionsHasMore && createdQuestions.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
+          )}
         </div>
       )}
 
@@ -560,6 +779,37 @@ export function ProfileClient({
             <p className="py-8 text-center text-zinc-500">No vote history yet.</p>
           ) : (
             history.map((item) => <HistoryItemComponent key={item.id} item={item} />)
+          )}
+
+          {/* Load More Button */}
+          {historyHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreHistory}
+                disabled={historyLoading}
+                className="gap-2"
+              >
+                {historyLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.history.total - history.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {!historyHasMore && history.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
           )}
         </div>
       )}

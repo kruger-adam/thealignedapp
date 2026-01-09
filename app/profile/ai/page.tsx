@@ -19,6 +19,10 @@ export const metadata = {
 export default async function AIProfilePage() {
   const supabase = await createClient();
 
+  // Pagination limits
+  const RESPONSES_LIMIT = 30;
+  const QUESTIONS_LIMIT = 20;
+
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -39,7 +43,14 @@ export default async function AIProfilePage() {
       )
     `)
     .eq('is_ai', true)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .limit(RESPONSES_LIMIT);
+
+  // Get total count for AI responses
+  const { count: responsesCount } = await supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ai', true);
 
   // Transform responses
   const responses = (rawResponses || []).map((r) => ({
@@ -56,13 +67,35 @@ export default async function AIProfilePage() {
     .from('questions')
     .select('id, content, created_at, image_url')
     .eq('is_ai', true)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(QUESTIONS_LIMIT);
 
-  // Calculate stats from AI responses
-  const totalVotes = responses.length;
-  const yesCount = responses.filter(r => r.vote === 'YES').length;
-  const noCount = responses.filter(r => r.vote === 'NO').length;
-  const unsureCount = responses.filter(r => r.vote === 'UNSURE').length;
+  // Get total count for AI questions
+  const { count: questionsCount } = await supabase
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ai', true);
+
+  // Get stats counts directly (for accurate totals)
+  const { count: yesCount } = await supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ai', true)
+    .eq('vote', 'YES');
+
+  const { count: noCount } = await supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ai', true)
+    .eq('vote', 'NO');
+
+  const { count: unsureCount } = await supabase
+    .from('responses')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_ai', true)
+    .eq('vote', 'UNSURE');
+
+  const totalVotes = responsesCount || 0;
 
   // Calculate compatibility with AI if user is logged in
   let compatibility = null;
@@ -180,10 +213,10 @@ export default async function AIProfilePage() {
       responses={responses}
       stats={{
         totalVotes,
-        yesCount,
-        noCount,
-        unsureCount,
-        questionsCreated: createdQuestions?.length || 0,
+        yesCount: yesCount || 0,
+        noCount: noCount || 0,
+        unsureCount: unsureCount || 0,
+        questionsCreated: questionsCount || 0,
       }}
       compatibility={compatibility}
       commonGround={commonGround}
@@ -192,6 +225,16 @@ export default async function AIProfilePage() {
       shareYourTake={shareYourTake}
       currentUserId={user?.id}
       createdQuestions={createdQuestions || []}
+      pagination={{
+        responses: {
+          total: responsesCount || 0,
+          limit: RESPONSES_LIMIT,
+        },
+        questions: {
+          total: questionsCount || 0,
+          limit: QUESTIONS_LIMIT,
+        },
+      }}
     />
   );
 }
