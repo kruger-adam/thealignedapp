@@ -19,6 +19,7 @@ import {
   Flame,
   Lightbulb,
   MessageSquareShare,
+  MessageSquare,
   Users,
   Loader2,
 } from 'lucide-react';
@@ -71,6 +72,16 @@ interface CreatedQuestion {
   is_anonymous?: boolean;
 }
 
+interface CommentWithQuestion {
+  id: string;
+  content: string;
+  created_at: string;
+  question: {
+    id: string;
+    content: string;
+  } | null;
+}
+
 interface FollowUser {
   id: string;
   username: string | null;
@@ -103,6 +114,7 @@ interface ProfileClientProps {
   shareYourTake: ShareYourTake[] | null;
   currentUserId?: string;
   createdQuestions: CreatedQuestion[];
+  comments: CommentWithQuestion[];
   followCounts: {
     followers: number;
     following: number;
@@ -112,10 +124,11 @@ interface ProfileClientProps {
     responses: PaginationInfo;
     questions: PaginationInfo;
     history: PaginationInfo;
+    comments: PaginationInfo;
   };
 }
 
-type Tab = 'stances' | 'questions' | 'history' | 'comparison';
+type Tab = 'stances' | 'questions' | 'comments' | 'history' | 'comparison';
 type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 export function ProfileClient({
@@ -131,6 +144,7 @@ export function ProfileClient({
   shareYourTake,
   currentUserId,
   createdQuestions: initialQuestions,
+  comments: initialComments,
   followCounts,
   isFollowing: initialIsFollowing,
   pagination,
@@ -169,6 +183,13 @@ export function ProfileClient({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyHasMore, setHistoryHasMore] = useState(
     initialHistory.length < pagination.history.total
+  );
+
+  // Pagination state for comments
+  const [comments, setComments] = useState<CommentWithQuestion[]>(initialComments);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsHasMore, setCommentsHasMore] = useState(
+    initialComments.length < pagination.comments.total
   );
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
@@ -411,6 +432,47 @@ export function ProfileClient({
     setHistoryLoading(false);
   };
 
+  // Load more comments
+  const loadMoreComments = async () => {
+    if (commentsLoading || !commentsHasMore) return;
+    
+    setCommentsLoading(true);
+    try {
+      const { data: rawComments } = await supabase
+        .from('comments')
+        .select(`
+          id,
+          content,
+          created_at,
+          question:questions (
+            id,
+            content
+          )
+        `)
+        .eq('user_id', profile.id)
+        .eq('is_ai', false)
+        .order('created_at', { ascending: false })
+        .range(comments.length, comments.length + pagination.comments.limit - 1);
+      
+      if (rawComments && rawComments.length > 0) {
+        const newComments = rawComments.map((c) => ({
+          id: c.id as string,
+          content: c.content as string,
+          created_at: c.created_at as string,
+          question: Array.isArray(c.question) ? c.question[0] : c.question,
+        }));
+        
+        setComments(prev => [...prev, ...newComments]);
+        setCommentsHasMore(comments.length + newComments.length < pagination.comments.total);
+      } else {
+        setCommentsHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more comments:', err);
+    }
+    setCommentsLoading(false);
+  };
+
   // Filter responses by stance
   const filteredResponses = responses.filter(
     (r) => stanceFilter === 'all' || r.vote === stanceFilter
@@ -621,6 +683,12 @@ export function ProfileClient({
           label={`Questions (${pagination.questions.total})`}
         />
         <TabButton
+          active={activeTab === 'comments'}
+          onClick={() => setActiveTab('comments')}
+          icon={MessageSquare}
+          label={`Comments (${pagination.comments.total})`}
+        />
+        <TabButton
           active={activeTab === 'history'}
           onClick={() => setActiveTab('history')}
           icon={RotateCcw}
@@ -771,6 +839,49 @@ export function ProfileClient({
         </div>
       )}
 
+      {activeTab === 'comments' && (
+        <div className="space-y-2">
+          {comments.length === 0 ? (
+            <p className="py-8 text-center text-zinc-500">No comments yet.</p>
+          ) : (
+            comments.map((comment) => (
+              <CommentItem key={comment.id} comment={comment} />
+            ))
+          )}
+
+          {/* Load More Button */}
+          {commentsHasMore && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMoreComments}
+                disabled={commentsLoading}
+                className="gap-2"
+              >
+                {commentsLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <span className="text-xs text-zinc-500">
+                      ({pagination.comments.total - comments.length} remaining)
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {!commentsHasMore && comments.length > 0 && (
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              You&apos;ve reached the end
+            </p>
+          )}
+        </div>
+      )}
+
       {activeTab === 'history' && (
         <div className="space-y-2">
           {history.length === 0 ? (
@@ -909,5 +1020,48 @@ function HistoryItemComponent({ item }: { item: HistoryItem }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function CommentItem({ comment }: { comment: CommentWithQuestion }) {
+  if (!comment.question) return null;
+
+  const date = new Date(comment.created_at).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  // Truncate comment if too long
+  const maxLength = 150;
+  const truncatedContent = comment.content.length > maxLength 
+    ? comment.content.substring(0, maxLength) + '...' 
+    : comment.content;
+
+  return (
+    <Link
+      href={`/question/${comment.question.id}`}
+      className="block rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+          <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-zinc-900 dark:text-zinc-100">
+            {truncatedContent}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-zinc-500">{date}</span>
+            <span className="text-xs text-zinc-400">•</span>
+            <span className="text-xs text-zinc-500 truncate">
+              on: {comment.question.content.length > 60 
+                ? comment.question.content.substring(0, 60) + '...' 
+                : comment.question.content}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }

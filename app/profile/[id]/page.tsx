@@ -30,6 +30,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const RESPONSES_LIMIT = 30;
   const QUESTIONS_LIMIT = 20;
   const HISTORY_LIMIT = 50;
+  const COMMENTS_LIMIT = 30;
 
   // Fetch user's responses with questions
   // If viewing someone else's profile, exclude their anonymous votes
@@ -185,6 +186,38 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   
   const { count: questionsCount } = await questionsCountQuery;
 
+  // Fetch comments by this user with question data
+  const { data: rawComments } = await supabase
+    .from('comments')
+    .select(`
+      id,
+      content,
+      created_at,
+      question:questions (
+        id,
+        content
+      )
+    `)
+    .eq('user_id', profile.id)
+    .eq('is_ai', false)
+    .order('created_at', { ascending: false })
+    .limit(COMMENTS_LIMIT);
+
+  // Get total count for comments
+  const { count: commentsCount } = await supabase
+    .from('comments')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', profile.id)
+    .eq('is_ai', false);
+
+  // Transform comments
+  const comments = (rawComments || []).map((c) => ({
+    id: c.id as string,
+    content: c.content as string,
+    created_at: c.created_at as string,
+    question: Array.isArray(c.question) ? c.question[0] : c.question,
+  }));
+
   // Calculate stats (using counts from database, not limited array)
   const totalVotes = responsesCount || 0;
   const changedVotes = changedVotesCount || 0;
@@ -283,6 +316,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       shareYourTake={shareYourTake}
       currentUserId={user?.id}
       createdQuestions={createdQuestions || []}
+      comments={comments}
       followCounts={{
         followers: followersCount || 0,
         following: followingCount || 0,
@@ -300,6 +334,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         history: {
           total: historyCount || 0,
           limit: HISTORY_LIMIT,
+        },
+        comments: {
+          total: commentsCount || 0,
+          limit: COMMENTS_LIMIT,
         },
       }}
     />
