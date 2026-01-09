@@ -32,6 +32,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const hasScrolledToInitial = useRef(false);
 
   // Check scroll position to show/hide arrows
   const updateArrows = () => {
@@ -56,9 +57,10 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
     };
   }, []);
 
-  // Auto-scroll to selected category on mount
+  // Auto-scroll to selected category when it first loads (from saved preferences)
   useEffect(() => {
-    if (selected && scrollRef.current) {
+    if (selected && scrollRef.current && !hasScrolledToInitial.current) {
+      hasScrolledToInitial.current = true;
       const selectedButton = scrollRef.current.querySelector(
         `[data-category="${selected}"]`
       ) as HTMLElement | null;
@@ -72,7 +74,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         setTimeout(updateArrows, 0);
       }
     }
-  }, []); // Only run on mount
+  }, [selected]);
 
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollRef.current;
