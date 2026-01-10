@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useTransition, useMemo } from 'react';
 import Link from 'next/link';
 import { Check, HelpCircle, X, Users, Sparkles, ArrowRight, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,8 +54,18 @@ export function ChallengeClient({
 }: ChallengeClientProps) {
   // _challengeCode available for future re-share functionality
   const { user } = useAuth();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
+
+  // Sign in with Google (stays on this page after auth)
+  const signInWithGoogle = useCallback(async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(window.location.pathname)}`,
+      },
+    });
+  }, [supabase]);
   
   // State
   const [userVote, setUserVote] = useState<VoteType | null>(existingVote);
@@ -208,12 +218,10 @@ export function ChallengeClient({
                 <p className="text-sm text-zinc-500 mb-4">
                   Sign in to vote and see if you agree
                 </p>
-                <Link href="/">
-                  <Button className="gap-2">
-                    Sign In to Vote
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
+                <Button onClick={signInWithGoogle} className="gap-2">
+                  Sign In to Vote
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
 

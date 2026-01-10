@@ -180,7 +180,7 @@ export function ShareChallenge({
             <div className="space-y-3">
               {/* Copy Link */}
               <div className="flex gap-2">
-                <div className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
+                <div className="flex-1 min-w-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
                   <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
                     {shareUrl}
                   </p>
