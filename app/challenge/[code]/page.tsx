@@ -28,7 +28,18 @@ export async function generateMetadata({ params }: ChallengePageProps): Promise<
     };
   }
 
-  const question = challenge.questions as { content: string };
+  // Handle both single object and array returns from Supabase
+  const questionsData = challenge.questions as unknown;
+  const question = Array.isArray(questionsData) 
+    ? (questionsData[0] as { content: string })
+    : (questionsData as { content: string });
+  
+  if (!question?.content) {
+    return {
+      title: 'Challenge | Aligned',
+    };
+  }
+  
   const truncatedQuestion = question.content.length > 60 
     ? question.content.slice(0, 60) + '...' 
     : question.content;
