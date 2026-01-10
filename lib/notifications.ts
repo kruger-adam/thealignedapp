@@ -76,7 +76,7 @@ export async function notifyNewSignup(user: NewUserInfo): Promise<void> {
   if (resend) {
     try {
       await resend.emails.send({
-        from: 'Aligned <no-reply@thealignedapp.com>',
+        from: 'Aligned <hello@thealignedapp.com>',
         to: ADMIN_EMAIL,
         subject: `🎉 New Signup: ${user.username}`,
         react: NewSignupEmail({
@@ -126,7 +126,7 @@ export async function notifyMention(info: MentionNotificationInfo): Promise<bool
   
   try {
     await resend.emails.send({
-      from: 'Aligned <no-reply@thealignedapp.com>',
+      from: 'Aligned <hello@thealignedapp.com>',
       to: mentionedUserEmail,
       subject: `@${mentionerUsername} mentioned you in a comment`,
       react: MentionEmail({
@@ -178,7 +178,7 @@ export async function notifyComment(info: CommentNotificationInfo): Promise<bool
   
   try {
     await resend.emails.send({
-      from: 'Aligned <no-reply@thealignedapp.com>',
+      from: 'Aligned <hello@thealignedapp.com>',
       to: authorEmail,
       subject: `${commenterUsername} commented on ${pollReference}`,
       react: CommentEmail({
