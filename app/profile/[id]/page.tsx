@@ -75,9 +75,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { count: responsesCount } = await responsesCountQuery;
 
   // Get crowd alignment score
-  const { data: crowdAlignmentData } = await supabase.rpc('get_crowd_alignment', {
+  const { data: crowdAlignmentData, error: crowdAlignmentError } = await supabase.rpc('get_crowd_alignment', {
     target_user_id: profile.id,
   });
+  if (crowdAlignmentError) {
+    console.error('Crowd alignment error:', crowdAlignmentError);
+  }
+  console.log('Crowd alignment data:', crowdAlignmentData);
   const crowdAlignment = crowdAlignmentData?.[0] || null;
 
   // Transform responses to handle Supabase's array return for single relations
