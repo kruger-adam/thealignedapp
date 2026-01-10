@@ -33,7 +33,8 @@ import { Avatar } from '@/components/ui/avatar';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { 
   StatBox, 
-  TabButton, 
+  TabButton,
+  TabDescription,
   CommonGroundCard, 
   DivergenceCard, 
   AskThemAboutCard, 
@@ -673,24 +674,24 @@ export function ProfileClient({
       )}
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/50">
+      <div className="mb-3 flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/50">
         <TabButton
           active={activeTab === 'stances'}
           onClick={() => setActiveTab('stances')}
           icon={Vote}
-          label={isOwnProfile ? 'My Votes' : 'Votes'}
+          label="Votes"
         />
         <TabButton
           active={activeTab === 'questions'}
           onClick={() => setActiveTab('questions')}
           icon={HelpCircle}
-          label={`Questions (${pagination.questions.total})`}
+          label="Questions"
         />
         <TabButton
           active={activeTab === 'comments'}
           onClick={() => setActiveTab('comments')}
           icon={MessageSquare}
-          label={`Comments (${pagination.comments.total})`}
+          label="Comments"
         />
         <TabButton
           active={activeTab === 'history'}
@@ -713,6 +714,44 @@ export function ProfileClient({
           label="Compare"
         />
       </div>
+
+      {/* Tab Description */}
+      {activeTab === 'stances' && (
+        <TabDescription 
+          title="Votes" 
+          description={isOwnProfile ? "How you've voted on questions" : "How they've voted on questions"} 
+        />
+      )}
+      {activeTab === 'questions' && (
+        <TabDescription 
+          title="Questions" 
+          description={isOwnProfile ? "Questions you've created" : "Questions they've created"} 
+        />
+      )}
+      {activeTab === 'comments' && (
+        <TabDescription 
+          title="Comments" 
+          description={isOwnProfile ? "Your comments on questions" : "Their comments on questions"} 
+        />
+      )}
+      {activeTab === 'history' && (
+        <TabDescription 
+          title="Changes" 
+          description={isOwnProfile ? "Times you changed your vote" : "Times they changed their vote"} 
+        />
+      )}
+      {activeTab === 'comparison' && (
+        <TabDescription 
+          title="Relationship" 
+          description="Where you agree and disagree with each other" 
+        />
+      )}
+      {activeTab === 'rankings' && (
+        <TabDescription 
+          title="Compare" 
+          description={isOwnProfile ? "Your agreement rate with everyone" : "Their agreement rate with everyone"} 
+        />
+      )}
 
       {/* Tab Content */}
       {activeTab === 'stances' && (

@@ -1,5 +1,5 @@
 export { StatBox } from './stat-box';
-export { TabButton } from './tab-button';
+export { TabButton, TabDescription } from './tab-button';
 export { 
   CommonGroundCard, 
   DivergenceCard, 

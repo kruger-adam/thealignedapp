@@ -27,7 +27,8 @@ import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { 
   StatBox, 
-  TabButton, 
+  TabButton,
+  TabDescription,
   CommonGroundCard, 
   DivergenceCard, 
   AskThemAboutCard, 
@@ -315,18 +316,18 @@ export function AIProfileClient({
       )}
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/50">
+      <div className="mb-3 flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800/50">
         <TabButton
           active={activeTab === 'stances'}
           onClick={() => setActiveTab('stances')}
           icon={Vote}
-          label="AI Votes"
+          label="Votes"
         />
         <TabButton
           active={activeTab === 'questions'}
           onClick={() => setActiveTab('questions')}
           icon={Sparkles}
-          label={`Questions (${pagination.questions.total})`}
+          label="Questions"
         />
         {compatibility && (
           <TabButton
@@ -343,6 +344,32 @@ export function AIProfileClient({
           label="Compare"
         />
       </div>
+
+      {/* Tab Description */}
+      {activeTab === 'stances' && (
+        <TabDescription 
+          title="Votes" 
+          description="How the AI has voted on questions" 
+        />
+      )}
+      {activeTab === 'questions' && (
+        <TabDescription 
+          title="Questions" 
+          description="Questions created by the AI" 
+        />
+      )}
+      {activeTab === 'comparison' && (
+        <TabDescription 
+          title="Relationship" 
+          description="Where you agree and disagree with the AI" 
+        />
+      )}
+      {activeTab === 'rankings' && (
+        <TabDescription 
+          title="Compare" 
+          description="Agreement rates between the AI and all users" 
+        />
+      )}
 
       {/* Tab Content */}
       {activeTab === 'stances' && (
