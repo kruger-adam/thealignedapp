@@ -17,18 +17,17 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   WITH user_votes AS (
-    -- Get all non-anonymous, non-AI, non-UNSURE votes from the user
+    -- Get all non-UNSURE votes from the user (including anonymous votes)
     SELECT 
       r.question_id,
       r.vote
     FROM responses r
     WHERE r.user_id = target_user_id
-      AND r.is_anonymous = false
       AND r.is_ai = false
       AND r.vote != 'UNSURE'
   ),
   question_majorities AS (
-    -- For each question the user voted on, calculate the majority
+    -- For each question the user voted on, calculate the majority (including AI votes)
     SELECT 
       uv.question_id,
       uv.vote AS user_vote,
@@ -42,8 +41,7 @@ BEGIN
       END AS majority_vote
     FROM user_votes uv
     INNER JOIN responses r ON r.question_id = uv.question_id
-    WHERE r.is_ai = false
-      AND r.vote IN ('YES', 'NO')  -- Only count YES/NO votes for majority calculation
+    WHERE r.vote IN ('YES', 'NO')  -- Only count YES/NO votes for majority calculation
     GROUP BY uv.question_id, uv.vote
   ),
   alignment_counts AS (
@@ -93,6 +91,7 @@ BEGIN
   ),
   question_majorities AS (
     -- For each question the AI voted on, calculate the majority from HUMAN votes only
+    -- (We exclude AI's own vote from majority to see how AI aligns with humans)
     SELECT 
       av.question_id,
       av.vote AS ai_vote,
@@ -105,7 +104,7 @@ BEGIN
       END AS majority_vote
     FROM ai_votes av
     INNER JOIN responses r ON r.question_id = av.question_id
-    WHERE r.is_ai = false  -- Only human votes for majority
+    WHERE r.is_ai = false  -- Only human votes for AI's crowd alignment
       AND r.vote IN ('YES', 'NO')
     GROUP BY av.question_id, av.vote
   ),
