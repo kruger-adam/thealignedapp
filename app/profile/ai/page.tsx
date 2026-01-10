@@ -129,14 +129,27 @@ export default async function AIProfilePage() {
       .eq('user_id', user.id)
       .eq('is_ai', false);
 
-    if (userResponses && userResponses.length > 0) {
-      // Create a map of AI votes by question_id
+    // Fetch ALL AI votes for comparison (not just the paginated subset)
+    const { data: allAiResponses } = await supabase
+      .from('responses')
+      .select(`
+        vote,
+        question:questions (
+          id,
+          content
+        )
+      `)
+      .eq('is_ai', true);
+
+    if (userResponses && userResponses.length > 0 && allAiResponses) {
+      // Create a map of AI votes by question_id using ALL AI responses
       const aiVoteMap = new Map<string, { vote: VoteType; content: string }>();
-      for (const r of responses) {
-        if (r.question) {
-          aiVoteMap.set(r.question.id, {
-            vote: r.vote,
-            content: r.question.content,
+      for (const r of allAiResponses) {
+        const question = Array.isArray(r.question) ? r.question[0] : r.question;
+        if (question) {
+          aiVoteMap.set(question.id, {
+            vote: r.vote as VoteType,
+            content: question.content,
           });
         }
       }
