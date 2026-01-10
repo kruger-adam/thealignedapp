@@ -139,7 +139,8 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
     challengeResponse = existingResponse;
   }
 
-  const question = challenge.questions as {
+  // Handle both single object and array returns from Supabase
+  type QuestionData = {
     id: string;
     content: string;
     category: string | null;
@@ -150,6 +151,11 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
     unsure_count: number;
     total_votes: number;
   };
+  
+  const questionsData = challenge.questions as unknown;
+  const question: QuestionData = Array.isArray(questionsData) 
+    ? (questionsData[0] as QuestionData)
+    : (questionsData as QuestionData);
 
   return (
     <ChallengeClient
