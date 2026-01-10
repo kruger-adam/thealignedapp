@@ -16,6 +16,7 @@ import {
   MessageSquareShare,
   Loader2,
   Users,
+  Handshake,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -330,15 +331,15 @@ export function AIProfileClient({
           <TabButton
             active={activeTab === 'comparison'}
             onClick={() => setActiveTab('comparison')}
-            icon={TrendingUp}
-            label="Compare"
+            icon={Handshake}
+            label="Relationship"
           />
         )}
         <TabButton
           active={activeTab === 'rankings'}
           onClick={() => setActiveTab('rankings')}
           icon={Users}
-          label="Rankings"
+          label="Compare"
         />
       </div>
 

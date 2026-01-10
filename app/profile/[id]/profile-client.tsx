@@ -23,6 +23,7 @@ import {
   Users,
   Loader2,
   Bot,
+  Handshake,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -700,15 +701,15 @@ export function ProfileClient({
           <TabButton
             active={activeTab === 'comparison'}
             onClick={() => setActiveTab('comparison')}
-            icon={TrendingUp}
-            label="Compare"
+            icon={Handshake}
+            label="Relationship"
           />
         )}
         <TabButton
           active={activeTab === 'rankings'}
           onClick={() => setActiveTab('rankings')}
           icon={Users}
-          label="Rankings"
+          label="Compare"
         />
       </div>
 
