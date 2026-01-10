@@ -24,6 +24,7 @@ import {
   Loader2,
   Bot,
   Handshake,
+  Network,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -708,7 +709,7 @@ export function ProfileClient({
         <TabButton
           active={activeTab === 'rankings'}
           onClick={() => setActiveTab('rankings')}
-          icon={Users}
+          icon={Network}
           label="Compare"
         />
       </div>

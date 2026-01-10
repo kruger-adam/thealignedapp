@@ -17,6 +17,7 @@ import {
   Loader2,
   Users,
   Handshake,
+  Network,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -338,7 +339,7 @@ export function AIProfileClient({
         <TabButton
           active={activeTab === 'rankings'}
           onClick={() => setActiveTab('rankings')}
-          icon={Users}
+          icon={Network}
           label="Compare"
         />
       </div>
