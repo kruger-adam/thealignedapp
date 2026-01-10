@@ -72,35 +72,57 @@ export default function FeedPage() {
   const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(false);
   const [onboardingCategory, setOnboardingCategory] = useState<Category | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
+  
+  // Inviter prioritization - for users who joined via invite
+  const [inviterQuestionIds, setInviterQuestionIds] = useState<Set<string>>(new Set());
 
   // Check if user needs onboarding (controlled by feature flag)
   const showOnboarding = FEATURES.ONBOARDING_FLOW && user && onboardingLoaded && onboardingVoteCount !== null && onboardingVoteCount < ONBOARDING_TARGET_VOTES;
 
-  // Fetch onboarding data when user loads (only if feature is enabled)
+  // Fetch onboarding data and inviter info when user loads
   useEffect(() => {
     async function fetchOnboardingData() {
-      if (!FEATURES.ONBOARDING_FLOW || !user) {
+      if (!user) {
         setOnboardingLoaded(true);
         return;
       }
 
       try {
-        // Fetch user's vote count (non-AI votes only)
-        const { count: voteCount } = await supabase
-          .from('responses')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('is_ai', false);
+        // Fetch user's vote count (non-AI votes only) and profile with invited_by
+        const [voteCountResult, profileResult] = await Promise.all([
+          supabase
+            .from('responses')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('is_ai', false),
+          supabase
+            .from('profiles')
+            .select('onboarding_dismissed, invited_by')
+            .eq('id', user.id)
+            .single(),
+        ]);
 
-        // Fetch onboarding_dismissed from profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_dismissed')
-          .eq('id', user.id)
-          .single();
+        const voteCount = voteCountResult.count;
+        const profile = profileResult.data;
 
-        setOnboardingVoteCount(voteCount ?? 0);
-        setOnboardingDismissed(profile?.onboarding_dismissed ?? false);
+        if (FEATURES.ONBOARDING_FLOW) {
+          setOnboardingVoteCount(voteCount ?? 0);
+          setOnboardingDismissed(profile?.onboarding_dismissed ?? false);
+        }
+        
+        // If user was invited, fetch the inviter's voted question IDs
+        if (profile?.invited_by) {
+          const { data: inviterVotes } = await supabase
+            .from('responses')
+            .select('question_id')
+            .eq('user_id', profile.invited_by)
+            .eq('is_ai', false);
+          
+          if (inviterVotes && inviterVotes.length > 0) {
+            setInviterQuestionIds(new Set(inviterVotes.map(v => v.question_id)));
+          }
+        }
+        
         setOnboardingLoaded(true);
       } catch (error) {
         console.error('Error fetching onboarding data:', error);
@@ -396,6 +418,18 @@ export default function FeedPage() {
         processedQuestions = processedQuestions.filter(q => !q.user_vote);
       }
 
+      // Boost inviter's questions to top (only on first page, and only for unanswered questions)
+      // This helps new users who joined via invite see questions their inviter voted on
+      if (!append && inviterQuestionIds.size > 0) {
+        const inviterQuestions = processedQuestions.filter(
+          q => inviterQuestionIds.has(q.id) && !q.user_vote
+        );
+        const otherQuestions = processedQuestions.filter(
+          q => !inviterQuestionIds.has(q.id) || q.user_vote
+        );
+        processedQuestions = [...inviterQuestions, ...otherQuestions];
+      }
+
       // Handle pagination for full-fetch mode
       if (needsFullFetch) {
         const startIndex = currentOffset;
@@ -430,7 +464,7 @@ export default function FeedPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
+  }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType, inviterQuestionIds]);
 
   // Reset and fetch when sort changes or user changes (wait for preferences to load)
   useEffect(() => {

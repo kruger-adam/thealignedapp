@@ -10,11 +10,16 @@ import {
   TrendingDown,
   Users,
   Loader2,
+  UserPlus,
+  Copy,
+  Check,
+  Share2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
 
 interface RankingUser {
   user_id: string;
@@ -34,11 +39,19 @@ interface AgreementRankingsProps {
 const PAGE_SIZE = 5;
 
 export function AgreementRankings({ profileUserId, profileUsername }: AgreementRankingsProps) {
+  const { user } = useAuth();
   const [rankings, setRankings] = useState<RankingUser[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sortAscending, setSortAscending] = useState(false); // false = highest first
+  
+  // Invite state
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  
+  const isOwnProfile = user?.id === profileUserId;
 
   const fetchRankings = useCallback(async (newOffset: number, ascending: boolean) => {
     setLoading(true);
@@ -97,6 +110,51 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
     return 'bg-rose-100 dark:bg-rose-900/40';
   };
 
+  // Generate invite link
+  const generateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const response = await fetch('/api/invite');
+      const data = await response.json();
+      if (response.ok && data.inviteCode) {
+        setInviteCode(data.inviteCode);
+      }
+    } catch (error) {
+      console.error('Error generating invite:', error);
+    }
+    setInviteLoading(false);
+  };
+
+  const inviteUrl = inviteCode ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${inviteCode}` : '';
+
+  const copyInviteLink = async () => {
+    if (!inviteUrl) return;
+    await navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareInvite = async () => {
+    if (!inviteUrl) return;
+    
+    const shareData = {
+      title: 'See how aligned we are!',
+      text: 'Vote on questions and discover how our views compare on Aligned.',
+      url: inviteUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled or share failed, fall back to copy
+        copyInviteLink();
+      }
+    } else {
+      copyInviteLink();
+    }
+  };
+
   if (loading && rankings.length === 0) {
     return (
       <Card>
@@ -116,10 +174,73 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
             Alignment Rankings
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-center text-sm text-zinc-500">
             No shared votes with other users yet. Vote on more questions to see alignment rankings!
           </p>
+          
+          {/* Invite CTA for own profile */}
+          {isOwnProfile && (
+            <div className="rounded-lg border border-dashed border-indigo-300 bg-gradient-to-br from-indigo-50 to-violet-50 p-4 dark:border-indigo-700 dark:from-indigo-950/30 dark:to-violet-950/30">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50">
+                  <UserPlus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                    Invite a friend to compare
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    See how aligned you are across all the questions you both vote on.
+                  </p>
+                  
+                  {!inviteCode ? (
+                    <Button
+                      onClick={generateInvite}
+                      disabled={inviteLoading}
+                      size="sm"
+                      className="mt-3 gap-2"
+                    >
+                      {inviteLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                      Get Invite Link
+                    </Button>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2 rounded-md bg-white p-2 dark:bg-zinc-800">
+                        <span className="min-w-0 flex-1 truncate text-sm text-zinc-600 dark:text-zinc-400">
+                          {inviteUrl}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={copyInviteLink}
+                          className="h-8 w-8 shrink-0 p-0"
+                        >
+                          {copied ? (
+                            <Check className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={shareInvite}
+                          className="h-8 w-8 shrink-0 p-0"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -224,6 +345,69 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
                   <ChevronRight className="h-4 w-4" />
                 )}
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Invite CTA for own profile */}
+        {isOwnProfile && (
+          <div className="mt-4 rounded-lg border border-dashed border-indigo-300 bg-gradient-to-br from-indigo-50 to-violet-50 p-4 dark:border-indigo-700 dark:from-indigo-950/30 dark:to-violet-950/30">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50">
+                <UserPlus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                  Invite a friend to compare
+                </p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  See how aligned you are across all the questions you both vote on.
+                </p>
+                
+                {!inviteCode ? (
+                  <Button
+                    onClick={generateInvite}
+                    disabled={inviteLoading}
+                    size="sm"
+                    className="mt-3 gap-2"
+                  >
+                    {inviteLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4" />
+                    )}
+                    Get Invite Link
+                  </Button>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 rounded-md bg-white p-2 dark:bg-zinc-800">
+                      <span className="min-w-0 flex-1 truncate text-sm text-zinc-600 dark:text-zinc-400">
+                        {inviteUrl}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyInviteLink}
+                        className="h-8 w-8 shrink-0 p-0"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={shareInvite}
+                        className="h-8 w-8 shrink-0 p-0"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

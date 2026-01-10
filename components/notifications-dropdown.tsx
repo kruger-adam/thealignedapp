@@ -68,6 +68,8 @@ function getPreferenceKey(notification: Notification, userId: string): keyof Not
       return 'thread_reply';
     case 'challenge_vote':
       return 'vote_on_your_question'; // Treat challenges like votes on your content
+    case 'invite_accepted':
+      return 'follow'; // Use follow preference for invite accepted
     default:
       return 'mention'; // Fallback
   }
@@ -367,6 +369,13 @@ export function NotificationsDropdown() {
           <>
             <span className="font-medium">{actorName}</span>
             {' voted on your challenge!'}
+          </>
+        );
+      case 'invite_accepted':
+        return (
+          <>
+            <span className="font-medium">{actorName}</span>
+            {' joined from your invite! Start comparing views.'}
           </>
         );
       default:
