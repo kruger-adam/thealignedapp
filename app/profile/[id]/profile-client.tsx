@@ -2,8 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Check,
-  X as XIcon,
   HelpCircle,
   TrendingUp,
   Heart,
@@ -755,11 +753,6 @@ export function ProfileClient({
                 className="flex-1"
               >
                 {filter === 'all' ? 'All' : voteConfig[filter].label}
-                {filter !== 'all' && (
-                  <span className="ml-1 text-xs opacity-75">
-                    ({filter === 'YES' ? stats.yesCount : filter === 'NO' ? stats.noCount : stats.unsureCount})
-                  </span>
-                )}
               </Button>
             ))}
           </div>
