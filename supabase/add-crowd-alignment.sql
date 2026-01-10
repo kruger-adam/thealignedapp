@@ -48,8 +48,8 @@ BEGIN
   ),
   alignment_counts AS (
     SELECT
-      COUNT(CASE WHEN majority_vote != 'TIE' AND user_vote = majority_vote THEN 1 END) AS with_maj,
-      COUNT(CASE WHEN majority_vote != 'TIE' AND user_vote != majority_vote THEN 1 END) AS against_maj,
+      COUNT(CASE WHEN majority_vote != 'TIE' AND user_vote::text = majority_vote THEN 1 END) AS with_maj,
+      COUNT(CASE WHEN majority_vote != 'TIE' AND user_vote::text != majority_vote THEN 1 END) AS against_maj,
       COUNT(CASE WHEN majority_vote = 'TIE' THEN 1 END) AS ties
     FROM question_majorities
   )
@@ -111,8 +111,8 @@ BEGIN
   ),
   alignment_counts AS (
     SELECT
-      COUNT(CASE WHEN majority_vote != 'TIE' AND ai_vote = majority_vote THEN 1 END) AS with_maj,
-      COUNT(CASE WHEN majority_vote != 'TIE' AND ai_vote != majority_vote THEN 1 END) AS against_maj,
+      COUNT(CASE WHEN majority_vote != 'TIE' AND ai_vote::text = majority_vote THEN 1 END) AS with_maj,
+      COUNT(CASE WHEN majority_vote != 'TIE' AND ai_vote::text != majority_vote THEN 1 END) AS against_maj,
       COUNT(CASE WHEN majority_vote = 'TIE' THEN 1 END) AS ties
     FROM question_majorities
   )
