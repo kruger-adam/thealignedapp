@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 // Limit execution time to reduce CPU usage
 export const maxDuration = 10;
+
+// Use service role key to bypass RLS for background updates
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const CATEGORIES = [
   'Hypothetical',
@@ -93,8 +101,9 @@ Respond with ONLY the category name, nothing else. If the question doesn't clear
     
     // If questionId is provided, update the database directly
     // This ensures the update happens within this function's lifecycle
+    // Uses service role to bypass RLS (background tasks don't have user context)
     if (questionId) {
-      const supabase = await createClient();
+      const supabase = getSupabase();
       const { error } = await supabase
         .from('questions')
         .update({ category })
