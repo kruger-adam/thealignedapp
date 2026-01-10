@@ -271,7 +271,7 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
           </div>
         </div>
         <p className="text-sm text-zinc-500">
-          Who {profileUsername ? `${profileUsername} aligns` : 'aligns'} with {sortAscending ? 'least' : 'most'}
+          Who {isOwnProfile ? 'you align' : (profileUsername ? `${profileUsername} aligns` : 'aligns')} with {sortAscending ? 'least' : 'most'}
         </p>
       </CardHeader>
       <CardContent>
@@ -300,7 +300,7 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
                   {user.username || 'Anonymous'}
                 </p>
                 <p className="text-xs text-zinc-500">
-                  {user.agreements} agree · {user.disagreements} disagree · {user.common_questions} common
+                  {user.agreements} agree · {user.disagreements} disagree
                 </p>
               </div>
               
