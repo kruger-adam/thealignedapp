@@ -610,6 +610,7 @@ export function ProfileClient({
               value={stats.totalVotes} 
               icon={Vote} 
               tooltip="Total questions voted on"
+              position="left"
             />
             <StatBox 
               label="Questions" 
@@ -638,6 +639,7 @@ export function ProfileClient({
               icon={RotateCcw} 
               className="text-violet-600" 
               tooltip="Times you changed your vote"
+              position="right"
             />
           </div>
 

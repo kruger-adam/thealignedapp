@@ -252,6 +252,7 @@ export function AIProfileClient({
               value={stats.totalVotes} 
               icon={Vote} 
               tooltip="Total questions voted on"
+              position="left"
             />
             <StatBox 
               label="Questions" 
@@ -266,6 +267,7 @@ export function AIProfileClient({
               icon={Users} 
               className="text-blue-600" 
               tooltip="How often AI votes with the human majority"
+              position="right"
             />
           </div>
         </CardContent>
