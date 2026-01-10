@@ -139,9 +139,9 @@ BEGIN
     -- Drop existing constraint if it exists
     ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
     
-    -- Add updated constraint with new type
+    -- Add updated constraint with new type (includes all existing types + challenge_vote)
     ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
-        CHECK (type IN ('mention', 'follow', 'new_question', 'vote', 'comment', 'challenge_vote'));
+        CHECK (type IN ('mention', 'follow', 'new_question', 'vote', 'comment', 'reply', 'challenge_vote'));
 END $$;
 
 -- ============================================

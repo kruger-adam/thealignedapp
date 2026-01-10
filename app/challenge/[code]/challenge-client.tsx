@@ -44,7 +44,7 @@ interface ChallengeClientProps {
 
 export function ChallengeClient({
   challengeId,
-  challengeCode,
+  challengeCode: _challengeCode,
   sharerVote,
   sharer,
   question,
@@ -52,6 +52,7 @@ export function ChallengeClient({
   existingVote,
   existingChallengeResponse,
 }: ChallengeClientProps) {
+  // _challengeCode available for future re-share functionality
   const { user } = useAuth();
   const supabase = createClient();
   const [isPending, startTransition] = useTransition();

@@ -33,6 +33,7 @@ export function ShareChallenge({
     if (isOpen && !shareCode && !isCreating) {
       createShareChallenge();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const createShareChallenge = useCallback(async () => {
@@ -145,7 +146,7 @@ export function ShareChallenge({
             voteBgColor
           )}>
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2 line-clamp-3">
-              "{questionContent}"
+              &ldquo;{questionContent}&rdquo;
             </p>
             <div className="flex items-center gap-2">
               <span className="text-xs text-zinc-500">You voted</span>
@@ -159,7 +160,7 @@ export function ShareChallenge({
           <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-950/30 dark:to-indigo-950/30">
             <Sparkles className="h-4 w-4 text-violet-500 flex-shrink-0" />
             <p className="text-sm text-zinc-700 dark:text-zinc-300">
-              When they vote, you'll both see if you <span className="font-semibold text-emerald-600 dark:text-emerald-400">agree</span> or <span className="font-semibold text-rose-600 dark:text-rose-400">disagree</span>!
+              When they vote, you&apos;ll both see if you <span className="font-semibold text-emerald-600 dark:text-emerald-400">agree</span> or <span className="font-semibold text-rose-600 dark:text-rose-400">disagree</span>!
             </p>
           </div>
 
@@ -242,7 +243,7 @@ export function ShareChallenge({
 
           {/* Close hint */}
           <p className="text-center text-xs text-zinc-400 mt-4">
-            You'll get notified when someone votes
+            You&apos;ll get notified when someone votes
           </p>
         </div>
       </div>
