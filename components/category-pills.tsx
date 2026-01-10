@@ -85,10 +85,10 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
     const el = scrollRef.current;
     if (!el) return;
     
-    const scrollAmount = 200;
-    el.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
+    // Click instantly jumps to the start/end
+    el.scrollTo({
+      left: direction === 'left' ? 0 : el.scrollWidth,
+      behavior: 'auto',
     });
   };
 

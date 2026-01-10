@@ -66,6 +66,8 @@ function getPreferenceKey(notification: Notification, userId: string): keyof Not
       return 'follow_activity';
     case 'reply':
       return 'thread_reply';
+    case 'challenge_vote':
+      return 'vote_on_your_question'; // Treat challenges like votes on your content
     default:
       return 'mention'; // Fallback
   }
@@ -358,6 +360,13 @@ export function NotificationsDropdown() {
           <>
             <span className="font-medium">{actorName}</span>
             {' replied in a conversation you joined'}
+          </>
+        );
+      case 'challenge_vote':
+        return (
+          <>
+            <span className="font-medium">{actorName}</span>
+            {' voted on your challenge!'}
           </>
         );
       default:

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo, useEffect, useCallback } from 'react';
-import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Pencil, Lock, Unlock, Vote, MoreHorizontal, Trash2, Share2, Bot, User } from 'lucide-react';
+import { Check, HelpCircle, X, MessageCircle, Clock, ChevronDown, ChevronUp, Pencil, Lock, Unlock, Vote, MoreHorizontal, Trash2, Share2, Bot, User, Users } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -17,6 +17,7 @@ import { triggerInstallPrompt } from '@/components/install-prompt';
 import { VoterList } from '@/components/voter-list';
 import { useToast } from '@/components/ui/toast';
 import { CommentInput } from '@/components/comment-input';
+import { ShareChallenge } from '@/components/share-challenge';
 
 interface QuestionCardProps {
   question: QuestionWithStats;
@@ -104,6 +105,9 @@ export function QuestionCard({
   
   // Private voting mode
   const [isPrivateMode, setIsPrivateMode] = useState(false);
+
+  // Share challenge modal state
+  const [showShareChallenge, setShowShareChallenge] = useState(false);
 
   // Fetch AI vote for this question
   const fetchAiVote = useCallback(async () => {
@@ -1111,6 +1115,17 @@ export function QuestionCard({
           </Link>
         )}
 
+        {/* Challenge a Friend - Show after voting */}
+        {hasVoted && user && optimisticData.userVote && (
+          <button
+            onClick={() => setShowShareChallenge(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-3 text-sm font-medium text-zinc-600 transition-all hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:border-violet-600 dark:hover:bg-violet-950/30 dark:hover:text-violet-300"
+          >
+            <Users className="h-4 w-4" />
+            {isAuthor ? 'Share with friends' : 'Challenge a friend'}
+          </button>
+        )}
+
         {/* Stats Row - votes and comments */}
         <div className="flex w-full items-center justify-center gap-6 pt-2">
           <button
@@ -1367,6 +1382,18 @@ export function QuestionCard({
             />
           </div>
         </div>
+      )}
+
+      {/* Share Challenge Modal */}
+      {optimisticData.userVote && (
+        <ShareChallenge
+          isOpen={showShareChallenge}
+          onClose={() => setShowShareChallenge(false)}
+          questionId={question.id}
+          questionContent={localQuestionContent}
+          userVote={optimisticData.userVote}
+          isAuthor={isAuthor}
+        />
       )}
     </Card>
   );

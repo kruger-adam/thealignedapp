@@ -160,9 +160,9 @@ CREATE INDEX idx_response_history_changed_at ON response_history(changed_at DESC
 ALTER TABLE response_history ENABLE ROW LEVEL SECURITY;
 
 -- Policies for response_history
-CREATE POLICY "Users can view their own response history"
+CREATE POLICY "Response history is viewable by everyone"
     ON response_history FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (true);
 
 CREATE POLICY "System can insert response history"
     ON response_history FOR INSERT

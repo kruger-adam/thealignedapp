@@ -136,7 +136,7 @@ export interface ShareYourTake {
 
 export type SortOption = 'newest' | 'popular' | 'controversial' | 'consensus' | 'most_undecided' | 'most_sensitive' | 'most_commented';
 
-export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment' | 'reply';
+export type NotificationType = 'mention' | 'follow' | 'new_question' | 'vote' | 'comment' | 'reply' | 'challenge_vote';
 
 // Comment types
 export interface Comment {
