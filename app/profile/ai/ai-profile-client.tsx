@@ -246,14 +246,25 @@ export function AIProfileClient({
 
           {/* Stats Row */}
           <div className="mt-6 grid grid-cols-3 gap-3">
-            <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
-            <StatBox label="Created" value={stats.questionsCreated} icon={MessageSquare} className="text-violet-600" />
             <StatBox 
-              label="Crowd" 
+              label="Votes" 
+              value={stats.totalVotes} 
+              icon={Vote} 
+              tooltip="Total questions voted on"
+            />
+            <StatBox 
+              label="Posts" 
+              value={stats.questionsCreated} 
+              icon={MessageSquare} 
+              className="text-violet-600" 
+              tooltip="Questions created by AI"
+            />
+            <StatBox 
+              label="Alignment" 
               value={stats.crowdAlignment !== null ? `${Math.round(stats.crowdAlignment)}%` : '—'} 
               icon={Users} 
               className="text-blue-600" 
-              tooltip="How often AI votes with the majority"
+              tooltip="How often AI votes with the human majority"
             />
           </div>
         </CardContent>

@@ -79,11 +79,7 @@ export default async function AIProfilePage() {
   const totalVotes = responsesCount || 0;
 
   // Get AI crowd alignment score
-  const { data: crowdAlignmentData, error: crowdAlignmentError } = await supabase.rpc('get_ai_crowd_alignment');
-  if (crowdAlignmentError) {
-    console.error('AI Crowd alignment error:', crowdAlignmentError);
-  }
-  console.log('AI Crowd alignment data:', crowdAlignmentData);
+  const { data: crowdAlignmentData } = await supabase.rpc('get_ai_crowd_alignment');
   const crowdAlignment = crowdAlignmentData?.[0] || null;
 
   // Calculate compatibility with AI if user is logged in

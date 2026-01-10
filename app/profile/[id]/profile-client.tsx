@@ -23,6 +23,7 @@ import {
   Bot,
   Handshake,
   Network,
+  PenLine,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -102,6 +103,7 @@ interface ProfileClientProps {
   history: HistoryItem[];
   stats: {
     totalVotes: number;
+    questionsCreated: number;
     changedVotes: number;
     voteStreak: number;
     longestStreak: number;
@@ -602,16 +604,40 @@ export function ProfileClient({
           </div>
 
           {/* Stats Row */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
-            <StatBox label="Streak" value={stats.voteStreak} icon={Flame} className="text-orange-500" tooltip={stats.longestStreak > 0 ? `Best: ${stats.longestStreak} days` : undefined} />
-            <StatBox label="Changed" value={stats.changedVotes} icon={RotateCcw} className="text-violet-600" />
+          <div className="mt-6 grid grid-cols-5 gap-2">
             <StatBox 
-              label="Crowd" 
+              label="Votes" 
+              value={stats.totalVotes} 
+              icon={Vote} 
+              tooltip="Total questions voted on"
+            />
+            <StatBox 
+              label="Posts" 
+              value={stats.questionsCreated} 
+              icon={PenLine} 
+              className="text-indigo-600" 
+              tooltip="Questions created"
+            />
+            <StatBox 
+              label="Alignment" 
               value={stats.crowdAlignment !== null ? `${Math.round(stats.crowdAlignment)}%` : '—'} 
               icon={Users} 
               className="text-blue-600" 
               tooltip="How often you vote with the majority"
+            />
+            <StatBox 
+              label="Streak" 
+              value={stats.voteStreak} 
+              icon={Flame} 
+              className="text-orange-500" 
+              tooltip={`Current voting streak${stats.longestStreak > 0 ? `. Best: ${stats.longestStreak} days` : ''}`}
+            />
+            <StatBox 
+              label="Changed" 
+              value={stats.changedVotes} 
+              icon={RotateCcw} 
+              className="text-violet-600" 
+              tooltip="Times you changed your vote"
             />
           </div>
 
