@@ -113,12 +113,12 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
             <Users className="h-5 w-5" />
-            Agreement Rankings
+            Alignment Rankings
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-center text-sm text-zinc-500">
-            No shared votes with other users yet. Vote on more questions to see agreement rankings!
+            No shared votes with other users yet. Vote on more questions to see alignment rankings!
           </p>
         </CardContent>
       </Card>
@@ -135,7 +135,7 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
             ) : (
               <TrendingUp className="h-5 w-5 text-emerald-500" />
             )}
-            {sortAscending ? 'Lowest Agreement' : 'Highest Agreement'}
+            {sortAscending ? 'Lowest Alignment' : 'Highest Alignment'}
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -150,7 +150,7 @@ export function AgreementRankings({ profileUserId, profileUsername }: AgreementR
           </div>
         </div>
         <p className="text-sm text-zinc-500">
-          Who {profileUsername ? `${profileUsername} agrees` : 'agrees'} with {sortAscending ? 'least' : 'most'}
+          Who {profileUsername ? `${profileUsername} aligns` : 'aligns'} with {sortAscending ? 'least' : 'most'}
         </p>
       </CardHeader>
       <CardContent>

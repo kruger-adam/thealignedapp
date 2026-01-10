@@ -15,6 +15,7 @@ import {
   Users,
   Handshake,
   Network,
+  HelpCircle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -253,9 +254,9 @@ export function AIProfileClient({
               tooltip="Total questions voted on"
             />
             <StatBox 
-              label="Posts" 
+              label="Questions" 
               value={stats.questionsCreated} 
-              icon={MessageSquare} 
+              icon={HelpCircle} 
               className="text-violet-600" 
               tooltip="Questions created by AI"
             />
@@ -363,7 +364,7 @@ export function AIProfileClient({
       {activeTab === 'rankings' && (
         <TabDescription 
           title="Compare" 
-          description="Agreement rates between the AI and all users" 
+          description="Alignment rates between the AI and all users" 
         />
       )}
 

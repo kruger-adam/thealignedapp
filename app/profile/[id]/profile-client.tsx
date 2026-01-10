@@ -23,7 +23,6 @@ import {
   Bot,
   Handshake,
   Network,
-  PenLine,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,6 +48,7 @@ interface ResponseWithQuestion {
   id: string;
   vote: VoteType;
   updated_at: string;
+  is_anonymous?: boolean;
   question: {
     id: string;
     content: string;
@@ -612,9 +612,9 @@ export function ProfileClient({
               tooltip="Total questions voted on"
             />
             <StatBox 
-              label="Posts" 
+              label="Questions" 
               value={stats.questionsCreated} 
-              icon={PenLine} 
+              icon={HelpCircle} 
               className="text-indigo-600" 
               tooltip="Questions created"
             />
@@ -761,7 +761,7 @@ export function ProfileClient({
       {activeTab === 'rankings' && (
         <TabDescription 
           title="Compare" 
-          description={isOwnProfile ? "Your agreement rate with everyone" : "Their agreement rate with everyone"} 
+          description={isOwnProfile ? "Your alignment rate with everyone" : "Their alignment rate with everyone"} 
         />
       )}
 
@@ -1036,8 +1036,13 @@ function StanceItem({ response }: { response: ResponseWithQuestion }) {
       <div className={cn('rounded-full p-2', config.bg)}>
         <Icon className={cn('h-4 w-4', config.color)} />
       </div>
-      <p className="flex-1 text-sm text-zinc-900 dark:text-zinc-100">
+      <p className="flex-1 flex items-center gap-1.5 text-sm text-zinc-900 dark:text-zinc-100">
         {response.question.content}
+        {response.is_anonymous && (
+          <span title="Voted anonymously">
+            <Lock className="h-3 w-3 text-zinc-400" />
+          </span>
+        )}
       </p>
     </Link>
   );

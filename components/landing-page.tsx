@@ -269,7 +269,7 @@ export function LandingPage() {
               </div>
               <h3 className="text-lg font-semibold text-zinc-100 mb-2">Find Common Ground</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                See your agreement rate with any user. Discover shared values you didn&apos;t know you had.
+                See your alignment rate with any user. Discover shared values you didn&apos;t know you had.
               </p>
             </div>
 
