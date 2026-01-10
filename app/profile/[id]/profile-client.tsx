@@ -30,7 +30,6 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
-import { ProgressBar } from '@/components/ui/progress-bar';
 import { 
   StatBox, 
   TabButton,
@@ -105,12 +104,10 @@ interface ProfileClientProps {
   history: HistoryItem[];
   stats: {
     totalVotes: number;
-    yesCount: number;
-    noCount: number;
-    unsureCount: number;
     changedVotes: number;
     voteStreak: number;
     longestStreak: number;
+    crowdAlignment: number | null;
   };
   compatibility: Compatibility | null;
   commonGround: CommonGround[] | null;
@@ -607,27 +604,18 @@ export function ProfileClient({
           </div>
 
           {/* Stats Row */}
-          <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
             <StatBox label="Streak" value={stats.voteStreak} icon={Flame} className="text-orange-500" tooltip={stats.longestStreak > 0 ? `Best: ${stats.longestStreak} days` : undefined} />
-            <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
-            <StatBox label="No" value={stats.noCount} icon={XIcon} className="text-rose-600" />
-            <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
             <StatBox label="Changed" value={stats.changedVotes} icon={RotateCcw} className="text-violet-600" />
+            <StatBox 
+              label="Crowd" 
+              value={stats.crowdAlignment !== null ? `${Math.round(stats.crowdAlignment)}%` : '—'} 
+              icon={Users} 
+              className="text-blue-600" 
+              tooltip="How often you vote with the majority"
+            />
           </div>
-
-          {/* Vote Distribution */}
-          {stats.totalVotes > 0 && (
-            <div className="mt-6">
-              <ProgressBar
-                yes={stats.yesCount}
-                no={stats.noCount}
-                unsure={stats.unsureCount}
-                showLabels
-                size="lg"
-              />
-            </div>
-          )}
 
           {/* Sign Out Button (only on own profile) */}
           {isOwnProfile && (

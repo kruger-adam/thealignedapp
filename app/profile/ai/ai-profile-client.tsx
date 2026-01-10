@@ -24,7 +24,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ProgressBar } from '@/components/ui/progress-bar';
 import { 
   StatBox, 
   TabButton,
@@ -78,10 +77,8 @@ interface AIProfileClientProps {
   responses: ResponseWithQuestion[];
   stats: {
     totalVotes: number;
-    yesCount: number;
-    noCount: number;
-    unsureCount: number;
     questionsCreated: number;
+    crowdAlignment: number | null;
   };
   compatibility: {
     compatibility_score: number;
@@ -251,26 +248,17 @@ export function AIProfileClient({
           </div>
 
           {/* Stats Row */}
-          <div className="mt-6 grid grid-cols-5 gap-3">
+          <div className="mt-6 grid grid-cols-3 gap-3">
             <StatBox label="Votes" value={stats.totalVotes} icon={Vote} />
-            <StatBox label="Yes" value={stats.yesCount} icon={Check} className="text-emerald-600" />
-            <StatBox label="No" value={stats.noCount} icon={XIcon} className="text-rose-600" />
-            <StatBox label="Not Sure" value={stats.unsureCount} icon={HelpCircle} className="text-amber-600" />
             <StatBox label="Created" value={stats.questionsCreated} icon={MessageSquare} className="text-violet-600" />
+            <StatBox 
+              label="Crowd" 
+              value={stats.crowdAlignment !== null ? `${Math.round(stats.crowdAlignment)}%` : '—'} 
+              icon={Users} 
+              className="text-blue-600" 
+              tooltip="How often AI votes with the majority"
+            />
           </div>
-
-          {/* Vote Distribution */}
-          {stats.totalVotes > 0 && (
-            <div className="mt-6">
-              <ProgressBar
-                yes={stats.yesCount}
-                no={stats.noCount}
-                unsure={stats.unsureCount}
-                showLabels
-                size="lg"
-              />
-            </div>
-          )}
         </CardContent>
       </Card>
 

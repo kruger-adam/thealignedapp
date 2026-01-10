@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 
 interface StatBoxProps {
   label: string;
-  value: number;
+  value: number | string;
   icon: React.ElementType;
   className?: string;
   tooltip?: string;

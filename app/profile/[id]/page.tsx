@@ -74,43 +74,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   
   const { count: responsesCount } = await responsesCountQuery;
 
-  // Get vote breakdown counts for stats
-  let yesCountQuery = supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', profile.id)
-    .eq('is_ai', false)
-    .eq('vote', 'YES');
-  
-  let noCountQuery = supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', profile.id)
-    .eq('is_ai', false)
-    .eq('vote', 'NO');
-  
-  let unsureCountQuery = supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', profile.id)
-    .eq('is_ai', false)
-    .eq('vote', 'UNSURE');
-  
-  if (!isOwnProfile) {
-    yesCountQuery = yesCountQuery.eq('is_anonymous', false);
-    noCountQuery = noCountQuery.eq('is_anonymous', false);
-    unsureCountQuery = unsureCountQuery.eq('is_anonymous', false);
-  }
-  
-  const [
-    { count: yesCount },
-    { count: noCount },
-    { count: unsureCount },
-  ] = await Promise.all([
-    yesCountQuery,
-    noCountQuery,
-    unsureCountQuery,
-  ]);
+  // Get crowd alignment score
+  const { data: crowdAlignmentData } = await supabase.rpc('get_crowd_alignment', {
+    target_user_id: profile.id,
+  });
+  const crowdAlignment = crowdAlignmentData?.[0] || null;
 
   // Transform responses to handle Supabase's array return for single relations
   const responses = (rawResponses || []).map((r) => ({
@@ -302,12 +270,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       history={history}
       stats={{
         totalVotes,
-        yesCount: yesCount || 0,
-        noCount: noCount || 0,
-        unsureCount: unsureCount || 0,
         changedVotes,
         voteStreak,
         longestStreak,
+        crowdAlignment: crowdAlignment?.alignment_score ?? null,
       }}
       compatibility={compatibility}
       commonGround={commonGround}

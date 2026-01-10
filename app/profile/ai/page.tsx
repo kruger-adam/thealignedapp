@@ -76,26 +76,11 @@ export default async function AIProfilePage() {
     .select('*', { count: 'exact', head: true })
     .eq('is_ai', true);
 
-  // Get stats counts directly (for accurate totals)
-  const { count: yesCount } = await supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_ai', true)
-    .eq('vote', 'YES');
-
-  const { count: noCount } = await supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_ai', true)
-    .eq('vote', 'NO');
-
-  const { count: unsureCount } = await supabase
-    .from('responses')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_ai', true)
-    .eq('vote', 'UNSURE');
-
   const totalVotes = responsesCount || 0;
+
+  // Get AI crowd alignment score
+  const { data: crowdAlignmentData } = await supabase.rpc('get_ai_crowd_alignment');
+  const crowdAlignment = crowdAlignmentData?.[0] || null;
 
   // Calculate compatibility with AI if user is logged in
   let compatibility = null;
@@ -226,10 +211,8 @@ export default async function AIProfilePage() {
       responses={responses}
       stats={{
         totalVotes,
-        yesCount: yesCount || 0,
-        noCount: noCount || 0,
-        unsureCount: unsureCount || 0,
         questionsCreated: questionsCount || 0,
+        crowdAlignment: crowdAlignment?.alignment_score ?? null,
       }}
       compatibility={compatibility}
       commonGround={commonGround}
