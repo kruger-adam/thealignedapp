@@ -18,39 +18,82 @@ export async function GET(request: Request) {
   const supabase = await createClient();
 
   try {
-    // Fetch rankings
-    const { data: rankings, error: rankingsError } = await supabase.rpc(
-      'get_agreement_rankings',
-      {
-        target_user_id: userId,
-        limit_count: limit,
-        offset_count: offset,
-        sort_ascending: sortAscending,
-      }
-    );
+    // Check if this is the AI profile (special case)
+    const isAiProfile = userId === 'ai';
 
-    if (rankingsError) {
-      console.error('Error fetching agreement rankings:', rankingsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch rankings' },
-        { status: 500 }
+    let rankings;
+    let totalCount;
+
+    if (isAiProfile) {
+      // Use AI-specific functions
+      const { data: aiRankings, error: aiRankingsError } = await supabase.rpc(
+        'get_ai_agreement_rankings',
+        {
+          limit_count: limit,
+          offset_count: offset,
+          sort_ascending: sortAscending,
+        }
       );
-    }
 
-    // Fetch total count for pagination
-    const { data: totalCount, error: countError } = await supabase.rpc(
-      'get_agreement_rankings_count',
-      {
-        target_user_id: userId,
+      if (aiRankingsError) {
+        console.error('Error fetching AI agreement rankings:', aiRankingsError);
+        return NextResponse.json(
+          { error: 'Failed to fetch rankings' },
+          { status: 500 }
+        );
       }
-    );
 
-    if (countError) {
-      console.error('Error fetching rankings count:', countError);
-      return NextResponse.json(
-        { error: 'Failed to fetch rankings count' },
-        { status: 500 }
+      const { data: aiCount, error: aiCountError } = await supabase.rpc(
+        'get_ai_agreement_rankings_count'
       );
+
+      if (aiCountError) {
+        console.error('Error fetching AI rankings count:', aiCountError);
+        return NextResponse.json(
+          { error: 'Failed to fetch rankings count' },
+          { status: 500 }
+        );
+      }
+
+      rankings = aiRankings;
+      totalCount = aiCount;
+    } else {
+      // Regular user - use standard functions
+      const { data: userRankings, error: rankingsError } = await supabase.rpc(
+        'get_agreement_rankings',
+        {
+          target_user_id: userId,
+          limit_count: limit,
+          offset_count: offset,
+          sort_ascending: sortAscending,
+        }
+      );
+
+      if (rankingsError) {
+        console.error('Error fetching agreement rankings:', rankingsError);
+        return NextResponse.json(
+          { error: 'Failed to fetch rankings' },
+          { status: 500 }
+        );
+      }
+
+      const { data: userCount, error: countError } = await supabase.rpc(
+        'get_agreement_rankings_count',
+        {
+          target_user_id: userId,
+        }
+      );
+
+      if (countError) {
+        console.error('Error fetching rankings count:', countError);
+        return NextResponse.json(
+          { error: 'Failed to fetch rankings count' },
+          { status: 500 }
+        );
+      }
+
+      rankings = userRankings;
+      totalCount = userCount;
     }
 
     return NextResponse.json({

@@ -121,3 +121,117 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ============================================
+-- AI AGREEMENT RANKINGS FUNCTION
+-- ============================================
+-- Special version for the AI profile since AI votes use is_ai=true flag
+-- instead of a specific user_id
+
+CREATE OR REPLACE FUNCTION get_ai_agreement_rankings(
+  limit_count INTEGER DEFAULT 5,
+  offset_count INTEGER DEFAULT 0,
+  sort_ascending BOOLEAN DEFAULT false
+)
+RETURNS TABLE (
+  user_id UUID,
+  username TEXT,
+  avatar_url TEXT,
+  compatibility_score NUMERIC,
+  common_questions INTEGER,
+  agreements INTEGER,
+  disagreements INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH ai_responses AS (
+    -- Get all AI responses (is_ai = true)
+    SELECT question_id, vote
+    FROM responses
+    WHERE is_ai = true
+  ),
+  user_comparisons AS (
+    -- For each human user, calculate their compatibility with AI
+    SELECT 
+      r.user_id,
+      COUNT(CASE 
+        WHEN ar.vote = r.vote THEN 1 
+        END
+      ) AS agree_count,
+      COUNT(CASE 
+        WHEN ar.vote != r.vote 
+          AND ar.vote IN ('YES', 'NO') 
+          AND r.vote IN ('YES', 'NO') 
+        THEN 1 
+        END
+      ) AS disagree_count
+    FROM responses r
+    INNER JOIN ai_responses ar ON r.question_id = ar.question_id
+    WHERE r.is_ai = false
+      AND r.is_anonymous = false
+      -- Exclude cases where one voted UNSURE and the other voted YES/NO
+      AND NOT (
+        (ar.vote = 'UNSURE' AND r.vote IN ('YES', 'NO')) OR
+        (r.vote = 'UNSURE' AND ar.vote IN ('YES', 'NO'))
+      )
+    GROUP BY r.user_id
+    HAVING COUNT(*) > 0
+  ),
+  ranked_users AS (
+    SELECT 
+      uc.user_id,
+      p.username,
+      p.avatar_url,
+      CASE 
+        WHEN (uc.agree_count + uc.disagree_count) > 0 THEN 
+          ROUND((uc.agree_count::NUMERIC / (uc.agree_count + uc.disagree_count)) * 100, 1)
+        ELSE 0 
+      END AS compat_score,
+      (uc.agree_count + uc.disagree_count)::INTEGER AS common_q,
+      uc.agree_count::INTEGER AS agrees,
+      uc.disagree_count::INTEGER AS disagrees
+    FROM user_comparisons uc
+    INNER JOIN profiles p ON p.id = uc.user_id
+  )
+  SELECT 
+    ranked_users.user_id,
+    ranked_users.username,
+    ranked_users.avatar_url,
+    ranked_users.compat_score,
+    ranked_users.common_q,
+    ranked_users.agrees,
+    ranked_users.disagrees
+  FROM ranked_users
+  ORDER BY 
+    CASE WHEN sort_ascending THEN ranked_users.compat_score END ASC,
+    CASE WHEN NOT sort_ascending THEN ranked_users.compat_score END DESC,
+    ranked_users.common_q DESC
+  LIMIT limit_count
+  OFFSET offset_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Count function for AI agreement rankings
+CREATE OR REPLACE FUNCTION get_ai_agreement_rankings_count()
+RETURNS INTEGER AS $$
+DECLARE
+  total_count INTEGER;
+BEGIN
+  WITH ai_responses AS (
+    SELECT question_id, vote
+    FROM responses
+    WHERE is_ai = true
+  )
+  SELECT COUNT(DISTINCT r.user_id)::INTEGER INTO total_count
+  FROM responses r
+  INNER JOIN ai_responses ar ON r.question_id = ar.question_id
+  WHERE r.is_ai = false
+    AND r.is_anonymous = false
+    AND NOT (
+      (ar.vote = 'UNSURE' AND r.vote IN ('YES', 'NO')) OR
+      (r.vote = 'UNSURE' AND ar.vote IN ('YES', 'NO'))
+    );
+  
+  RETURN total_count;
+END;
+$$ LANGUAGE plpgsql;
+

@@ -15,6 +15,7 @@ import {
   Lightbulb,
   MessageSquareShare,
   Loader2,
+  Users,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -28,7 +29,8 @@ import {
   CommonGroundCard, 
   DivergenceCard, 
   AskThemAboutCard, 
-  ShareYourTakeCard 
+  ShareYourTakeCard,
+  AgreementRankings,
 } from '@/components/profile';
 import { VoteType } from '@/lib/types';
 import { voteConfig } from '@/lib/constants';
@@ -113,7 +115,7 @@ interface AIProfileClientProps {
   };
 }
 
-type Tab = 'stances' | 'questions' | 'comparison';
+type Tab = 'stances' | 'questions' | 'comparison' | 'rankings';
 type StanceFilter = 'all' | 'YES' | 'NO' | 'UNSURE';
 
 export function AIProfileClient({
@@ -332,6 +334,12 @@ export function AIProfileClient({
             label="Compare"
           />
         )}
+        <TabButton
+          active={activeTab === 'rankings'}
+          onClick={() => setActiveTab('rankings')}
+          icon={Users}
+          label="Rankings"
+        />
       </div>
 
       {/* Tab Content */}
@@ -506,6 +514,13 @@ export function AIProfileClient({
             <p className="py-8 text-center text-zinc-500">No comparison data yet. Vote on more questions to see how you compare with the AI!</p>
           )}
         </div>
+      )}
+
+      {activeTab === 'rankings' && (
+        <AgreementRankings 
+          profileUserId="ai" 
+          profileUsername="AI"
+        />
       )}
     </div>
   );
