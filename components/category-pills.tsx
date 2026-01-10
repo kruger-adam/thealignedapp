@@ -33,6 +33,7 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
   const hasScrolledToInitial = useRef(false);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check scroll position to show/hide arrows
   const updateArrows = () => {
@@ -54,6 +55,10 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
     return () => {
       el.removeEventListener('scroll', updateArrows);
       window.removeEventListener('resize', updateArrows);
+      // Clean up any active scroll interval
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
     };
   }, []);
 
@@ -87,6 +92,32 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
     });
   };
 
+  // Start continuous scrolling on hover (desktop only)
+  const startHoverScroll = (direction: 'left' | 'right') => {
+    // Clear any existing interval
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+    }
+    
+    const el = scrollRef.current;
+    if (!el) return;
+    
+    // Scroll immediately on hover start
+    el.scrollBy({ left: direction === 'left' ? -3 : 3 });
+    
+    // Continue scrolling while hovering
+    scrollIntervalRef.current = setInterval(() => {
+      el.scrollBy({ left: direction === 'left' ? -3 : 3 });
+    }, 16); // ~60fps
+  };
+
+  const stopHoverScroll = () => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  };
+
   const handleClick = (category: Category | null) => {
     // If clicking the same category, deselect (go back to All)
     if (category === selected) {
@@ -103,6 +134,8 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         <div className="absolute left-0 top-0 z-10 flex h-full items-center bg-gradient-to-r from-white via-white to-transparent pl-2 pr-4 dark:from-zinc-950 dark:via-zinc-950">
           <button
             onClick={() => scroll('left')}
+            onMouseEnter={() => startHoverScroll('left')}
+            onMouseLeave={stopHoverScroll}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm transition-all hover:bg-zinc-200 active:scale-90 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
             aria-label="Scroll left"
           >
@@ -153,6 +186,8 @@ export function CategoryPills({ selected, onChange }: CategoryPillsProps) {
         <div className="absolute right-0 top-0 z-10 flex h-full items-center bg-gradient-to-l from-white via-white to-transparent pl-4 pr-2 dark:from-zinc-950 dark:via-zinc-950">
           <button
             onClick={() => scroll('right')}
+            onMouseEnter={() => startHoverScroll('right')}
+            onMouseLeave={stopHoverScroll}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 shadow-sm transition-all hover:bg-zinc-200 active:scale-90 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
             aria-label="Scroll right"
           >
