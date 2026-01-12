@@ -78,6 +78,7 @@ async function logTokenUsage(
   const thinkingTokens = Math.max(0, totalTokens - inputTokens - outputTokens);
   
   try {
+    // Note: total_tokens is a generated column, so we don't include it
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('ai_token_logs').insert({
       operation,
@@ -85,7 +86,6 @@ async function logTokenUsage(
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       thinking_tokens: thinkingTokens,
-      total_tokens: totalTokens,
       metadata,
     });
   } catch (e) {
