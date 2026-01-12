@@ -371,7 +371,11 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
   }, [activePrompts]);
 
   const handleSubmit = async () => {
-    if (!user || !isValid || isLoading) return;
+    if (!user) {
+      signInWithGoogle();
+      return;
+    }
+    if (!isValid || isLoading) return;
 
     // Trigger animations immediately for responsiveness
     triggerHaptic(15);
@@ -466,28 +470,6 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
       setIsAnimating(false);
     }
   };
-
-  // For logged-out users, show the typewriter animation but redirect to sign-in on click
-  if (!user) {
-    return (
-      <Card className="border-dashed hover:border-solid transition-all duration-200">
-        <CardContent className="p-4">
-          <button
-            onClick={() => signInWithGoogle()}
-            className="flex w-full items-center gap-3 text-left"
-          >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-              <Plus className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-            </div>
-            <span className="text-zinc-500">
-              {displayedText}
-              <span className="ml-0.5 inline-block w-0.5 h-4 bg-zinc-400 animate-pulse" />
-            </span>
-          </button>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card
