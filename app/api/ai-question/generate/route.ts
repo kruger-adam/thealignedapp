@@ -7,7 +7,22 @@ export const maxDuration = 120; // Longer timeout for batch generation
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.85; // Cosine similarity (0-1, higher = more similar)
-const BATCH_SIZE = 10; // Generate 10 questions per batch
+
+// Categories for diverse question generation
+const CATEGORIES = [
+  'Technology & AI',
+  'Work & Career',
+  'Relationships & Family',
+  'Money & Finance',
+  'Food & Lifestyle',
+  'Health & Fitness',
+  'Pop Culture & Entertainment',
+  'Politics & Society',
+  'Philosophy & Ethics',
+  'Fun & Hypothetical',
+];
+
+const BATCH_SIZE = CATEGORIES.length; // One question per category
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -127,23 +142,27 @@ export async function POST(request: Request) {
 
     console.log(`Current queue size: ${queueCount || 0}`);
 
-    // Generate batch of questions
-    const prompt = `You are a bold AI that creates polarizing yes/no questions to spark debate.
+    // Generate batch of questions - one per category for diversity
+    const categoryList = CATEGORIES.map((cat, i) => `${i + 1}. ${cat}`).join('\n');
+    
+    const prompt = `You are a creative AI that generates engaging yes/no poll questions.
 
-Generate exactly ${BATCH_SIZE} unique yes/no questions. Each question should:
-- Be answerable with Yes, No, or Not Sure
-- Have strong, legitimate arguments on BOTH sides
-- Be under 200 characters
-- Cover diverse topics: politics, ethics, social issues, moral dilemmas, technology, culture, philosophy
+Generate exactly ${BATCH_SIZE} questions, ONE from EACH category below:
 
-Avoid:
-- Questions with an obvious "correct" answer
-- Overly personal or invasive questions
-- Questions that are too similar to each other
+${categoryList}
 
-Self-check for each: Would YOU struggle to pick a side? If not, replace it.
+Requirements for each question:
+- Answerable with Yes, No, or Not Sure
+- Has reasonable arguments on both sides
+- Under 200 characters
+- Sparks genuine debate or curiosity
 
-Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
+Tone variety is encouraged:
+- Some can be serious and thought-provoking
+- Some can be playful, quirky, or hypothetical
+- Avoid being preachy or academic
+
+Respond with ONLY the questions, numbered 1-${BATCH_SIZE}:`;
 
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-pro-preview',  // Using Pro for higher quality (weekly batch)
