@@ -146,7 +146,7 @@ Self-check for each: Would YOU struggle to pick a side? If not, replace it.
 Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
 
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',  // Using Pro for higher quality (weekly batch)
       generationConfig: {
         maxOutputTokens: 2048,
         temperature: 0.95, // Higher for variety
@@ -169,7 +169,7 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
       await logTokenUsage(
         supabase,
         'ai-question-batch-generate',
-        'gemini-3-flash-preview',
+        'gemini-3-pro-preview',
         usageMetadata.promptTokenCount || 0,
         usageMetadata.candidatesTokenCount || 0,
         usageMetadata.totalTokenCount || 0,
