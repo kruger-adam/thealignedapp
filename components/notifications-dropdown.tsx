@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Notification } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface NotificationPreferences {
   mention: boolean;
@@ -77,6 +78,7 @@ function getPreferenceKey(notification: Notification, userId: string): keyof Not
 
 export function NotificationsDropdown() {
   const { user } = useAuth();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -309,12 +311,49 @@ export function NotificationsDropdown() {
   // Get notification message
   const getNotificationMessage = (notification: Notification) => {
     const actorName = notification.actor?.username || 'Someone';
+    const actorId = notification.actor?.id;
+    
+    // Helper to create a clickable username link
+    const ActorLink = ({ children }: { children: React.ReactNode }) => (
+      actorId ? (
+        <Link
+          href={`/profile/${actorId}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(false);
+          }}
+          className="font-medium hover:underline"
+        >
+          {children}
+        </Link>
+      ) : (
+        <span className="font-medium">{children}</span>
+      )
+    );
+    
+    // Helper for related user links (e.g., "X followed Y")
+    const RelatedUserLink = ({ children, userId }: { children: React.ReactNode; userId?: string }) => (
+      userId ? (
+        <Link
+          href={`/profile/${userId}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(false);
+          }}
+          className="font-medium hover:underline"
+        >
+          {children}
+        </Link>
+      ) : (
+        <span className="font-medium">{children}</span>
+      )
+    );
     
     switch (notification.type) {
       case 'mention':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' mentioned you in a comment'}
           </>
         );
@@ -323,58 +362,60 @@ export function NotificationsDropdown() {
           // Someone you follow followed someone else
           return (
             <>
-              <span className="font-medium">{actorName}</span>
+              <ActorLink>{actorName}</ActorLink>
               {' started following '}
-              <span className="font-medium">{notification.related_user.username || 'someone'}</span>
+              <RelatedUserLink userId={notification.related_user.id}>
+                {notification.related_user.username || 'someone'}
+              </RelatedUserLink>
             </>
           );
         }
         // Someone followed you directly
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' started following you'}
           </>
         );
       case 'new_question':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' posted a new question'}
           </>
         );
       case 'vote':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' voted on a question'}
           </>
         );
       case 'comment':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' commented on a question'}
           </>
         );
       case 'reply':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' replied in a conversation you joined'}
           </>
         );
       case 'challenge_vote':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' voted on your challenge!'}
           </>
         );
       case 'invite_accepted':
         return (
           <>
-            <span className="font-medium">{actorName}</span>
+            <ActorLink>{actorName}</ActorLink>
             {' joined from your invite! Start comparing views.'}
           </>
         );
@@ -508,23 +549,41 @@ export function NotificationsDropdown() {
               </div>
             ) : (
               filteredNotifications.map((notification) => (
-                <Link
+                <div
                   key={notification.id}
-                  href={notification.question_id ? `/question/${notification.question_id}` : '/'}
                   onClick={() => {
                     if (!notification.read) markAsRead(notification.id);
                     setIsOpen(false);
+                    const href = notification.question_id ? `/question/${notification.question_id}` : '/';
+                    router.push(href);
                   }}
                   className={cn(
-                    "flex gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors",
+                    "flex gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer",
                     !notification.read && "bg-blue-50 dark:bg-blue-900/20"
                   )}
                 >
-                  <Avatar
-                    src={notification.actor?.avatar_url}
-                    fallback={notification.actor?.username || 'U'}
-                    size="sm"
-                  />
+                  {notification.actor?.id ? (
+                    <Link
+                      href={`/profile/${notification.actor.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!notification.read) markAsRead(notification.id);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Avatar
+                        src={notification.actor?.avatar_url}
+                        fallback={notification.actor?.username || 'U'}
+                        size="sm"
+                      />
+                    </Link>
+                  ) : (
+                    <Avatar
+                      src={notification.actor?.avatar_url}
+                      fallback={notification.actor?.username || 'U'}
+                      size="sm"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       {getNotificationMessage(notification)}
@@ -541,7 +600,7 @@ export function NotificationsDropdown() {
                   {!notification.read && (
                     <div className="h-2 w-2 rounded-full bg-blue-500 mt-2" />
                   )}
-                </Link>
+                </div>
               ))
             )}
           </div>

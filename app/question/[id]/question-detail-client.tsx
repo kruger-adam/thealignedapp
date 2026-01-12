@@ -71,6 +71,40 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
   // Private voting mode
   const [isPrivateMode, setIsPrivateMode] = useState(false);
 
+  // Vote animation state
+  const [animatingVote, setAnimatingVote] = useState<VoteType | null>(null);
+  const [confettiParticles, setConfettiParticles] = useState<Array<{ id: number; x: number; y: number; color: string }>>([]);
+
+  // Spawn confetti particles
+  const spawnConfetti = useCallback((voteType: VoteType) => {
+    const colors = {
+      YES: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+      NO: ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3'],
+      UNSURE: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a'],
+    };
+    
+    const particles = Array.from({ length: 12 }, (_, i) => {
+      const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
+      const distance = 30 + Math.random() * 40;
+      return {
+        id: Date.now() + i,
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance - 20,
+        color: colors[voteType][Math.floor(Math.random() * colors[voteType].length)],
+      };
+    });
+    
+    setConfettiParticles(particles);
+    setTimeout(() => setConfettiParticles([]), 600);
+  }, []);
+
+  // Trigger haptic feedback
+  const triggerHaptic = useCallback(() => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+  }, []);
+
   // AI vote state
   const [aiVote, setAiVote] = useState<{ vote: VoteType; reasoning: string | null; ai_model?: string | null } | null>(null);
   const [loadingAiVote, setLoadingAiVote] = useState(false);
@@ -157,6 +191,14 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
     // Check if user is clicking the same vote to unvote
     const isUnvoting = localUserVote === vote;
     const isFirstVote = !localUserVote;
+
+    // Trigger animations and haptic feedback (only for new votes, not unvotes)
+    if (!isUnvoting) {
+      triggerHaptic();
+      setAnimatingVote(vote);
+      spawnConfetti(vote);
+      setTimeout(() => setAnimatingVote(null), 400);
+    }
     
     // Update local state immediately
     if (isUnvoting) {
@@ -536,7 +578,43 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
 
       {/* Question Card */}
       <Card className="mb-6">
-        <CardContent className="pt-6">
+        <CardContent className="relative pt-6">
+          {/* 3-dot menu - top right of card */}
+          <div className="absolute right-4 top-4">
+            <DropdownMenu
+              trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />}
+              align="right"
+            >
+              <DropdownMenuItem onClick={shareQuestion}>
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </DropdownMenuItem>
+              {user?.id === question.author_id && (
+                <>
+                  <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={deleteQuestion}
+                    variant="destructive"
+                    disabled={deletingQuestion}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deletingQuestion ? 'Deleting...' : 'Delete'}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenu>
+            {copied && (
+              <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+                  Link copied!
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Author */}
           {question.is_ai ? (
             <Link 
@@ -645,7 +723,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               </div>
             </div>
           ) : (
-            <div className="group relative mb-6">
+            <div className="mb-6">
               <p className="text-xl font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {localQuestionContent}
               </p>
@@ -657,40 +735,6 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                     {question.category}
                   </span>
-                )}
-              </div>
-              <div className="absolute -right-1 -top-1">
-                <DropdownMenu
-                  trigger={<MoreHorizontal className="h-4 w-4 text-zinc-400" />}
-                  align="right"
-                >
-                  <DropdownMenuItem onClick={shareQuestion}>
-                    <Share2 className="h-3.5 w-3.5" />
-                    Share
-                  </DropdownMenuItem>
-                  {user?.id === question.author_id && (
-                    <>
-                      <DropdownMenuItem onClick={() => setIsEditingQuestion(true)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={deleteQuestion}
-                        variant="destructive"
-                        disabled={deletingQuestion}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {deletingQuestion ? 'Deleting...' : 'Delete'}
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenu>
-                {copied && (
-                  <div className="absolute right-0 top-8 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <span className="whitespace-nowrap rounded-md bg-zinc-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
-                      Link copied!
-                    </span>
-                  </div>
                 )}
               </div>
             </div>
@@ -804,48 +848,102 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
           
           {/* Vote buttons */}
           {user && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="relative grid grid-cols-3 gap-3">
               <Button
-                variant={localUserVote === 'YES' ? 'default' : 'outline'}
+                variant={localUserVote === 'YES' ? 'yes' : 'yes-outline'}
                 onClick={() => handleVote('YES')}
                 disabled={isPending}
                 className={cn(
-                  'gap-2',
-                  localUserVote === 'YES' && 'bg-emerald-600 hover:bg-emerald-700',
-                  isPrivateMode && 'border-dashed'
+                  'relative gap-2 overflow-visible',
+                  localUserVote === 'YES' && 'ring-2 ring-emerald-500/50',
+                  isPrivateMode && 'border-dashed',
+                  animatingVote === 'YES' && 'animate-vote-pop'
                 )}
               >
                 {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'YES')) && <Lock className="h-3 w-3" />}
                 <Check className="h-4 w-4" />
                 Yes
+                {/* Confetti particles for YES */}
+                {animatingVote === 'YES' && confettiParticles.map((particle) => (
+                  <span
+                    key={particle.id}
+                    className="confetti-particle"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: particle.color,
+                      '--confetti-x': `${particle.x}px`,
+                      '--confetti-y': `${particle.y}px`,
+                    } as React.CSSProperties}
+                  />
+                ))}
               </Button>
               <Button
-                variant={localUserVote === 'NO' ? 'default' : 'outline'}
+                variant={localUserVote === 'NO' ? 'no' : 'no-outline'}
                 onClick={() => handleVote('NO')}
                 disabled={isPending}
                 className={cn(
-                  'gap-2',
-                  localUserVote === 'NO' && 'bg-rose-600 hover:bg-rose-700',
-                  isPrivateMode && 'border-dashed'
+                  'relative gap-2 overflow-visible',
+                  localUserVote === 'NO' && 'ring-2 ring-rose-500/50',
+                  isPrivateMode && 'border-dashed',
+                  animatingVote === 'NO' && 'animate-vote-pop'
                 )}
               >
                 {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'NO')) && <Lock className="h-3 w-3" />}
                 <X className="h-4 w-4" />
                 No
+                {/* Confetti particles for NO */}
+                {animatingVote === 'NO' && confettiParticles.map((particle) => (
+                  <span
+                    key={particle.id}
+                    className="confetti-particle"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: particle.color,
+                      '--confetti-x': `${particle.x}px`,
+                      '--confetti-y': `${particle.y}px`,
+                    } as React.CSSProperties}
+                  />
+                ))}
               </Button>
               <Button
-                variant={localUserVote === 'UNSURE' ? 'default' : 'outline'}
+                variant={localUserVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
                 onClick={() => handleVote('UNSURE')}
                 disabled={isPending}
                 className={cn(
-                  'gap-2',
-                  localUserVote === 'UNSURE' && 'bg-amber-600 hover:bg-amber-700',
-                  isPrivateMode && 'border-dashed'
+                  'relative gap-2 overflow-visible',
+                  localUserVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
+                  isPrivateMode && 'border-dashed',
+                  animatingVote === 'UNSURE' && 'animate-vote-pop'
                 )}
               >
                 {(isPrivateMode || (localVoteIsAnonymous && localUserVote === 'UNSURE')) && <Lock className="h-3 w-3" />}
                 <HelpCircle className="h-4 w-4" />
                 Not Sure
+                {/* Confetti particles for UNSURE */}
+                {animatingVote === 'UNSURE' && confettiParticles.map((particle) => (
+                  <span
+                    key={particle.id}
+                    className="confetti-particle"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: particle.color,
+                      '--confetti-x': `${particle.x}px`,
+                      '--confetti-y': `${particle.y}px`,
+                    } as React.CSSProperties}
+                  />
+                ))}
               </Button>
             </div>
           )}
