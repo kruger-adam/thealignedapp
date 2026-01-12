@@ -256,10 +256,7 @@ export function Header() {
     setIsInApp(isInAppBrowser());
   }, []);
 
-  // Don't show main header for logged-out users (landing page has its own)
-  if (!loading && !user) {
-    return null;
-  }
+  // Show header for all users (logged-out users see sign-in button)
 
   const handleSignIn = () => {
     if (isInApp) {

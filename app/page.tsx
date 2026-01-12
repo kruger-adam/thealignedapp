@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { Loader2, ChevronDown } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
 import { FeedFilters } from '@/components/feed-filters';
 import { CategoryPills } from '@/components/category-pills';
 import { Search } from '@/components/search';
-import { LandingPage } from '@/components/landing-page';
+// LandingPage is no longer used - feed is shown to logged-out users with sign-in prompts
 import { OnboardingFlow } from '@/components/onboarding';
 import { AICountdown } from '@/components/ai-countdown';
 import { useAuth } from '@/contexts/auth-context';
@@ -533,10 +534,8 @@ export default function FeedPage() {
     };
   }, [supabase, fetchQuestions]);
 
-  // Show landing page for logged-out users
-  if (!authLoading && !user) {
-    return <LandingPage />;
-  }
+  // Note: We now show the feed to logged-out users too (with sign-in prompts)
+  // The LandingPage component is no longer used as the default home page
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 pb-fab-safe">
@@ -665,6 +664,26 @@ export default function FeedPage() {
           {/* Extra padding when onboarding progress bar is visible */}
           {showOnboarding && <div className="h-24" />}
         </div>
+      )}
+
+      {/* Footer with Privacy/Terms for logged-out users */}
+      {!user && (
+        <footer className="mt-12 border-t border-zinc-200 py-6 dark:border-zinc-800">
+          <div className="flex flex-col items-center gap-3 text-sm text-zinc-500">
+            <p>© 2025 Aligned</p>
+            <div className="flex items-center gap-4">
+              <Link href="/about" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                About
+              </Link>
+              <Link href="/privacy" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                Terms
+              </Link>
+            </div>
+          </div>
+        </footer>
       )}
     </div>
   );

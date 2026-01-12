@@ -467,13 +467,25 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     }
   };
 
+  // For logged-out users, show the typewriter animation but prompt sign-in on click
   if (!user) {
     return (
-      <Card className="border-dashed border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50">
-        <CardContent className="flex items-center justify-center py-8">
-          <p className="text-sm text-zinc-500">
-            Sign in to create questions and vote
-          </p>
+      <Card className="border-dashed hover:border-solid transition-all duration-200">
+        <CardContent className="p-4">
+          <button
+            onClick={() => {
+              showToast('Sign in to post a question', 'info');
+            }}
+            className="flex w-full items-center gap-3 text-left"
+          >
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <Plus className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+            </div>
+            <span className="text-zinc-500">
+              {displayedText}
+              <span className="ml-0.5 inline-block w-0.5 h-4 bg-zinc-400 animate-pulse" />
+            </span>
+          </button>
         </CardContent>
       </Card>
     );

@@ -595,7 +595,10 @@ export function QuestionCard({
       };
 
   const handleVote = async (vote: VoteType) => {
-    if (!user) return;
+    if (!user) {
+      showToast('Sign in to vote', 'info');
+      return;
+    }
     
     // Check if poll is expired
     if (isExpired) {
@@ -965,7 +968,7 @@ export function QuestionCard({
             variant={optimisticData.userVote === 'YES' ? 'yes' : 'yes-outline'}
             size="sm"
             onClick={() => handleVote('YES')}
-            disabled={isPending || !user || isExpired}
+            disabled={isPending || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'YES' && 'ring-2 ring-emerald-500/50',
@@ -998,7 +1001,7 @@ export function QuestionCard({
             variant={optimisticData.userVote === 'NO' ? 'no' : 'no-outline'}
             size="sm"
             onClick={() => handleVote('NO')}
-            disabled={isPending || !user || isExpired}
+            disabled={isPending || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'NO' && 'ring-2 ring-rose-500/50',
@@ -1031,7 +1034,7 @@ export function QuestionCard({
             variant={optimisticData.userVote === 'UNSURE' ? 'unsure' : 'unsure-outline'}
             size="sm"
             onClick={() => handleVote('UNSURE')}
-            disabled={isPending || !user || isExpired}
+            disabled={isPending || isExpired}
             className={cn(
               'relative flex-1 gap-1.5 overflow-visible',
               optimisticData.userVote === 'UNSURE' && 'ring-2 ring-amber-500/50',
