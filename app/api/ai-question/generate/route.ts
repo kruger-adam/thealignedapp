@@ -151,16 +151,25 @@ Generate exactly ${BATCH_SIZE} questions, ONE from EACH category below:
 
 ${categoryList}
 
-Requirements for each question:
-- Answerable with Yes, No, or Not Sure
-- Has reasonable arguments on both sides
-- Under 200 characters
-- Sparks genuine debate or curiosity
+CRITICAL FORMAT RULES:
+- Every question MUST be answerable with "Yes", "No", or "Not Sure"
+- NO "A or B" questions (e.g., "Is X better than Y?" is NOT allowed)
+- NO "which/what/how" questions
+- Questions should start with "Should...", "Is...", "Do you...", "Would you...", "Can...", "Are..."
 
-Tone variety is encouraged:
-- Some can be serious and thought-provoking
-- Some can be playful, quirky, or hypothetical
-- Avoid being preachy or academic
+Good examples:
+✓ "Should companies be required to disclose AI use in their products?"
+✓ "Is it okay to ghost someone after a first date?"
+✓ "Would you give up social media for a year for $10,000?"
+
+Bad examples:
+✗ "Is X a valid reason or just an excuse?" (This is A or B, not yes/no)
+✗ "What's more important, X or Y?" (This is a comparison)
+
+Other requirements:
+- Under 200 characters
+- Has reasonable arguments on both sides
+- Tone can vary: serious, playful, or hypothetical
 
 Respond with ONLY the questions, numbered 1-${BATCH_SIZE}:`;
 
