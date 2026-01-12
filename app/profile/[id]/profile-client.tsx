@@ -43,7 +43,6 @@ import { voteConfig } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { createClient } from '@/lib/supabase/client';
-import { useToast } from '@/components/ui/toast';
 
 interface ResponseWithQuestion {
   id: string;
@@ -152,8 +151,7 @@ export function ProfileClient({
   isFollowing: initialIsFollowing,
   pagination,
 }: ProfileClientProps) {
-  const { signOut, user } = useAuth();
-  const { showToast } = useToast();
+  const { signOut, user, signInWithGoogle } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [activeTab, setActiveTab] = useState<Tab>(
     isOwnProfile ? 'stances' : compatibility ? 'comparison' : 'stances'
@@ -586,7 +584,7 @@ export function ProfileClient({
                 size="sm"
                 onClick={() => {
                   if (!user) {
-                    showToast('Sign in to follow users', 'info');
+                    signInWithGoogle();
                     return;
                   }
                   handleFollow();

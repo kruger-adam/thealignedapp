@@ -32,7 +32,7 @@ export function QuestionCard({
   authorAvatar,
   onVote,
 }: QuestionCardProps) {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, signInWithGoogle } = useAuth();
   const { showToast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
@@ -596,7 +596,7 @@ export function QuestionCard({
 
   const handleVote = async (vote: VoteType) => {
     if (!user) {
-      showToast('Sign in to vote', 'info');
+      signInWithGoogle();
       return;
     }
     

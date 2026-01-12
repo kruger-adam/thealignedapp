@@ -165,7 +165,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const { showToast } = useToast();
   const { openAssistant, sendMessage } = useAIAssistant();
   const [content, setContent] = useState('');
@@ -467,15 +467,13 @@ export function CreateQuestion({ onQuestionCreated }: CreateQuestionProps) {
     }
   };
 
-  // For logged-out users, show the typewriter animation but prompt sign-in on click
+  // For logged-out users, show the typewriter animation but redirect to sign-in on click
   if (!user) {
     return (
       <Card className="border-dashed hover:border-solid transition-all duration-200">
         <CardContent className="p-4">
           <button
-            onClick={() => {
-              showToast('Sign in to post a question', 'info');
-            }}
+            onClick={() => signInWithGoogle()}
             className="flex w-full items-center gap-3 text-left"
           >
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
