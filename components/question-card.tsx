@@ -32,7 +32,7 @@ export function QuestionCard({
   authorAvatar,
   onVote,
 }: QuestionCardProps) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { showToast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
@@ -716,6 +716,9 @@ export function QuestionCard({
               }
             });
       }
+
+      // Refresh profile to update streak indicator immediately
+      refreshProfile();
 
       onVote?.(question.id, vote);
       }

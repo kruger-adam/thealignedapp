@@ -53,7 +53,7 @@ export function ChallengeClient({
   existingChallengeResponse,
 }: ChallengeClientProps) {
   // _challengeCode available for future re-share functionality
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
 
@@ -144,7 +144,10 @@ export function ChallengeClient({
           });
         }
 
-        // 5. Show the reveal with a slight delay for drama
+        // 5. Refresh profile to update streak indicator immediately
+        refreshProfile();
+
+        // 6. Show the reveal with a slight delay for drama
         setTimeout(() => {
           setShowReveal(true);
         }, 300);
@@ -153,7 +156,7 @@ export function ChallengeClient({
         setUserVote(null);
       }
     });
-  }, [user, isPending, supabase, question.id, challengeId, sharer, sharerVote, localStats]);
+  }, [user, isPending, supabase, question.id, challengeId, sharer, sharerVote, localStats, refreshProfile]);
 
   const voteLabel = (vote: VoteType) => 
     vote === 'YES' ? 'Yes' : vote === 'NO' ? 'No' : 'Not Sure';

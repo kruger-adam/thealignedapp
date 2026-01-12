@@ -32,7 +32,7 @@ function getTimeAgo(date: Date): string {
 }
 
 export function QuestionDetailClient({ question, initialComments }: QuestionDetailClientProps) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { showToast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
@@ -262,6 +262,9 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
             question_id: question.id,
           });
         }
+
+        // Refresh profile to update streak indicator immediately
+        refreshProfile();
       }
     });
   };
