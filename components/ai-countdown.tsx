@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bot, Sparkles } from 'lucide-react';
+import { Bot, Sparkles, Loader2 } from 'lucide-react';
 
 // The cron job runs at 12:00 PM Toronto time (America/Toronto)
 const CRON_HOUR = 12; // 12:00 PM
 const CRON_TIMEZONE = 'America/Toronto';
+
+// How long to show "dropping now" message while cron is executing (in seconds)
+const DROPPING_NOW_DURATION = 60;
 
 // How long to show "just dropped" message after posting (in minutes)
 const JUST_DROPPED_DURATION = 5;
@@ -52,9 +55,11 @@ function formatTimeRemaining(ms: number): string {
   }
 }
 
+type CountdownState = 'countdown' | 'dropping' | 'dropped';
+
 export function AICountdown() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [justDropped, setJustDropped] = useState(false);
+  const [state, setState] = useState<CountdownState>('countdown');
 
   useEffect(() => {
     function updateCountdown() {
@@ -62,14 +67,20 @@ export function AICountdown() {
       const nextCron = getNextCronTime();
       const remaining = nextCron.getTime() - now.getTime();
       
-      // Check if we're within the "just dropped" window
+      // Calculate time since the last cron run
       const msInDay = 24 * 60 * 60 * 1000;
       const msSinceCron = msInDay - remaining;
       
-      if (msSinceCron >= 0 && msSinceCron < JUST_DROPPED_DURATION * 60 * 1000) {
-        setJustDropped(true);
+      // Determine state based on time since cron
+      if (msSinceCron >= 0 && msSinceCron < DROPPING_NOW_DURATION * 1000) {
+        // First 60 seconds: "dropping now" while cron executes
+        setState('dropping');
+      } else if (msSinceCron >= DROPPING_NOW_DURATION * 1000 && msSinceCron < JUST_DROPPED_DURATION * 60 * 1000) {
+        // After 60 seconds up to 5 minutes: "just dropped"
+        setState('dropped');
       } else {
-        setJustDropped(false);
+        // Otherwise: show countdown
+        setState('countdown');
       }
       
       setTimeRemaining(remaining);
@@ -91,7 +102,21 @@ export function AICountdown() {
 
   const isUrgent = timeRemaining > 0 && timeRemaining < 60 * 60 * 1000; // Less than 1 hour
 
-  if (justDropped) {
+  // "Dropping now" state - cron is executing
+  if (state === 'dropping') {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 px-4 py-2.5 dark:from-violet-500/20 dark:to-fuchsia-500/20">
+        <Loader2 className="h-4 w-4 text-violet-500 animate-spin" />
+        <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
+          AI question dropping now!
+        </span>
+        <Bot className="h-4 w-4 text-fuchsia-500 animate-bounce" />
+      </div>
+    );
+  }
+
+  // "Just dropped" state - question is posted
+  if (state === 'dropped') {
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 px-4 py-2.5 dark:from-violet-500/20 dark:to-fuchsia-500/20">
         <Sparkles className="h-4 w-4 text-violet-500 animate-pulse" />
@@ -103,6 +128,7 @@ export function AICountdown() {
     );
   }
 
+  // Countdown state
   return (
     <div className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition-all ${
       isUrgent 
