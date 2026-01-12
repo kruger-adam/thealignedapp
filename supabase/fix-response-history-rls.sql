@@ -11,3 +11,5 @@ CREATE POLICY "Response history is viewable by everyone"
     ON response_history FOR SELECT
     USING (true);
 
+
+
