@@ -311,7 +311,7 @@ export function NotificationsDropdown() {
   // Get notification message
   const getNotificationMessage = (notification: Notification) => {
     const actorName = notification.actor?.username || 'Someone';
-    const actorId = notification.actor?.id;
+    const actorId = notification.actor_id;
     
     // Helper to create a clickable username link
     const ActorLink = ({ children }: { children: React.ReactNode }) => (
@@ -364,7 +364,7 @@ export function NotificationsDropdown() {
             <>
               <ActorLink>{actorName}</ActorLink>
               {' started following '}
-              <RelatedUserLink userId={notification.related_user.id}>
+              <RelatedUserLink userId={notification.related_user_id || undefined}>
                 {notification.related_user.username || 'someone'}
               </RelatedUserLink>
             </>
@@ -562,9 +562,9 @@ export function NotificationsDropdown() {
                     !notification.read && "bg-blue-50 dark:bg-blue-900/20"
                   )}
                 >
-                  {notification.actor?.id ? (
+                  {notification.actor_id ? (
                     <Link
-                      href={`/profile/${notification.actor.id}`}
+                      href={`/profile/${notification.actor_id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (!notification.read) markAsRead(notification.id);
