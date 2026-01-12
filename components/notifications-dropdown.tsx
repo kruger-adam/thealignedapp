@@ -548,14 +548,32 @@ export function NotificationsDropdown() {
                 No notifications yet
               </div>
             ) : (
-              filteredNotifications.map((notification) => (
+              filteredNotifications.map((notification) => {
+                // Determine where clicking the notification should navigate
+                const getNotificationHref = () => {
+                  // Follow notifications: go to the follower's profile
+                  if (notification.type === 'follow' && !notification.related_user_id) {
+                    return `/profile/${notification.actor_id}`;
+                  }
+                  // Invite accepted: go to the new user's profile
+                  if (notification.type === 'invite_accepted') {
+                    return `/profile/${notification.actor_id}`;
+                  }
+                  // Question-related notifications: go to the question
+                  if (notification.question_id) {
+                    return `/question/${notification.question_id}`;
+                  }
+                  // Fallback to home
+                  return '/';
+                };
+
+                return (
                 <div
                   key={notification.id}
                   onClick={() => {
                     if (!notification.read) markAsRead(notification.id);
                     setIsOpen(false);
-                    const href = notification.question_id ? `/question/${notification.question_id}` : '/';
-                    router.push(href);
+                    router.push(getNotificationHref());
                   }}
                   className={cn(
                     "flex gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer",
@@ -601,7 +619,8 @@ export function NotificationsDropdown() {
                     <div className="h-2 w-2 rounded-full bg-blue-500 mt-2" />
                   )}
                 </div>
-              ))
+                );
+              })
             )}
           </div>
           )}
