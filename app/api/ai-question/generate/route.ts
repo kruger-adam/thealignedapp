@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 export const maxDuration = 120; // Longer timeout for batch generation
+
+const EMBEDDING_MODEL = 'text-embedding-3-small';
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.85; // Cosine similarity (0-1, higher = more similar)
+const BATCH_SIZE = 10; // Generate 10 questions per batch
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -10,6 +15,14 @@ function getGemini() {
     throw new Error('GEMINI_API_KEY is not configured');
   }
   return new GoogleGenerativeAI(apiKey);
+}
+
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+  return new OpenAI({ apiKey });
 }
 
 function getSupabase() {
@@ -65,8 +78,14 @@ async function logTokenUsage(
   }
 }
 
-const SIMILARITY_THRESHOLD = 0.4;
-const BATCH_SIZE = 10; // Generate 10 questions per batch
+// Generate embedding for a question
+async function generateEmbedding(openai: OpenAI, text: string): Promise<number[]> {
+  const response = await openai.embeddings.create({
+    model: EMBEDDING_MODEL,
+    input: text,
+  });
+  return response.data[0].embedding;
+}
 
 export async function POST(request: Request) {
   const supabase = getSupabase();
@@ -90,8 +109,14 @@ export async function POST(request: Request) {
       await logCron(supabase, 'error', 'GEMINI_API_KEY not configured');
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
+
+    if (!process.env.OPENAI_API_KEY) {
+      await logCron(supabase, 'error', 'OPENAI_API_KEY not configured (needed for embeddings)');
+      return NextResponse.json({ error: 'Embedding service not configured' }, { status: 500 });
+    }
     
     const genAI = getGemini();
+    const openai = getOpenAI();
 
     // Check current queue size
     const { count: queueCount } = await supabase
@@ -132,7 +157,7 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
     const response = await result.response;
     const responseText = response.text().trim();
 
-    // Log token usage
+    // Log token usage for Gemini
     const usageMetadata = response.usageMetadata;
     if (usageMetadata) {
       console.log('Batch generation token usage:', {
@@ -166,25 +191,51 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
 
     console.log(`Parsed ${questions.length} questions from AI response`);
 
-    // Check each question for duplicates and add to queue
+    // Generate embeddings for all questions in one batch call (more efficient)
+    console.log('Generating embeddings for questions...');
+    const embeddingResponse = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: questions,
+    });
+    
+    console.log(`Generated ${embeddingResponse.data.length} embeddings, tokens used: ${embeddingResponse.usage.total_tokens}`);
+
+    // Log embedding token usage
+    await logTokenUsage(
+      supabase,
+      'ai-question-embeddings',
+      EMBEDDING_MODEL,
+      embeddingResponse.usage.prompt_tokens,
+      0, // No output tokens for embeddings
+      embeddingResponse.usage.total_tokens,
+      { questionCount: questions.length }
+    );
+
+    // Check each question for semantic duplicates and add to queue
     const results = {
       added: 0,
       rejected: 0,
       rejections: [] as { question: string; reason: string; similarity: number }[],
     };
 
-    for (const question of questions) {
-      // Use the similarity check function
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const embedding = embeddingResponse.data[i].embedding;
+
+      // Use semantic similarity check
       const { data: simCheck, error: simError } = await supabase
-        .rpc('check_question_similarity', { 
-          new_content: question, 
-          threshold: SIMILARITY_THRESHOLD 
+        .rpc('check_semantic_similarity', { 
+          query_embedding: JSON.stringify(embedding),
+          similarity_threshold: SEMANTIC_SIMILARITY_THRESHOLD,
         });
 
       if (simError) {
-        console.error('Similarity check error:', simError);
-        // Fallback: just add to queue
-        await supabase.from('question_queue').insert({ content: question });
+        console.error('Semantic similarity check error:', simError);
+        // Fallback: just add to queue without similarity check
+        await supabase.from('question_queue').insert({ 
+          content: question,
+          embedding: JSON.stringify(embedding),
+        });
         results.added++;
         continue;
       }
@@ -192,11 +243,12 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
       const check = simCheck?.[0];
       
       if (check?.is_duplicate) {
-        // Too similar - reject
+        // Too similar semantically - reject
         await supabase.from('question_queue').insert({
           content: question,
+          embedding: JSON.stringify(embedding),
           rejected: true,
-          rejection_reason: `Similar to: "${check.similar_question?.substring(0, 100)}"`,
+          rejection_reason: `Semantically similar (${(check.highest_similarity * 100).toFixed(0)}%) to: "${check.similar_question?.substring(0, 100)}"`,
           similarity_score: check.highest_similarity,
         });
         results.rejected++;
@@ -205,15 +257,17 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
           reason: check.similar_question?.substring(0, 50) || 'unknown',
           similarity: check.highest_similarity,
         });
-        console.log(`Rejected (${(check.highest_similarity * 100).toFixed(0)}% similar): "${question.substring(0, 50)}..."`);
+        console.log(`Rejected (${(check.highest_similarity * 100).toFixed(0)}% semantic similarity): "${question.substring(0, 50)}..."`);
+        console.log(`  Similar to: "${check.similar_question?.substring(0, 80)}..."`);
       } else {
         // Unique enough - add to queue
         await supabase.from('question_queue').insert({ 
           content: question,
+          embedding: JSON.stringify(embedding),
           similarity_score: check?.highest_similarity || 0,
         });
         results.added++;
-        console.log(`Added to queue: "${question.substring(0, 50)}..."`);
+        console.log(`Added to queue (${((check?.highest_similarity || 0) * 100).toFixed(0)}% max similarity): "${question.substring(0, 50)}..."`);
       }
     }
 
@@ -223,11 +277,12 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
       rejected: results.rejected,
       rejections: results.rejections,
       queueSizeBefore: queueCount,
-      tokens: usageMetadata ? {
+      geminiTokens: usageMetadata ? {
         prompt: usageMetadata.promptTokenCount,
         completion: usageMetadata.candidatesTokenCount,
         total: usageMetadata.totalTokenCount,
       } : undefined,
+      embeddingTokens: embeddingResponse.usage.total_tokens,
     });
 
     return NextResponse.json({ 
@@ -248,4 +303,3 @@ Respond with ONLY the questions, one per line, numbered 1-${BATCH_SIZE}:`;
 export async function GET(request: Request) {
   return POST(request);
 }
-

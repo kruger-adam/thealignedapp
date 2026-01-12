@@ -87,13 +87,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Insert the question into the main questions table
+    // Insert the question into the main questions table (including embedding if available)
     const { data: newQuestion, error: insertError } = await supabase
       .from('questions')
       .insert({
         content: queueItem.content,
         author_id: null,
         is_ai: true,
+        ...(queueItem.embedding ? { embedding: queueItem.embedding } : {}),
       })
       .select()
       .single();
