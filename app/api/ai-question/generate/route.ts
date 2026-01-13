@@ -6,7 +6,7 @@ import OpenAI from 'openai';
 export const maxDuration = 120; // Longer timeout for batch generation
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
-const SEMANTIC_SIMILARITY_THRESHOLD = 0.85; // Cosine similarity (0-1, higher = more similar)
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.75; // Cosine similarity (0-1, higher = more similar)
 
 // Categories for diverse question generation
 const CATEGORIES = [
