@@ -111,8 +111,10 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
 
   const hasVoted = !!localUserVote;
   const isAuthor = user?.id === question.author_id;
-  // Can see results if: voted, is the author, or not logged in (guests can't comment anyway)
-  const canSeeResults = hasVoted || isAuthor;
+  // Check if user was mentioned in any comment (format: @[username](user_id))
+  const wasMentioned = user && comments.some(c => c.content.includes(`(${user.id})`));
+  // Can see results if: voted, is the author, was mentioned, or not logged in (guests can't comment anyway)
+  const canSeeResults = hasVoted || isAuthor || wasMentioned;
 
   const timeAgo = getTimeAgo(new Date(question.created_at));
 

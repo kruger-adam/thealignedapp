@@ -1,12 +1,26 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
 export const maxDuration = 120;
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.75;
+
+// ============================================
+// LLM PROVIDER CONFIGURATION
+// Change this to switch between providers
+// Options: 'gemini' | 'anthropic'
+// ============================================
+const LLM_PROVIDER: 'gemini' | 'anthropic' = 'gemini';
+
+// Model configurations for each provider
+const MODELS = {
+  gemini: 'gemini-3-flash-preview',
+  anthropic: 'claude-sonnet-4-20250514',
+};
 
 // EA Forum GraphQL endpoint
 const EA_FORUM_GRAPHQL = 'https://forum.effectivealtruism.org/graphql';
@@ -17,6 +31,14 @@ function getGemini() {
     throw new Error('GEMINI_API_KEY is not configured');
   }
   return new GoogleGenerativeAI(apiKey);
+}
+
+function getAnthropic() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not configured');
+  }
+  return new Anthropic({ apiKey });
 }
 
 function getOpenAI() {
@@ -211,9 +233,15 @@ export async function POST(request: Request) {
       }
     }
     
-    if (!process.env.GEMINI_API_KEY) {
+    // Check for required API keys based on provider
+    if (LLM_PROVIDER === 'gemini' && !process.env.GEMINI_API_KEY) {
       await logCron(supabase, 'error', 'GEMINI_API_KEY not configured');
       return NextResponse.json({ error: 'Gemini not configured' }, { status: 500 });
+    }
+
+    if (LLM_PROVIDER === 'anthropic' && !process.env.ANTHROPIC_API_KEY) {
+      await logCron(supabase, 'error', 'ANTHROPIC_API_KEY not configured');
+      return NextResponse.json({ error: 'Anthropic not configured' }, { status: 500 });
     }
 
     if (!process.env.OPENAI_API_KEY) {
@@ -239,8 +267,7 @@ export async function POST(request: Request) {
     
     console.log(`Top post from ${totalPosts} yesterday: "${post.title}" (${post.upvotes} upvotes)`);
     
-    const genAI = getGemini();
-    const openai = getOpenAI(); // Still needed for embeddings
+    const openai = getOpenAI(); // Needed for embeddings
     
     // Generate a question based on the top EA Forum post
     const bodyContent = post.body || '';
@@ -277,36 +304,71 @@ Bad examples:
 
 Respond with ONLY the question, nothing else.`;
 
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3-flash-preview',
-      generationConfig: {
-        maxOutputTokens: 2048, // Increased to account for thinking tokens
-        temperature: 0.85,
-      },
-    });
+    let question: string;
+    const modelUsed = MODELS[LLM_PROVIDER];
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const question = response.text().trim().replace(/^["']|["']$/g, '');
-
-    // Log token usage
-    const usageMetadata = response.usageMetadata;
-    if (usageMetadata) {
-      console.log('EA Forum question generation token usage:', {
-        prompt_tokens: usageMetadata.promptTokenCount,
-        completion_tokens: usageMetadata.candidatesTokenCount,
-        total_tokens: usageMetadata.totalTokenCount,
+    if (LLM_PROVIDER === 'anthropic') {
+      // Use Anthropic Claude
+      const anthropic = getAnthropic();
+      const message = await anthropic.messages.create({
+        model: modelUsed,
+        max_tokens: 256,
+        messages: [{ role: 'user', content: prompt }],
       });
-      
+
+      const textBlock = message.content.find(block => block.type === 'text');
+      question = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim().replace(/^["']|["']$/g, '');
+
+      // Log token usage
+      console.log('EA Forum question generation token usage:', {
+        prompt_tokens: message.usage.input_tokens,
+        completion_tokens: message.usage.output_tokens,
+        total_tokens: message.usage.input_tokens + message.usage.output_tokens,
+      });
+
       await logTokenUsage(
         supabase,
         'ai-question-ea-forum',
-        'gemini-3-flash-preview',
-        usageMetadata.promptTokenCount || 0,
-        usageMetadata.candidatesTokenCount || 0,
-        usageMetadata.totalTokenCount || 0,
+        modelUsed,
+        message.usage.input_tokens,
+        message.usage.output_tokens,
+        message.usage.input_tokens + message.usage.output_tokens,
         { topPost: post.title, upvotes: post.upvotes, totalPosts, source }
       );
+    } else {
+      // Use Gemini (default)
+      const genAI = getGemini();
+      const model = genAI.getGenerativeModel({ 
+        model: modelUsed,
+        generationConfig: {
+          maxOutputTokens: 2048, // Increased to account for thinking tokens
+          temperature: 0.85,
+        },
+      });
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      question = response.text().trim().replace(/^["']|["']$/g, '');
+
+      // Log token usage
+      const usageMetadata = response.usageMetadata;
+      if (usageMetadata) {
+        console.log('EA Forum question generation token usage:', {
+          prompt_tokens: usageMetadata.promptTokenCount,
+          completion_tokens: usageMetadata.candidatesTokenCount,
+          total_tokens: usageMetadata.totalTokenCount,
+        });
+
+        await logTokenUsage(
+          supabase,
+          'ai-question-ea-forum',
+          modelUsed,
+          usageMetadata.promptTokenCount || 0,
+          usageMetadata.candidatesTokenCount || 0,
+          usageMetadata.totalTokenCount || 0,
+          { topPost: post.title, upvotes: post.upvotes, totalPosts, source }
+        );
+      }
     }
 
     if (!question || question.length < 20 || question.length > 300) {
