@@ -14,12 +14,12 @@ const SEMANTIC_SIMILARITY_THRESHOLD = 0.75;
 // Change this to switch between providers
 // Options: 'gemini' | 'anthropic'
 // ============================================
-const LLM_PROVIDER: 'gemini' | 'anthropic' = 'gemini';
+const LLM_PROVIDER: 'gemini' | 'anthropic' = 'anthropic';
 
 // Model configurations for each provider
 const MODELS = {
   gemini: 'gemini-3-flash-preview',
-  anthropic: 'claude-sonnet-4-20250514',
+  anthropic: 'claude-opus-4-20250514',
 };
 
 // EA Forum GraphQL endpoint
