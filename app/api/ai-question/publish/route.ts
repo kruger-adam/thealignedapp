@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Insert the question into the main questions table (including embedding if available)
+    // Insert the question into the main questions table (including embedding and category if available)
     const { data: newQuestion, error: insertError } = await supabase
       .from('questions')
       .insert({
@@ -95,6 +95,7 @@ export async function POST(request: Request) {
         author_id: null,
         is_ai: true,
         ...(queueItem.embedding ? { embedding: queueItem.embedding } : {}),
+        ...(queueItem.category ? { category: queueItem.category } : {}),
       })
       .select()
       .single();
@@ -118,8 +119,8 @@ export async function POST(request: Request) {
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
 
-    // Trigger AI vote and categorization in parallel
-    const [voteResult, catResult] = await Promise.allSettled([
+    // Trigger AI vote (and categorization if not already set)
+    const promises: Promise<Response | null>[] = [
       fetch(`${baseUrl}/api/ai-vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,23 +129,33 @@ export async function POST(request: Request) {
         console.error('Error triggering AI vote:', err);
         return null;
       }),
-      fetch(`${baseUrl}/api/categorize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          question: queueItem.content,
-          questionId: newQuestion.id,
-        }),
-      }).catch(err => {
-        console.error('Error triggering categorization:', err);
-        return null;
-      })
-    ]);
+    ];
 
-    if (voteResult.status === 'fulfilled' && voteResult.value) {
-      console.log('AI vote response:', voteResult.value.status);
+    // Only trigger categorization if category wasn't already set in the queue
+    if (!queueItem.category) {
+      promises.push(
+        fetch(`${baseUrl}/api/categorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            question: queueItem.content,
+            questionId: newQuestion.id,
+          }),
+        }).catch(err => {
+          console.error('Error triggering categorization:', err);
+          return null;
+        })
+      );
+    } else {
+      console.log(`Skipping categorization - already set to: ${queueItem.category}`);
     }
-    if (catResult.status === 'fulfilled') {
+
+    const results = await Promise.allSettled(promises);
+
+    if (results[0].status === 'fulfilled' && results[0].value) {
+      console.log('AI vote response:', results[0].value.status);
+    }
+    if (results[1]?.status === 'fulfilled') {
       console.log('Categorization completed for question:', newQuestion.id);
     }
 
