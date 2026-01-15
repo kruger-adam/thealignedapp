@@ -187,13 +187,39 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
     throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
   }
   
-  const posts = data.data?.posts?.results || [];
+  const allPosts = data.data?.posts?.results || [];
   
-  if (posts.length === 0) {
-    throw new Error(`No EA Forum posts found for ${afterDate}`);
+  console.log(`EA Forum returned ${allPosts.length} posts from API`);
+  
+  // Log the dates of posts returned to debug date filtering issues
+  if (allPosts.length > 0) {
+    const postDates = allPosts.slice(0, 5).map((p: { title: string; postedAt: string }) => 
+      `"${p.title.substring(0, 40)}..." posted ${p.postedAt}`
+    );
+    console.log('Sample posts returned:', postDates);
   }
   
-  console.log(`Found ${posts.length} posts from yesterday`);
+  // Filter posts to only include those from yesterday (local filtering as safety net)
+  // The EA Forum API sometimes doesn't respect date filters properly
+  const yesterdayStart = new Date(afterDate + 'T00:00:00Z');
+  const todayStart = new Date(beforeDate + 'T00:00:00Z');
+  
+  const posts = allPosts.filter((p: { postedAt: string }) => {
+    const postDate = new Date(p.postedAt);
+    return postDate >= yesterdayStart && postDate < todayStart;
+  });
+  
+  console.log(`After local date filtering: ${posts.length} posts from ${afterDate}`);
+  
+  if (posts.length === 0) {
+    // If no posts from yesterday, show what dates we did get
+    if (allPosts.length > 0) {
+      const dates = allPosts.map((p: { postedAt: string }) => p.postedAt.split('T')[0]);
+      const uniqueDates = [...new Set(dates)].sort();
+      console.log(`No posts from ${afterDate}. Posts returned were from: ${uniqueDates.join(', ')}`);
+    }
+    throw new Error(`No EA Forum posts found for ${afterDate}`);
+  }
   
   // Sort by upvotes (baseScore) descending and get the top one
   const sortedPosts = [...posts].sort((a: { baseScore?: number }, b: { baseScore?: number }) => 
