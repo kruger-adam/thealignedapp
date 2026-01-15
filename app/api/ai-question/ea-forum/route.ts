@@ -73,6 +73,7 @@ async function logTokenUsage(
 interface EAForumPost {
   title: string;
   url: string;
+  slug?: string;
   excerpt?: string;
   body?: string;
   postedAt?: string;
@@ -80,10 +81,10 @@ interface EAForumPost {
 }
 
 /**
- * Fetch posts from EA Forum GraphQL API
+ * Fetch posts list from EA Forum GraphQL API (lightweight, no body content)
  */
-async function fetchFromGraphQL(afterDate: string, beforeDate: string): Promise<EAForumPost[]> {
-  console.log(`Attempting to fetch EA Forum GraphQL API for ${afterDate} to ${beforeDate}...`);
+async function fetchPostsList(afterDate: string, beforeDate: string): Promise<EAForumPost[]> {
+  console.log(`Fetching EA Forum posts for ${afterDate} to ${beforeDate}...`);
   
   const query = `
     query GetPosts($after: Date, $before: Date) {
@@ -101,9 +102,6 @@ async function fetchFromGraphQL(afterDate: string, beforeDate: string): Promise<
           postedAt
           excerpt
           baseScore
-          contents {
-            markdown
-          }
         }
       }
     }
@@ -143,15 +141,56 @@ async function fetchFromGraphQL(afterDate: string, beforeDate: string): Promise<
     excerpt?: string; 
     postedAt: string; 
     baseScore?: number;
-    contents?: { markdown?: string };
   }) => ({
     title: post.title,
     url: `https://forum.effectivealtruism.org/posts/${post.slug}`,
+    slug: post.slug,
     excerpt: post.excerpt?.substring(0, 500),
-    body: post.contents?.markdown?.substring(0, 6000), // Truncate to ~6k chars for token limits
     postedAt: post.postedAt,
     upvotes: post.baseScore || 0,
   }));
+}
+
+/**
+ * Fetch a single post's body content
+ */
+async function fetchPostBody(slug: string): Promise<string | undefined> {
+  console.log(`Fetching body content for post: ${slug}...`);
+  
+  const query = `
+    query GetPostBody($slug: String) {
+      post(input: { selector: { slug: $slug } }) {
+        result {
+          contents {
+            markdown
+          }
+        }
+      }
+    }
+  `;
+  
+  const response = await fetch(EA_FORUM_GRAPHQL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Consensus App (contact: forum@consensusapp.com)',
+    },
+    body: JSON.stringify({
+      query,
+      variables: { slug },
+    }),
+  });
+  
+  if (!response.ok) {
+    console.error(`Failed to fetch post body: ${response.status}`);
+    return undefined;
+  }
+  
+  const data = await response.json();
+  const markdown = data.data?.post?.result?.contents?.markdown;
+  
+  // Truncate to ~6k chars for token limits
+  return markdown?.substring(0, 6000);
 }
 
 /**
@@ -166,20 +205,25 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
   const afterDate = yesterday.toISOString().split('T')[0];
   const beforeDate = now.toISOString().split('T')[0];
   
-  // Use GraphQL to get posts with upvote counts
-  const graphqlPosts = await fetchFromGraphQL(afterDate, beforeDate);
+  // First, fetch lightweight list of posts
+  const posts = await fetchPostsList(afterDate, beforeDate);
   
-  if (graphqlPosts.length === 0) {
+  if (posts.length === 0) {
     throw new Error(`No EA Forum posts found for ${afterDate}`);
   }
   
   // Sort by upvotes and get the top post
-  const sortedPosts = graphqlPosts.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+  const sortedPosts = posts.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
   const topPost = sortedPosts[0];
   
-  console.log(`Found ${graphqlPosts.length} posts from yesterday. Top post: "${topPost.title}" with ${topPost.upvotes} upvotes`);
+  console.log(`Found ${posts.length} posts. Top: "${topPost.title}" (${topPost.upvotes} upvotes)`);
   
-  return { post: topPost, source: 'graphql', totalPosts: graphqlPosts.length };
+  // Now fetch the body content for just this one post
+  if (topPost.slug) {
+    topPost.body = await fetchPostBody(topPost.slug);
+  }
+  
+  return { post: topPost, source: 'graphql', totalPosts: posts.length };
 }
 
 export async function POST(request: Request) {
