@@ -273,38 +273,19 @@ export async function POST(request: Request) {
     const bodyContent = post.body || '';
     console.log(`Post body: ${bodyContent.length} characters${bodyContent.length > 0 ? ` (preview: "${bodyContent.substring(0, 100)}...")` : ' (NO BODY CONTENT)'}`);
     
-    const prompt = `You are an AI that generates thought-provoking yes/no poll questions for the Effective Altruism community.
-
-Yesterday's most upvoted post on the Effective Altruism Forum was:
+    const prompt = `Generate a yes/no poll question based on this Effective Altruism Forum post.
 
 Title: "${post.title}"
-Upvotes: ${post.upvotes || 0}
 
-Post content:
 ${bodyContent}
 
-Generate ONE engaging poll question based on this post that:
-1. Is answerable with "Yes", "No", or "Not Sure"
-2. Captures a key tension, debate, or interesting idea from the post
-3. Would spark thoughtful discussion
-4. Is under 200 characters
-5. Asks for the reader's PERSONAL OPINION - use "Do you think...", "Do you believe...", "Would you..." etc.
+Requirements:
+- Start with "Do you think..." or "Do you believe..."
+- Under 200 characters
+- Don't use acronyms
+- Extract an interesting debate angle, don't just rephrase the title
 
-IMPORTANT RULES:
-- Frame questions SUBJECTIVELY (asking for opinions) not objectively (asking about facts)
-- Do NOT use acronyms like "EA" or "EAs" - always write out "Effective Altruism" or "effective altruists"
-- Do NOT simply restate the post title - extract an interesting angle or underlying question
-
-Good examples:
-✓ "Do you think Effective Altruism should prioritize AI safety over global health?"
-✓ "Do you believe earning to give is still a top-tier career path for effective altruists?"
-✓ "Do you think effective altruists should be more skeptical of ideas that align with their career interests?"
-
-Bad examples:
-✗ "Is the funding gap a problem?" (too objective - should be "Do you think the funding gap is a problem?")
-✗ "Should EA fund more animal advocacy?" (uses acronym)
-
-Respond with ONLY the question, nothing else.`;
+Reply with ONLY the question.`;
 
     let question: string;
     const modelUsed = MODELS[LLM_PROVIDER];
