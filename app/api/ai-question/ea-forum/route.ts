@@ -74,7 +74,6 @@ interface EAForumPost {
   title: string;
   url: string;
   slug?: string;
-  excerpt?: string;
   body?: string;
   postedAt?: string;
   upvotes?: number;
@@ -100,7 +99,6 @@ async function fetchPostsList(afterDate: string, beforeDate: string): Promise<EA
           title
           slug
           postedAt
-          excerpt
           baseScore
         }
       }
@@ -149,14 +147,12 @@ async function fetchPostsList(afterDate: string, beforeDate: string): Promise<EA
   return posts.map((post: { 
     title: string; 
     slug: string; 
-    excerpt?: string; 
     postedAt: string; 
     baseScore?: number;
   }) => ({
     title: post.title,
     url: `https://forum.effectivealtruism.org/posts/${post.slug}`,
     slug: post.slug,
-    excerpt: post.excerpt?.substring(0, 500),
     postedAt: post.postedAt,
     upvotes: post.baseScore || 0,
   }));
@@ -281,7 +277,7 @@ export async function POST(request: Request) {
     const openai = getOpenAI();
     
     // Generate a question based on the top EA Forum post
-    const bodyContent = post.body || post.excerpt || '';
+    const bodyContent = post.body || '';
     const systemPrompt = `You are an AI that generates thought-provoking yes/no poll questions for the Effective Altruism community.
 
 Generate ONE engaging poll question that:
