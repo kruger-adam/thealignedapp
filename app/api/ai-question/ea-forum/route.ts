@@ -376,6 +376,7 @@ Respond with ONLY the question, nothing else.`;
         is_ai: true,
         category: 'Effective Altruism',
         embedding: JSON.stringify(embedding),
+        source_url: post.url, // Link to the EA Forum post
       })
       .select()
       .single();

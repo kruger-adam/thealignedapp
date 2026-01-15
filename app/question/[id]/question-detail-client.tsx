@@ -730,7 +730,7 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
               <p className="text-xl font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">
                 {localQuestionContent}
               </p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
                 {questionWasEdited && (
                   <span className="text-xs text-zinc-400 italic">(edited)</span>
                 )}
@@ -738,6 +738,19 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                   <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                     {question.category}
                   </span>
+                )}
+                {question.source_url && (
+                  <a
+                    href={question.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Source
+                  </a>
                 )}
               </div>
             </div>

@@ -37,6 +37,7 @@ export interface Question {
   content: string;
   category?: Category;
   image_url?: string | null;
+  source_url?: string | null; // URL of source content (e.g., EA Forum post)
   created_at: string;
   updated_at: string;
   expires_at?: string | null; // ISO timestamp, null = never expires
