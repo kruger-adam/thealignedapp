@@ -107,27 +107,38 @@ async function fetchPostsList(afterDate: string, beforeDate: string): Promise<EA
     }
   `;
   
-  const response = await fetch(EA_FORUM_GRAPHQL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Consensus App (contact: forum@consensusapp.com)',
-    },
-    body: JSON.stringify({
-      query,
-      variables: {
-        after: afterDate,
-        before: beforeDate,
+  let response: Response;
+  try {
+    response = await fetch(EA_FORUM_GRAPHQL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; ConsensusApp/1.0; +https://thealignedapp.com)',
       },
-    }),
-  });
+      body: JSON.stringify({
+        query,
+        variables: {
+          after: afterDate,
+          before: beforeDate,
+        },
+      }),
+    });
+  } catch (fetchError) {
+    console.error('Network error fetching EA Forum:', fetchError);
+    throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown'}`);
+  }
+  
+  console.log(`EA Forum response status: ${response.status}`);
   
   if (!response.ok) {
     const text = await response.text();
+    console.error(`EA Forum error response: ${text.substring(0, 500)}`);
     throw new Error(`GraphQL fetch failed: ${response.status} - ${text.substring(0, 200)}`);
   }
   
   const data = await response.json();
+  console.log(`EA Forum returned ${data.data?.posts?.results?.length || 0} posts`);
   
   if (data.errors) {
     throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
