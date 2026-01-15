@@ -259,20 +259,21 @@ Generate ONE engaging poll question based on this post that:
 2. Captures a key tension, debate, or interesting idea from the post
 3. Would spark thoughtful discussion
 4. Is under 200 characters
-5. Starts with "Should...", "Is...", "Do you...", "Would you...", "Can...", or "Are..."
+5. Asks for the reader's PERSONAL OPINION - use "Do you think...", "Do you believe...", "Would you..." etc.
 
 IMPORTANT RULES:
+- Frame questions SUBJECTIVELY (asking for opinions) not objectively (asking about facts)
 - Do NOT use acronyms like "EA" or "EAs" - always write out "Effective Altruism" or "effective altruists"
 - Do NOT simply restate the post title - extract an interesting angle or underlying question
 
 Good examples:
-✓ "Should Effective Altruism prioritize AI safety over global health given short timelines?"
-✓ "Is earning to give still a top-tier career path for effective altruists?"
-✓ "Should effective altruists be more skeptical of ideas that align with their career interests?"
+✓ "Do you think Effective Altruism should prioritize AI safety over global health?"
+✓ "Do you believe earning to give is still a top-tier career path for effective altruists?"
+✓ "Do you think effective altruists should be more skeptical of ideas that align with their career interests?"
 
 Bad examples:
+✗ "Is the funding gap a problem?" (too objective - should be "Do you think the funding gap is a problem?")
 ✗ "Should EA fund more animal advocacy?" (uses acronym)
-✗ "Is X better than Y?" (This is A or B, not yes/no)
 
 Respond with ONLY the question, nothing else.`;
 
