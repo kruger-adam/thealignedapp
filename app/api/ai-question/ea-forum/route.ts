@@ -91,17 +91,18 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
   const afterDate = yesterday.toISOString().split('T')[0];
   const beforeDate = now.toISOString().split('T')[0];
   
-  console.log(`Fetching top EA Forum post for ${afterDate} to ${beforeDate}...`);
+  console.log(`Fetching EA Forum posts for ${afterDate} to ${beforeDate}...`);
   
-  // Fetch the #1 top post directly with body content using sortedBy: "top"
+  // Fetch all posts from yesterday, then sort locally by upvotes
+  // (sortedBy: "top" doesn't respect date filters properly)
   const query = `
-    query GetTopPost($after: Date, $before: Date) {
+    query GetPosts($after: Date, $before: Date) {
       posts(input: {
         terms: {
           after: $after,
           before: $before,
-          limit: 1,
-          sortedBy: "top"
+          limit: 100,
+          view: "new"
         }
       }) {
         results {
@@ -113,15 +114,6 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
             markdown
           }
         }
-      }
-      allPosts: posts(input: {
-        terms: {
-          after: $after,
-          before: $before,
-          limit: 100
-        }
-      }) {
-        totalCount
       }
     }
   `;
@@ -164,13 +156,19 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
   }
   
   const posts = data.data?.posts?.results || [];
-  const totalCount = data.data?.allPosts?.totalCount || posts.length;
   
   if (posts.length === 0) {
     throw new Error(`No EA Forum posts found for ${afterDate}`);
   }
   
-  const topPostData = posts[0];
+  console.log(`Found ${posts.length} posts from yesterday`);
+  
+  // Sort by upvotes (baseScore) descending and get the top one
+  const sortedPosts = [...posts].sort((a: { baseScore?: number }, b: { baseScore?: number }) => 
+    (b.baseScore || 0) - (a.baseScore || 0)
+  );
+  
+  const topPostData = sortedPosts[0];
   const topPost: EAForumPost = {
     title: topPostData.title,
     url: `https://forum.effectivealtruism.org/posts/${topPostData.slug}`,
@@ -180,9 +178,9 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
     upvotes: topPostData.baseScore || 0,
   };
   
-  console.log(`Top post: "${topPost.title}" (${topPost.upvotes} upvotes, ${topPost.body?.length || 0} chars body)`);
+  console.log(`Top post: "${topPost.title}" (${topPost.upvotes} upvotes, posted ${topPost.postedAt})`);
   
-  return { post: topPost, source: 'graphql', totalPosts: totalCount };
+  return { post: topPost, source: 'graphql', totalPosts: posts.length };
 }
 
 export async function POST(request: Request) {
