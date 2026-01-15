@@ -115,6 +115,7 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
         }
       }) {
         results {
+          _id
           title
           slug
           postedAt
@@ -180,7 +181,7 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
   const topPostData = sortedPosts[0];
   const topPost: EAForumPost = {
     title: topPostData.title,
-    url: `https://forum.effectivealtruism.org/posts/${topPostData.slug}`,
+    url: `https://forum.effectivealtruism.org/posts/${topPostData._id}/${topPostData.slug}`,
     slug: topPostData.slug,
     body: topPostData.contents?.markdown?.substring(0, 6000), // Truncate for token limits
     postedAt: topPostData.postedAt,
