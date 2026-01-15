@@ -271,6 +271,8 @@ export async function POST(request: Request) {
     
     // Generate a question based on the top EA Forum post
     const bodyContent = post.body || '';
+    console.log(`Post body: ${bodyContent.length} characters${bodyContent.length > 0 ? ` (preview: "${bodyContent.substring(0, 100)}...")` : ' (NO BODY CONTENT)'}`);
+    
     const prompt = `You are an AI that generates thought-provoking yes/no poll questions for the Effective Altruism community.
 
 Yesterday's most upvoted post on the Effective Altruism Forum was:
@@ -333,7 +335,14 @@ Respond with ONLY the question, nothing else.`;
         message.usage.input_tokens,
         message.usage.output_tokens,
         message.usage.input_tokens + message.usage.output_tokens,
-        { topPost: post.title, upvotes: post.upvotes, totalPosts, source }
+        { 
+          topPost: post.title, 
+          upvotes: post.upvotes, 
+          totalPosts, 
+          source,
+          bodyLength: bodyContent.length,
+          bodyPreview: bodyContent.substring(0, 200),
+        }
       );
     } else {
       // Use Gemini (default)
@@ -366,7 +375,14 @@ Respond with ONLY the question, nothing else.`;
           usageMetadata.promptTokenCount || 0,
           usageMetadata.candidatesTokenCount || 0,
           usageMetadata.totalTokenCount || 0,
-          { topPost: post.title, upvotes: post.upvotes, totalPosts, source }
+          { 
+            topPost: post.title, 
+            upvotes: post.upvotes, 
+            totalPosts, 
+            source,
+            bodyLength: bodyContent.length,
+            bodyPreview: bodyContent.substring(0, 200),
+          }
         );
       }
     }
