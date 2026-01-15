@@ -791,9 +791,23 @@ export function QuestionCard({
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  AI
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                    AI
+                  </span>
+                  {question.ai_model && (() => {
+                    const modelInfo = getModelDisplayInfo(question.ai_model);
+                    return (
+                      <span className={cn(
+                        "px-1.5 py-0.5 text-[10px] font-medium rounded",
+                        modelInfo.bgColor,
+                        modelInfo.textColor
+                      )}>
+                        {modelInfo.shortName}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <span className="flex items-center gap-1 text-xs text-zinc-500">
                   <Clock className="h-3 w-3" />
                   {timeAgo}

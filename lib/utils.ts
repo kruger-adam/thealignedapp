@@ -53,6 +53,50 @@ export function getModelDisplayInfo(model: AIModel | null | undefined): ModelDis
     };
   }
 
+  // Claude/Anthropic models
+  if (modelLower.includes('claude')) {
+    if (modelLower.includes('opus') && modelLower.includes('4-5')) {
+      return {
+        displayName: 'Claude Opus 4.5',
+        shortName: 'Opus 4.5',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+        textColor: 'text-orange-700 dark:text-orange-400',
+        borderColor: 'border-orange-200 dark:border-orange-800',
+      };
+    }
+    if (modelLower.includes('opus')) {
+      return {
+        displayName: 'Claude Opus',
+        shortName: 'Opus',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+        textColor: 'text-orange-700 dark:text-orange-400',
+      };
+    }
+    if (modelLower.includes('sonnet')) {
+      return {
+        displayName: 'Claude Sonnet',
+        shortName: 'Sonnet',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+        textColor: 'text-amber-700 dark:text-amber-400',
+      };
+    }
+    if (modelLower.includes('haiku')) {
+      return {
+        displayName: 'Claude Haiku',
+        shortName: 'Haiku',
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        textColor: 'text-yellow-700 dark:text-yellow-400',
+      };
+    }
+    // Generic Claude
+    return {
+      displayName: 'Claude',
+      shortName: 'Claude',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      textColor: 'text-orange-700 dark:text-orange-400',
+    };
+  }
+
   // GPT models
   if (modelLower.includes('gpt')) {
     if (modelLower.includes('4.1') || modelLower.includes('4o')) {

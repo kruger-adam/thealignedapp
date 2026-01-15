@@ -293,6 +293,7 @@ export default function FeedPage() {
         category: string | null;
         image_url: string | null;
         source_url: string | null;
+        ai_model: string | null;
         created_at: string;
         updated_at: string;
         expires_at: string | null;
@@ -357,6 +358,7 @@ export default function FeedPage() {
           category: q.category as import('@/lib/types').Category | undefined,
           image_url: q.image_url,
           source_url: q.source_url,
+          ai_model: q.ai_model,
           created_at: q.created_at,
           updated_at: q.updated_at,
           expires_at: q.expires_at,

@@ -38,6 +38,7 @@ export interface Question {
   category?: Category;
   image_url?: string | null;
   source_url?: string | null; // URL of source content (e.g., EA Forum post)
+  ai_model?: string | null; // AI model used to generate this question (when is_ai = true)
   created_at: string;
   updated_at: string;
   expires_at?: string | null; // ISO timestamp, null = never expires

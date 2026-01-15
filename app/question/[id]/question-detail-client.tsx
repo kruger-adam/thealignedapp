@@ -630,9 +630,23 @@ export function QuestionDetailClient({ question, initialComments }: QuestionDeta
                 <Bot className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  AI
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                    AI
+                  </p>
+                  {question.ai_model && (() => {
+                    const modelInfo = getModelDisplayInfo(question.ai_model);
+                    return (
+                      <span className={cn(
+                        "px-1.5 py-0.5 text-[10px] font-medium rounded",
+                        modelInfo.bgColor,
+                        modelInfo.textColor
+                      )}>
+                        {modelInfo.shortName}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="flex items-center gap-1 text-xs text-zinc-500">
                   <Clock className="h-3 w-3" />
                   <span>{timeAgo}</span>

@@ -441,6 +441,7 @@ Respond with ONLY the question, nothing else.`;
         category: 'Effective Altruism',
         embedding: JSON.stringify(embedding),
         source_url: post.url, // Link to the EA Forum post
+        ai_model: modelUsed, // Track which model generated this question
       })
       .select()
       .single();
