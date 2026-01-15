@@ -19,7 +19,7 @@ const LLM_PROVIDER: 'gemini' | 'anthropic' = 'anthropic';
 // Model configurations for each provider
 const MODELS = {
   gemini: 'gemini-3-flash-preview',
-  anthropic: 'claude-opus-4-20250514',
+  anthropic: 'claude-opus-4-5-20251101',
 };
 
 // EA Forum GraphQL endpoint
