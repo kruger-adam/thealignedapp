@@ -333,16 +333,6 @@ ${bodyContent}`;
     const isDuplicate = check?.is_duplicate;
     
     if (isDuplicate) {
-      // Add to queue as rejected
-      await supabase.from('question_queue').insert({
-        content: question,
-        embedding: JSON.stringify(embedding),
-        rejected: true,
-        rejection_reason: `Semantically similar (${(check.highest_similarity * 100).toFixed(0)}%) to: "${check.similar_question?.substring(0, 100)}"`,
-        similarity_score: check.highest_similarity,
-        category: 'Effective Altruism',
-      });
-      
       await logCron(supabase, 'success', `Generated but rejected (duplicate): "${question.substring(0, 60)}..."`, {
         question,
         similarity: check.highest_similarity,
@@ -354,7 +344,7 @@ ${bodyContent}`;
       });
       
       return NextResponse.json({ 
-        success: true,
+        success: false,
         question,
         rejected: true,
         reason: 'duplicate',
@@ -362,15 +352,42 @@ ${bodyContent}`;
       });
     }
 
-    // Add to queue
-    await supabase.from('question_queue').insert({
-      content: question,
-      embedding: JSON.stringify(embedding),
-      similarity_score: check?.highest_similarity || 0,
-      category: 'Effective Altruism',
+    // Publish directly to questions table (not queue)
+    const { data: newQuestion, error: insertError } = await supabase
+      .from('questions')
+      .insert({
+        content: question,
+        author_id: null,
+        is_ai: true,
+        category: 'Effective Altruism',
+        embedding: JSON.stringify(embedding),
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting question:', insertError);
+      await logCron(supabase, 'error', `Failed to insert question: ${insertError.message}`);
+      return NextResponse.json({ error: 'Failed to insert question' }, { status: 500 });
+    }
+
+    console.log(`Published question ${newQuestion.id}: "${question.substring(0, 50)}..."`);
+
+    // Trigger AI vote in background
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
+
+    fetch(`${baseUrl}/api/ai-vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: newQuestion.id }),
+    }).catch(err => {
+      console.error('Error triggering AI vote:', err);
     });
 
-    await logCron(supabase, 'success', `Generated EA Forum question: "${question.substring(0, 60)}..."`, {
+    await logCron(supabase, 'success', `Published EA Forum question: "${question.substring(0, 60)}..."`, {
+      questionId: newQuestion.id,
       question,
       source,
       topPost: post.title,
@@ -380,6 +397,8 @@ ${bodyContent}`;
 
     return NextResponse.json({ 
       success: true,
+      published: true,
+      questionId: newQuestion.id,
       question,
       source,
       topPost: {
