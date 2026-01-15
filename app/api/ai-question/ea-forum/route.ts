@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 
 export const maxDuration = 120;
@@ -9,6 +10,14 @@ const SEMANTIC_SIMILARITY_THRESHOLD = 0.75;
 
 // EA Forum GraphQL endpoint
 const EA_FORUM_GRAPHQL = 'https://forum.effectivealtruism.org/graphql';
+
+function getGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+  return new GoogleGenerativeAI(apiKey);
+}
 
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -201,8 +210,13 @@ export async function POST(request: Request) {
       }
     }
     
+    if (!process.env.GEMINI_API_KEY) {
+      await logCron(supabase, 'error', 'GEMINI_API_KEY not configured');
+      return NextResponse.json({ error: 'Gemini not configured' }, { status: 500 });
+    }
+
     if (!process.env.OPENAI_API_KEY) {
-      await logCron(supabase, 'error', 'OPENAI_API_KEY not configured');
+      await logCron(supabase, 'error', 'OPENAI_API_KEY not configured (needed for embeddings)');
       return NextResponse.json({ error: 'OpenAI not configured' }, { status: 500 });
     }
     
@@ -224,68 +238,71 @@ export async function POST(request: Request) {
     
     console.log(`Top post from ${totalPosts} yesterday: "${post.title}" (${post.upvotes} upvotes)`);
     
-    const openai = getOpenAI();
+    const genAI = getGemini();
+    const openai = getOpenAI(); // Still needed for embeddings
     
     // Generate a question based on the top EA Forum post
     const bodyContent = post.body || '';
-    const systemPrompt = `You are an AI that generates thought-provoking yes/no poll questions for the Effective Altruism community.
+    const prompt = `You are an AI that generates thought-provoking yes/no poll questions for the Effective Altruism community.
 
-Generate ONE engaging poll question that:
-1. Is answerable with "Yes", "No", or "Not Sure"
-2. Captures a key tension, debate, or interesting idea from the post
-3. Would spark thoughtful discussion among EAs
-4. Is under 200 characters
-5. Starts with "Should...", "Is...", "Do you...", "Would you...", "Can...", or "Are..."
-
-CRITICAL: Do NOT simply restate the post title. Extract an interesting angle or underlying question.
-
-Good examples:
-✓ "Should EA prioritize AI safety over global health given short timelines?"
-✓ "Is earning to give still a top-tier EA career path?"
-✓ "Should EAs be more skeptical of ideas that align with their career interests?"
-
-Bad examples:
-✗ "Is X better than Y?" (This is A or B, not yes/no)
-✗ Questions that just rephrase the post title
-
-Respond with ONLY the question, nothing else.`;
-
-    const userPrompt = `Yesterday's most upvoted post on the EA Forum was:
+Yesterday's most upvoted post on the Effective Altruism Forum was:
 
 Title: "${post.title}"
 Upvotes: ${post.upvotes || 0}
 
 Post content:
-${bodyContent}`;
+${bodyContent}
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.85,
-      max_tokens: 256,
+Generate ONE engaging poll question based on this post that:
+1. Is answerable with "Yes", "No", or "Not Sure"
+2. Captures a key tension, debate, or interesting idea from the post
+3. Would spark thoughtful discussion
+4. Is under 200 characters
+5. Starts with "Should...", "Is...", "Do you...", "Would you...", "Can...", or "Are..."
+
+IMPORTANT RULES:
+- Do NOT use acronyms like "EA" or "EAs" - always write out "Effective Altruism" or "effective altruists"
+- Do NOT simply restate the post title - extract an interesting angle or underlying question
+
+Good examples:
+✓ "Should Effective Altruism prioritize AI safety over global health given short timelines?"
+✓ "Is earning to give still a top-tier career path for effective altruists?"
+✓ "Should effective altruists be more skeptical of ideas that align with their career interests?"
+
+Bad examples:
+✗ "Should EA fund more animal advocacy?" (uses acronym)
+✗ "Is X better than Y?" (This is A or B, not yes/no)
+
+Respond with ONLY the question, nothing else.`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-3-flash-preview',
+      generationConfig: {
+        maxOutputTokens: 256,
+        temperature: 0.85,
+      },
     });
 
-    const question = (completion.choices[0]?.message?.content || '').trim().replace(/^["']|["']$/g, '');
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const question = response.text().trim().replace(/^["']|["']$/g, '');
 
     // Log token usage
-    const usage = completion.usage;
-    if (usage) {
+    const usageMetadata = response.usageMetadata;
+    if (usageMetadata) {
       console.log('EA Forum question generation token usage:', {
-        prompt_tokens: usage.prompt_tokens,
-        completion_tokens: usage.completion_tokens,
-        total_tokens: usage.total_tokens,
+        prompt_tokens: usageMetadata.promptTokenCount,
+        completion_tokens: usageMetadata.candidatesTokenCount,
+        total_tokens: usageMetadata.totalTokenCount,
       });
       
       await logTokenUsage(
         supabase,
         'ai-question-ea-forum',
-        'gpt-4.1-mini',
-        usage.prompt_tokens || 0,
-        usage.completion_tokens || 0,
-        usage.total_tokens || 0,
+        'gemini-3-flash-preview',
+        usageMetadata.promptTokenCount || 0,
+        usageMetadata.candidatesTokenCount || 0,
+        usageMetadata.totalTokenCount || 0,
         { topPost: post.title, upvotes: post.upvotes, totalPosts, source }
       );
     }
