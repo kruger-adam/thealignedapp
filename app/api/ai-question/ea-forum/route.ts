@@ -278,7 +278,7 @@ Respond with ONLY the question, nothing else.`;
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-flash-preview',
       generationConfig: {
-        maxOutputTokens: 256,
+        maxOutputTokens: 2048, // Increased to account for thinking tokens
         temperature: 0.85,
       },
     });
