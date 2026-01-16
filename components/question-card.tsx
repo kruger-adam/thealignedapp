@@ -1106,12 +1106,19 @@ export function QuestionCard({
                 size="md"
               />
             ) : (
-              <div className="relative h-8 overflow-hidden rounded-lg bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 dark:from-zinc-700 dark:via-zinc-600 dark:to-zinc-700">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  signInWithGoogle();
+                }}
+                className="relative h-8 w-full overflow-hidden rounded-lg bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 dark:from-zinc-700 dark:via-zinc-600 dark:to-zinc-700 cursor-pointer hover:from-zinc-300 hover:via-zinc-200 hover:to-zinc-300 dark:hover:from-zinc-600 dark:hover:via-zinc-500 dark:hover:to-zinc-600 transition-colors"
+              >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent dark:via-white/20 animate-shimmer" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Vote to see results</span>
                 </div>
-              </div>
+              </button>
             )}
           </div>
         )}
