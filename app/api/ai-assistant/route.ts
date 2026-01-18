@@ -65,8 +65,9 @@ export async function POST(request: NextRequest) {
       return handlePollCreation(supabase, user.id, message);
     }
 
-    // Gather context-specific data
-    const contextData = await gatherContextData(supabase, user.id, context);
+    // Gather context-specific data (pass message + history for user mention detection)
+    const fullConversation = [...(history || []).map(m => m.content), message].join(' ');
+    const contextData = await gatherContextData(supabase, user.id, context, fullConversation);
 
     // Build the system prompt
     const systemPrompt = buildSystemPrompt(contextData);
@@ -331,6 +332,7 @@ interface ContextData {
   recentQuestions: string[];
   topCategories: string[];
   similarUsers: SimilarUser[];
+  mentionedUsers: SimilarUser[]; // Users mentioned by name in the conversation
   recommendedQuestions: RecommendedQuestion[];
   controversialVotes: ControversialVote[];
   votingActivity: VotingActivity;
@@ -345,7 +347,8 @@ interface ContextData {
 async function gatherContextData(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  context: AssistantContext
+  context: AssistantContext,
+  conversationText: string = ''
 ): Promise<ContextData> {
   // Get user's profile
   const { data: profile } = await supabase
@@ -751,6 +754,54 @@ async function gatherContextData(
     trendingTopics.push(...Array.from(themes).slice(0, 5));
   }
 
+  // Search for users mentioned by name in the conversation
+  const mentionedUsers: SimilarUser[] = [];
+  
+  if (conversationText) {
+    // Extract potential names (words with capital letters, excluding common words)
+    const commonWords = new Set(['I', 'A', 'The', 'What', 'Where', 'When', 'How', 'Why', 'Who', 'Yes', 'No', 'Not', 'Sure', 'Can', 'Could', 'Would', 'Should', 'Do', 'Does', 'Did', 'Is', 'Are', 'Was', 'Were', 'Have', 'Has', 'Had', 'Will', 'Would', 'My', 'Me', 'You', 'Your', 'They', 'Their', 'We', 'Our', 'He', 'She', 'It', 'AI', 'Vote', 'Votes']);
+    
+    // Match capitalized words that might be names (2+ chars, not all caps)
+    const potentialNames = conversationText.match(/\b[A-Z][a-z]+\b/g) || [];
+    const uniqueNames = [...new Set(potentialNames)]
+      .filter(name => !commonWords.has(name) && name.length >= 3);
+    
+    // Search for users with matching names (partial match on username)
+    for (const name of uniqueNames.slice(0, 3)) { // Limit to 3 names to avoid too many queries
+      const { data: matchingUsers } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .ilike('username', `%${name}%`)
+        .neq('id', userId)
+        .limit(3);
+      
+      if (matchingUsers && matchingUsers.length > 0) {
+        for (const matchedUser of matchingUsers) {
+          // Check if already in similarUsers or mentionedUsers
+          const alreadyIncluded = similarUsers.some(u => u.username === matchedUser.username) ||
+                                   mentionedUsers.some(u => u.username === matchedUser.username);
+          if (alreadyIncluded) continue;
+          
+          // Calculate compatibility with this user
+          const { data: compatibility } = await supabase
+            .rpc('calculate_compatibility', {
+              user_a: userId,
+              user_b: matchedUser.id,
+            });
+          
+          if (compatibility && compatibility.common_questions > 0) {
+            mentionedUsers.push({
+              username: matchedUser.username,
+              compatibility: compatibility.compatibility_score,
+              agreements: compatibility.agreements,
+              disagreements: compatibility.disagreements,
+            });
+          }
+        }
+      }
+    }
+  }
+
   const contextData: ContextData = {
     userName: profile?.username || 'User',
     userStats,
@@ -758,6 +809,7 @@ async function gatherContextData(
     recentQuestions,
     topCategories,
     similarUsers,
+    mentionedUsers,
     recommendedQuestions,
     controversialVotes,
     votingActivity,
@@ -819,27 +871,71 @@ async function gatherContextData(
   }
 
   // Add profile comparison data if on a profile page
-  if (context.page === 'profile' && context.profileId && context.profileId !== 'ai') {
-    const { data: otherProfile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', context.profileId)
-      .single();
+  if (context.page === 'profile' && context.profileId) {
+    if (context.profileId === 'ai') {
+      // Special handling for AI profile - compare user's votes with AI votes
+      const { data: userVotes } = await supabase
+        .from('responses')
+        .select('question_id, vote')
+        .eq('user_id', userId)
+        .eq('is_ai', false);
+      
+      const { data: aiVotes } = await supabase
+        .from('responses')
+        .select('question_id, vote')
+        .eq('is_ai', true);
+      
+      if (userVotes && aiVotes) {
+        const aiVoteMap = new Map(aiVotes.map(v => [v.question_id, v.vote]));
+        let agreements = 0;
+        let disagreements = 0;
+        
+        for (const uv of userVotes) {
+          const aiVote = aiVoteMap.get(uv.question_id);
+          if (aiVote) {
+            if (aiVote === uv.vote) {
+              agreements++;
+            } else {
+              disagreements++;
+            }
+          }
+        }
+        
+        const commonQuestions = agreements + disagreements;
+        const compatibilityScore = commonQuestions > 0 
+          ? Math.round((agreements / commonQuestions) * 100) 
+          : 0;
+        
+        contextData.profileData = {
+          username: 'AI',
+          compatibility: compatibilityScore,
+          agreements,
+          disagreements,
+          commonQuestions,
+        };
+      }
+    } else {
+      const { data: otherProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', context.profileId)
+        .single();
 
-    // Calculate compatibility using the database function
-    const { data: compatibility } = await supabase
-      .rpc('calculate_compatibility', {
-        user_a: userId,
-        user_b: context.profileId,
-      });
+      // Calculate compatibility using the database function
+      const { data: compatibility } = await supabase
+        .rpc('calculate_compatibility', {
+          user_a: userId,
+          user_b: context.profileId,
+        });
 
-    contextData.profileData = {
-      username: otherProfile?.username || 'This user',
-      compatibility: compatibility?.compatibility_score,
-      agreements: compatibility?.agreements,
-      disagreements: compatibility?.disagreements,
-      commonQuestions: compatibility?.common_questions,
-    };
+      contextData.profileData = {
+        username: otherProfile?.username || 'This user',
+        compatibility: compatibility?.compatibility_score,
+        agreements: compatibility?.agreements,
+        disagreements: compatibility?.disagreements,
+        commonQuestions: compatibility?.common_questions,
+      };
+    }
   }
 
   return contextData;
@@ -849,12 +945,12 @@ function buildSystemPrompt(data: ContextData): string {
   let prompt = `You are the AI Assistant for Aligned, a polling app where users vote Yes, No, or Not Sure on questions to discover opinions and find common ground with others.
 
 CRITICAL RULES - YOU MUST FOLLOW THESE:
-1. NEVER invent or make up usernames. Only mention users listed in "SIMILAR USERS" below.
+1. NEVER invent or make up usernames. Only mention users listed in "SIMILAR USERS" or "USERS MENTIONED IN CONVERSATION" below.
 2. NEVER fabricate statistics, percentages, or vote counts. Only use numbers provided in this prompt.
 3. NEVER invent question content. Only reference questions listed in this prompt.
 4. If asked about something you don't have data for, honestly say "I don't have that information" and suggest what you CAN help with.
 5. When recommending questions, ONLY suggest questions from "RECOMMENDED QUESTIONS" below.
-6. When discussing similar users, ONLY mention users from "SIMILAR USERS" below.
+6. When discussing users, ONLY mention users from "SIMILAR USERS" or "USERS MENTIONED IN CONVERSATION" below.
 
 Your personality:
 - Friendly, casual, and slightly witty
@@ -904,6 +1000,11 @@ SIMILAR USERS (real users from the database who think like ${data.userName}):
 ${data.similarUsers.length > 0 
   ? data.similarUsers.map(u => `- @${u.username}: ${u.compatibility}% compatible (${u.agreements} agreements, ${u.disagreements} disagreements)`).join('\n')
   : 'Not enough shared votes with other users yet to find matches.'}
+
+USERS MENTIONED IN CONVERSATION (users the user asked about by name):
+${data.mentionedUsers.length > 0 
+  ? data.mentionedUsers.map(u => `- @${u.username}: ${u.compatibility}% compatible (${u.agreements} agreements, ${u.disagreements} disagreements)`).join('\n')
+  : 'No users mentioned by name found in the database.'}
 
 RECOMMENDED QUESTIONS TO SUGGEST (questions user has NOT voted on yet - ONLY suggest from this list):
 ${data.recommendedQuestions.length > 0
