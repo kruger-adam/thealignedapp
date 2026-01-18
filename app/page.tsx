@@ -31,7 +31,7 @@ const ONBOARDING_TARGET_VOTES = 10;
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
-  const urlCategoryApplied = useRef(false);
+  const [urlParamProcessed, setUrlParamProcessed] = useState(false);
   const {
     preferences,
     isInitialized: prefsInitialized,
@@ -46,18 +46,20 @@ export default function FeedPage() {
   const { sortBy, categoryFilter, minVotes, timePeriod, pollStatus, authorType } = preferences;
 
   // Apply category from URL query param (e.g., ?category=Product%20Management)
+  // This must complete before the initial fetch happens
   useEffect(() => {
-    if (!prefsInitialized || urlCategoryApplied.current) return;
+    if (!prefsInitialized || urlParamProcessed) return;
     
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
       const decodedCategory = decodeURIComponent(categoryParam);
       if (VALID_CATEGORIES.includes(decodedCategory as Category)) {
         setCategoryFilter(decodedCategory as Category);
-        urlCategoryApplied.current = true;
       }
     }
-  }, [prefsInitialized, searchParams, setCategoryFilter]);
+    // Mark as processed whether or not there was a param
+    setUrlParamProcessed(true);
+  }, [prefsInitialized, searchParams, setCategoryFilter, urlParamProcessed]);
   
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -495,21 +497,21 @@ export default function FeedPage() {
     }
   }, [user, sortBy, offset, categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType, inviterQuestionIds]);
 
-  // Reset and fetch when sort changes or user changes (wait for preferences to load)
+  // Reset and fetch when sort changes or user changes (wait for preferences AND URL param processing)
   useEffect(() => {
-    if (prefsInitialized) {
+    if (prefsInitialized && urlParamProcessed) {
       fetchQuestions(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, sortBy, prefsInitialized]);
+  }, [user, sortBy, prefsInitialized, urlParamProcessed]);
 
   // Refetch when filters change (filters require fetching all data to apply correctly)
   useEffect(() => {
-    if (prefsInitialized) {
+    if (prefsInitialized && urlParamProcessed) {
       fetchQuestions(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType]);
+  }, [categoryFilter, minVotes, timePeriod, unansweredOnly, pollStatus, authorType, urlParamProcessed]);
 
   // Load more when user scrolls to bottom
   const loadMore = useCallback(() => {
