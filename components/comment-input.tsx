@@ -545,7 +545,7 @@ export function CommentInput({
             value={commentText}
             onChange={handleCommentChange}
             placeholder={mentionedUsers.length > 0 ? "Add message..." : "Add a comment..."}
-            className="min-w-[80px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
+            className="w-full resize-none border-0 bg-transparent px-1 py-1 text-base placeholder:text-zinc-400 focus:outline-none dark:placeholder:text-zinc-500"
             onKeyDown={handleMentionKeyDown}
             rows={1}
             style={{ height: 'auto', maxHeight: '120px' }}
