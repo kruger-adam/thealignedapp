@@ -3,70 +3,89 @@
  * 
  * Run with: npx tsx scripts/backfill-ai-votes.ts
  * 
- * Requires OPENAI_API_KEY and SUPABASE_SERVICE_ROLE_KEY in .env.local
+ * Requires GEMINI_API_KEY and SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
 
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const openaiKey = process.env.OPENAI_API_KEY!;
+const geminiKey = process.env.GEMINI_API_KEY!;
 
-if (!supabaseUrl || !supabaseServiceKey || !openaiKey) {
-  console.error('Missing required environment variables');
+const AI_MODEL = 'gemini-3-flash-preview';
+
+if (!supabaseUrl || !supabaseServiceKey || !geminiKey) {
+  console.error('Missing required environment variables (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY)');
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-const openai = new OpenAI({ apiKey: openaiKey });
+const genAI = new GoogleGenerativeAI(geminiKey);
 
 async function getAIVote(questionContent: string): Promise<{ vote: 'YES' | 'NO' | 'UNSURE'; reasoning: string }> {
-  const systemPrompt = `You are voting on a yes/no question in a polling app. You must respond with EXACTLY one line for the vote and one line for the reasoning in this format:
+  const prompt = `Vote on this yes/no poll question. You MUST respond with EXACTLY two lines:
 
-VOTE: YES|NO|UNSURE
-REASON: <one concise sentence explaining why>
+Line 1: VOTE: followed by YES, NO, or UNSURE
+Line 2: REASON: followed by a one-sentence explanation (under 25 words)
 
-Guidelines:
-- Vote based on your genuine perspective as an AI
-- Consider nuance; pick UNSURE if truly ambiguous or context-dependent
-- Be decisive otherwise
-- Keep the reasoning short, clear, and conversational`;
+Example response format:
+VOTE: YES
+REASON: This seems reasonable based on common practice.
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4.1-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Question: "${questionContent}"\n\nReturn your vote and reasoning in the required format.` },
-    ],
-    max_tokens: 60,
-    temperature: 0.7,
+Question: "${questionContent}"
+
+Respond now with your vote and reason (both lines required):`;
+
+  const model = genAI.getGenerativeModel({ 
+    model: AI_MODEL,
+    generationConfig: {
+      maxOutputTokens: 1024,
+      temperature: 0.7,
+    },
   });
 
-  const responseText = completion.choices[0].message?.content?.trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const responseText = response.text().trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
   
   let vote: 'YES' | 'NO' | 'UNSURE' = 'UNSURE';
   let reasoning = 'No reason provided.';
   
-  const voteMatch = responseText.match(/VOTE:\s*(YES|NO|UNSURE)/i);
-  const reasonMatch = responseText.match(/REASON:\s*(.+)/i);
-  
+  // Parse vote
+  const voteMatch = responseText.match(/\*?\*?VOTE:?\*?\*?\s*(YES|NO|UNSURE)/i);
   if (voteMatch) {
     const v = voteMatch[1].toUpperCase();
     if (v === 'YES' || v === 'NO' || v === 'UNSURE') vote = v;
   }
-  if (reasonMatch) {
-    reasoning = reasonMatch[1].trim();
+  
+  // Parse reason - try multiple patterns
+  const reasonPatterns = [
+    /\*?\*?REASON(?:ING)?:?\*?\*?\s*(.+)/i,
+    /\*?\*?RATIONALE:?\*?\*?\s*(.+)/i,
+    /\*?\*?EXPLANATION:?\*?\*?\s*(.+)/i,
+  ];
+  
+  for (const pattern of reasonPatterns) {
+    const match = responseText.match(pattern);
+    if (match && match[1]) {
+      const extracted = match[1].trim();
+      const firstLine = extracted.split('\n')[0].trim();
+      if (firstLine.length > 0) {
+        reasoning = firstLine.replace(/\*\*/g, '').replace(/^["']|["']$/g, '').trim();
+        break;
+      }
+    }
   }
 
   return { vote, reasoning };
 }
 
 async function backfillAIVotes() {
-  console.log('🤖 Starting AI vote backfill...\n');
+  console.log(`🤖 Starting AI vote backfill using ${AI_MODEL}...\n`);
 
   // Get all questions
   const { data: questions, error: questionsError } = await supabase
@@ -138,6 +157,7 @@ async function backfillAIVotes() {
           is_ai: true,
           is_anonymous: false,
           ai_reasoning: reasoning,
+          ai_model: AI_MODEL,
         });
 
       if (insertError) {
@@ -163,4 +183,3 @@ async function backfillAIVotes() {
 }
 
 backfillAIVotes();
-
