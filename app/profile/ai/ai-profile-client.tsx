@@ -400,7 +400,7 @@ export function AIProfileClient({
           )}
 
           {/* Load More Button */}
-          {stanceFilter === 'all' && responsesHasMore && (
+          {responsesHasMore && (
             <div className="mt-4 flex justify-center">
               <Button
                 variant="outline"
@@ -424,7 +424,7 @@ export function AIProfileClient({
               </Button>
             </div>
           )}
-          {stanceFilter === 'all' && !responsesHasMore && responses.length > 0 && (
+          {!responsesHasMore && responses.length > 0 && (
             <p className="mt-4 text-center text-sm text-zinc-400">
               You&apos;ve reached the end
             </p>
