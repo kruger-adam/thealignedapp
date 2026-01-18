@@ -511,7 +511,7 @@ export function CommentInput({
       <div className="flex items-center gap-2">
         {/* Input container with inline chips */}
         <div 
-          className="flex flex-1 flex-wrap items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
+          className="flex flex-1 flex-wrap items-start gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 focus-within:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800"
           onClick={() => inputRef.current?.focus()}
         >
           {/* Tagged Users Chips - inline */}
