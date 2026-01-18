@@ -43,6 +43,113 @@ function getInitialSuggestions(context: AssistantContext): string[] {
   }
 }
 
+// Suggestions that match the proactive insight message
+function getInsightAwareSuggestions(insight: string | null, context: AssistantContext): string[] {
+  if (!insight) return getInitialSuggestions(context);
+  
+  const lowerInsight = insight.toLowerCase();
+  
+  // Milestone insights (100, 250, 500, 1000 votes)
+  if (lowerInsight.includes('crossed 100 votes') || lowerInsight.includes('milestone') || lowerInsight.includes('just hit')) {
+    return [
+      'What have you learned about me?',
+      'My most surprising votes',
+      'Who thinks like me?',
+      'What makes me unique?',
+    ];
+  }
+  
+  // Streak insights
+  if (lowerInsight.includes('streak') || lowerInsight.includes('day voting')) {
+    return [
+      'Show my voting history',
+      'What topics am I drawn to?',
+      'My most active days',
+      'Recommend questions',
+    ];
+  }
+  
+  // Activity insights (votes today/this week)
+  if (lowerInsight.includes('votes today') || lowerInsight.includes('votes this week') || lowerInsight.includes('on a roll')) {
+    return [
+      'Summarize my recent votes',
+      'Any patterns today?',
+      'Recommend more questions',
+      'Who else is active?',
+    ];
+  }
+  
+  // Pattern insights (optimist/skeptic/balanced)
+  if (lowerInsight.includes('optimist') || lowerInsight.includes('yes %') || lowerInsight.includes('voting yes')) {
+    return [
+      'Why am I so optimistic?',
+      'My strongest No votes',
+      'Challenge my assumptions',
+      'Who thinks differently?',
+    ];
+  }
+  
+  if (lowerInsight.includes('skeptic') || lowerInsight.includes('voting no')) {
+    return [
+      'Why am I skeptical?',
+      'My strongest Yes votes',
+      'Challenge my assumptions',
+      'Who thinks differently?',
+    ];
+  }
+  
+  if (lowerInsight.includes('balanced') || lowerInsight.includes('perfectly balanced')) {
+    return [
+      'What topics split me?',
+      'My most decisive votes',
+      'Who else is balanced?',
+      'Show me polarizing questions',
+    ];
+  }
+  
+  // Context-specific insights (question page, profile page)
+  if (lowerInsight.includes('why people voted') || lowerInsight.includes('this question')) {
+    return [
+      'Yes, explain the votes',
+      'Argue the other side',
+      'What does AI think?',
+      'Similar questions',
+    ];
+  }
+  
+  if (lowerInsight.includes('compare with this person') || lowerInsight.includes('agree and differ')) {
+    return [
+      'Yes, compare us!',
+      'What do we agree on?',
+      'Where do we differ?',
+      'Other similar users',
+    ];
+  }
+  
+  // Welcome message for new users
+  if (lowerInsight.includes('welcome') || lowerInsight.includes('start voting')) {
+    return [
+      'How does this work?',
+      'Recommend questions',
+      'What can you do?',
+      'Popular questions',
+    ];
+  }
+  
+  // Default insights
+  if (lowerInsight.includes('voting patterns') || lowerInsight.includes('who thinks like you')) {
+    return [
+      'My voting patterns',
+      'Who thinks like me?',
+      'My controversial votes',
+      'Surprise me!',
+    ];
+  }
+  
+  // Fallback to context-based suggestions
+  return getInitialSuggestions(context);
+}
+
 // Smart follow-up suggestions based on conversation context
 function getSmartFollowUps(messages: Message[], context: AssistantContext): string[] {
   if (messages.length === 0) return getInitialSuggestions(context);
@@ -338,7 +445,7 @@ export function AIAssistantPanel() {
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
 
-  const initialSuggestions = getInitialSuggestions(currentContext);
+  const initialSuggestions = getInsightAwareSuggestions(proactiveInsight, currentContext);
   const smartFollowUps = getSmartFollowUps(messages, currentContext);
 
   // Scroll to bottom when new messages arrive
