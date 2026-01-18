@@ -15,6 +15,7 @@ const CATEGORIES: { value: Category; emoji: string }[] = [
   { value: 'Health & Wellness', emoji: '🧘' },
   { value: 'Hypothetical', emoji: '🤔' },
   { value: 'Politics', emoji: '🗳️' },
+  { value: 'Product Management', emoji: '📊' },
   { value: 'Relationships', emoji: '💕' },
   { value: 'Society', emoji: '🏛️' },
   { value: 'Sports', emoji: '⚽' },

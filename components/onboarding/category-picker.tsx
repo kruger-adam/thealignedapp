@@ -17,6 +17,7 @@ const CATEGORIES: { value: Category; emoji: string; description: string }[] = [
   { value: 'Entertainment', emoji: '🎬', description: 'Movies, music & more' },
   { value: 'Environment', emoji: '🌍', description: 'Our planet' },
   { value: 'Politics', emoji: '🗳️', description: 'Governance & policy' },
+  { value: 'Product Management', emoji: '📊', description: 'Building products' },
   { value: 'Sports', emoji: '⚽', description: 'Games & competition' },
   { value: 'Food & Lifestyle', emoji: '🍕', description: 'How we live' },
   { value: 'Effective Altruism', emoji: '🌐', description: 'Doing the most good' },

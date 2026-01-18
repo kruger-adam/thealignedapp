@@ -26,6 +26,7 @@ export type Category =
   | 'Entertainment'
   | 'Environment'
   | 'Politics'
+  | 'Product Management'
   | 'Sports'
   | 'Food & Lifestyle'
   | 'Effective Altruism'

@@ -24,6 +24,7 @@ const CATEGORIES = [
   'Entertainment',
   'Environment',
   'Politics',
+  'Product Management',
   'Sports',
   'Food & Lifestyle',
   'Effective Altruism',
