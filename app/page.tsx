@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, ChevronDown } from 'lucide-react';
 import { QuestionCard } from '@/components/question-card';
 import { CreateQuestion } from '@/components/create-question';
@@ -17,11 +18,20 @@ import { FEATURES } from '@/lib/features';
 import { QuestionWithStats, SortOption, VoteType, Category } from '@/lib/types';
 import { useFeedPreferences } from '@/hooks/use-feed-preferences';
 
+// Valid categories for URL param validation
+const VALID_CATEGORIES: Category[] = [
+  'Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly',
+  'Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment',
+  'Politics', 'Product Management', 'Sports', 'Food & Lifestyle', 'Effective Altruism', 'Other'
+];
+
 const PAGE_SIZE = 15;
 const ONBOARDING_TARGET_VOTES = 10;
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const urlCategoryApplied = useRef(false);
   const {
     preferences,
     isInitialized: prefsInitialized,
@@ -34,6 +44,20 @@ export default function FeedPage() {
   } = useFeedPreferences();
   
   const { sortBy, categoryFilter, minVotes, timePeriod, pollStatus, authorType } = preferences;
+
+  // Apply category from URL query param (e.g., ?category=Product%20Management)
+  useEffect(() => {
+    if (!prefsInitialized || urlCategoryApplied.current) return;
+    
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      const decodedCategory = decodeURIComponent(categoryParam);
+      if (VALID_CATEGORIES.includes(decodedCategory as Category)) {
+        setCategoryFilter(decodedCategory as Category);
+        urlCategoryApplied.current = true;
+      }
+    }
+  }, [prefsInitialized, searchParams, setCategoryFilter]);
   
   const [questions, setQuestions] = useState<QuestionWithStats[]>([]);
   const [loading, setLoading] = useState(true);
