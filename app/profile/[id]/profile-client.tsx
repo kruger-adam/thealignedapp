@@ -23,6 +23,9 @@ import {
   Bot,
   Handshake,
   Network,
+  Trash2,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -193,6 +196,13 @@ export function ProfileClient({
   const [commentsHasMore, setCommentsHasMore] = useState(
     initialComments.length < pagination.comments.total
   );
+
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
     if (showFollowList === type) {
@@ -475,6 +485,42 @@ export function ProfileClient({
     setCommentsLoading(false);
   };
 
+  // Delete account handler
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await fetch('/api/account', {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setDeleteError(data.error || 'Failed to delete account');
+        setDeleteLoading(false);
+        return;
+      }
+      
+      // Show success message
+      setDeleteLoading(false);
+      setDeleteSuccess(true);
+      
+      // Sign out and redirect after a short delay
+      setTimeout(async () => {
+        await signOut();
+        window.location.href = '/';
+      }, 2500);
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      setDeleteError('An unexpected error occurred. Please try again.');
+      setDeleteLoading(false);
+    }
+  };
+
   // Filter responses by stance
   const filteredResponses = responses.filter(
     (r) => stanceFilter === 'all' || r.vote === stanceFilter
@@ -663,8 +709,132 @@ export function ProfileClient({
               </Button>
             </div>
           )}
+
+          {/* Delete Account Button (only on own profile) */}
+          {isOwnProfile && (
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full gap-2 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:border-red-800 dark:hover:bg-red-950 dark:hover:text-red-300"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete account
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
+            {deleteSuccess ? (
+              // Success state
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Account Deleted
+                </h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Your account and all associated data have been permanently deleted. 
+                  Redirecting you to the home page...
+                </p>
+              </div>
+            ) : (
+              // Confirmation state
+              <>
+                <div className="mb-4 flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                      Delete Account
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteConfirmText('');
+                      setDeleteError(null);
+                    }}
+                    className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="mb-4 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                  <p className="text-sm text-red-800 dark:text-red-200">
+                    <strong>Warning:</strong> This action cannot be undone. This will permanently delete:
+                  </p>
+                  <ul className="mt-2 list-inside list-disc text-sm text-red-700 dark:text-red-300">
+                    <li>Your profile and account</li>
+                    <li>All your votes and stances</li>
+                    <li>All your questions</li>
+                    <li>All your comments</li>
+                  </ul>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Type <span className="font-mono font-bold">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-red-500"
+                  />
+                </div>
+                
+                {deleteError && (
+                  <div className="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                    {deleteError}
+                  </div>
+                )}
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteConfirmText('');
+                      setDeleteError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+                  >
+                    {deleteLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete my account'
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Compatibility Banner (when viewing another profile) */}
       {compatibility && currentUserId && (

@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-zinc-200 mb-3">Deleting your data</h2>
             <p className="text-zinc-400">
-              You can delete your account and all associated data at any time by contacting us. 
+              You can delete your account and all associated data at any time from your profile page. 
               Upon deletion, your votes, comments, and questions will be permanently removed.
             </p>
           </section>
