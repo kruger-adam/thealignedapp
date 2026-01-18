@@ -82,18 +82,13 @@ export function ShareChallenge({
     }
   }, [shareUrl]);
 
-  // Add question mark only if the question doesn't already end with punctuation
-  const questionWithPunctuation = /[?!.]$/.test(questionContent.trim()) 
-    ? questionContent.trim() 
-    : `${questionContent.trim()}?`;
-
   const handleNativeShare = useCallback(async () => {
     if (!shareUrl || typeof navigator.share !== 'function') return;
     
     try {
       await navigator.share({
         title: 'Do you agree?',
-        text: `${questionWithPunctuation} Vote here:`,
+        text: `${questionContent} Vote here:`,
         url: shareUrl,
       });
     } catch (err) {
@@ -102,7 +97,7 @@ export function ShareChallenge({
         console.error('Share failed:', err);
       }
     }
-  }, [shareUrl, questionWithPunctuation]);
+  }, [shareUrl, questionContent]);
 
   const voteColor = userVote === 'YES' 
     ? 'text-emerald-600 dark:text-emerald-400' 
@@ -227,7 +222,7 @@ export function ShareChallenge({
               {/* Messaging Apps Quick Share */}
               <div className="flex gap-2">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`${questionWithPunctuation} Vote here: ${shareUrl}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`${questionContent} Vote here: ${shareUrl}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#20BD5A] transition-colors"
@@ -236,7 +231,7 @@ export function ShareChallenge({
                   WhatsApp
                 </a>
                 <a
-                  href={`sms:?body=${encodeURIComponent(`${questionWithPunctuation} Vote here: ${shareUrl}`)}`}
+                  href={`sms:?body=${encodeURIComponent(`${questionContent} Vote here: ${shareUrl}`)}`}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
