@@ -118,7 +118,7 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
   const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1];
   const guid = itemXml.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1];
   const pubDate = itemXml.match(/<pubDate>(.*?)<\/pubDate>/)?.[1];
-  const description = itemXml.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/s)?.[1] || '';
+  const description = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] || '';
 
   if (!title || !link) {
     return null;
