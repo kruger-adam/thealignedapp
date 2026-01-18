@@ -231,7 +231,7 @@ export function ShareChallenge({
                   WhatsApp
                 </a>
                 <a
-                  href={`sms:?body=${encodeURIComponent(`Do you agree? Vote here: ${shareUrl}`)}`}
+                  href={`sms:?body=${encodeURIComponent(`Do you agree? "${questionContent.slice(0, 100)}${questionContent.length > 100 ? '...' : ''}" — Vote here: ${shareUrl}`)}`}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
