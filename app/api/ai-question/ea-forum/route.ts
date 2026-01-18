@@ -477,18 +477,21 @@ Reply with ONLY the question.`;
 
     console.log(`Published question ${newQuestion.id}: "${question.substring(0, 50)}..."`);
 
-    // Trigger AI vote in background
+    // Trigger AI vote (must await, otherwise serverless function terminates before completion)
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
 
-    fetch(`${baseUrl}/api/ai-vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: newQuestion.id }),
-    }).catch(err => {
+    try {
+      const voteResponse = await fetch(`${baseUrl}/api/ai-vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: newQuestion.id }),
+      });
+      console.log('AI vote response:', voteResponse.status);
+    } catch (err) {
       console.error('Error triggering AI vote:', err);
-    });
+    }
 
     await logCron(supabase, 'success', `Published EA Forum question: "${question.substring(0, 60)}..."`, {
       questionId: newQuestion.id,
