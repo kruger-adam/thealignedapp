@@ -222,7 +222,7 @@ export function ShareChallenge({
               {/* Messaging Apps Quick Share */}
               <div className="flex gap-2">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Do you agree? "${questionContent.slice(0, 100)}${questionContent.length > 100 ? '...' : ''}" — Vote here: ${shareUrl}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I voted on: "${questionContent.slice(0, 100)}${questionContent.length > 100 ? '...' : ''}" — What do you think? ${shareUrl}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#20BD5A] transition-colors"
@@ -231,7 +231,7 @@ export function ShareChallenge({
                   WhatsApp
                 </a>
                 <a
-                  href={`sms:?body=${encodeURIComponent(`Do you agree? "${questionContent.slice(0, 100)}${questionContent.length > 100 ? '...' : ''}" — Vote here: ${shareUrl}`)}`}
+                  href={`sms:?body=${encodeURIComponent(`I voted on: "${questionContent.slice(0, 100)}${questionContent.length > 100 ? '...' : ''}" — What do you think? ${shareUrl}`)}`}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
