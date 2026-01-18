@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   HelpCircle,
   TrendingUp,
@@ -203,6 +204,12 @@ export function ProfileClient({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Track mount state for portal rendering
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchFollowList = async (type: 'followers' | 'following') => {
     if (showFollowList === type) {
@@ -727,8 +734,8 @@ export function ProfileClient({
         </CardContent>
       </Card>
 
-      {/* Delete Account Confirmation Modal */}
-      {showDeleteModal && (
+      {/* Delete Account Confirmation Modal - rendered via portal to ensure proper fixed positioning */}
+      {mounted && showDeleteModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
             {deleteSuccess ? (
@@ -833,7 +840,8 @@ export function ProfileClient({
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Compatibility Banner (when viewing another profile) */}
