@@ -714,7 +714,10 @@ export function QuestionCard({
                   }));
                 
                 if (notifications.length > 0) {
-                  supabase.from('notifications').insert(notifications);
+                  supabase.from('notifications').insert(notifications).then(({ error: followerNotifError }) => {
+                    if (followerNotifError) console.error('Failed to insert follower vote notifications:', followerNotifError);
+                    else console.log(`Follower vote notifications sent to ${notifications.length} follower(s)`);
+                  });
                 }
               }
             });
