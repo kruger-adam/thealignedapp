@@ -1,9 +1,8 @@
--- Update the single existing Open to Debate question to the podcast page
--- (Episode-specific /podcast/{slug} URLs 404; the podcast listing page works)
+-- Update the existing Open to Debate question to the episode-specific pod.link URL
 -- Run in Supabase SQL Editor
 
 UPDATE questions
-SET source_url = 'https://opentodebate.org/open-to-debate-podcast/'
+SET source_url = 'https://pod.link/216713308/episode/MzU1YWY0ZWMtMTFkNS0xMWYxLThmNjEtYTMyNTZhNGM4ZWNj'
 WHERE is_ai = true
   AND category = 'Politics & Society'
   AND (source_url ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
