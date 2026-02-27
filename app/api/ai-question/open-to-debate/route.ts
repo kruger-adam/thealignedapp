@@ -24,8 +24,16 @@ const MODELS = {
 
 // Open to Debate RSS feed
 const OPEN_TO_DEBATE_RSS = 'https://feeds.megaphone.fm/PNP1207584390';
-// Megaphone items often lack <link>; use channel link for constructing episode URLs
-const OPEN_TO_DEBATE_CHANNEL_LINK = 'https://opentodebate.org';
+// Apple Podcasts ID for constructing pod.link episode URLs
+const OPEN_TO_DEBATE_APPLE_ID = '216713308';
+// Fallback URL if episode link generation fails
+const OPEN_TO_DEBATE_PODCAST_URL = 'https://opentodebate.org/open-to-debate-podcast/';
+
+function buildPodlinkUrl(guid: string): string {
+  // pod.link accepts base64-encoded GUIDs for episode-specific links
+  const base64Guid = Buffer.from(guid).toString('base64url');
+  return `https://pod.link/${OPEN_TO_DEBATE_APPLE_ID}/episode/${base64Guid}`;
+}
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -111,22 +119,9 @@ interface PodcastEpisode {
   guid: string;
 }
 
-/**
- * Create URL-friendly slug from title (for Open to Debate episode URLs)
- */
-function slugifyTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
-function parseEpisodeFromXml(itemXml: string, channelLink: string): PodcastEpisode | null {
+function parseEpisodeFromXml(itemXml: string, fallbackUrl: string): PodcastEpisode | null {
   const title = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] 
     || itemXml.match(/<title>(.*?)<\/title>/)?.[1];
-  const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1];
   const guid = itemXml.match(/<guid[^>]*><!\[CDATA\[(.*?)\]\]><\/guid>/)?.[1]
     || itemXml.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1];
   const pubDate = itemXml.match(/<pubDate>(.*?)<\/pubDate>/)?.[1];
@@ -138,13 +133,8 @@ function parseEpisodeFromXml(itemXml: string, channelLink: string): PodcastEpiso
     return null;
   }
 
-  // Megaphone items often have no <link>; guid is just a UUID, not a valid URL.
-  // Prefer proper http(s) link; otherwise construct episode URL from channel + title slug
-  const linkStr = link ?? '';
-  const isValidUrl = (u: string) => u.startsWith('http://') || u.startsWith('https://');
-  const displayUrl = isValidUrl(linkStr)
-    ? linkStr
-    : `${channelLink.replace(/\/$/, '')}/podcast/${slugifyTitle(title)}`;
+  // Build episode-specific pod.link URL from GUID, fall back to podcast page
+  const displayUrl = guid ? buildPodlinkUrl(guid) : fallbackUrl;
 
   const cleanDescription = description
     .replace(/<[^>]*>/g, ' ')
@@ -182,7 +172,7 @@ async function fetchLatestEpisode(): Promise<PodcastEpisode> {
     throw new Error('No episodes found in RSS feed');
   }
 
-  const episode = parseEpisodeFromXml(itemMatch[0], OPEN_TO_DEBATE_CHANNEL_LINK);
+  const episode = parseEpisodeFromXml(itemMatch[0], OPEN_TO_DEBATE_PODCAST_URL);
   if (!episode) {
     throw new Error('Failed to parse episode from RSS');
   }
