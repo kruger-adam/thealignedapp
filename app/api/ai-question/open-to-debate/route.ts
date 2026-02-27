@@ -112,12 +112,23 @@ interface PodcastEpisode {
 function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
   const title = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] 
     || itemXml.match(/<title>(.*?)<\/title>/)?.[1];
-  const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1];
-  const guid = itemXml.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1];
+  const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1]
+    || itemXml.match(/<enclosure[^>]+url="([^"]+)"/)?.[1];  // Megaphone feeds use enclosure instead of link
+  const guid = itemXml.match(/<guid[^>]*><!\[CDATA\[(.*?)\]\]><\/guid>/)?.[1]
+    || itemXml.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1];
   const pubDate = itemXml.match(/<pubDate>(.*?)<\/pubDate>/)?.[1];
-  const description = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] || '';
+  const description = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1]
+    || itemXml.match(/<description>([\s\S]*?)<\/description>/)?.[1]  // Megaphone uses plain text descriptions
+    || '';
 
-  if (!title || !link) {
+  if (!title) {
+    return null;
+  }
+
+  // Use guid as stable identifier for dedup (enclosure URLs can have changing tracking params)
+  const stableUrl = guid || link || '';
+
+  if (!stableUrl) {
     return null;
   }
 
@@ -129,10 +140,10 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
 
   return {
     title,
-    url: link,
+    url: stableUrl,
     description: cleanDescription,
     pubDate: pubDate || '',
-    guid: guid || link,
+    guid: guid || stableUrl,
   };
 }
 
