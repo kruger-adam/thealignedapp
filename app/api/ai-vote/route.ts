@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 
 // Limit execution time to reduce CPU usage
 export const maxDuration = 10;
 
-// Lazy initialization to avoid build-time errors
-function getGemini() {
-  const apiKey = process.env.GEMINI_API_KEY;
+const AI_VOTE_MODEL = 'claude-sonnet-4-6';
+
+function getAnthropic() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured');
+    throw new Error('ANTHROPIC_API_KEY is not configured');
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new Anthropic({ apiKey });
 }
 
 // Use service role to bypass RLS (AI votes are system-generated)
@@ -64,12 +65,12 @@ export async function POST(req: Request) {
     const supabase = getSupabase();
     
     // Check for API key
-    if (!process.env.GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not configured');
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not configured');
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
     }
     
-    const genAI = getGemini();
+    const anthropic = getAnthropic();
 
     // If content not provided, fetch question details from the database
     let questionContent = providedContent;
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'AI already voted' }, { status: 200 });
     }
 
-    // Ask Gemini to vote + rationale
+    // Ask Claude to vote + rationale
     const prompt = `Vote on this yes/no poll question. You MUST respond with EXACTLY two lines:
 
 Line 1: VOTE: followed by YES, NO, or UNSURE
@@ -130,36 +131,21 @@ Question: "${questionContent}"
 
 Respond now with your vote and reason (both lines required):`;
 
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3-flash-preview',
-      generationConfig: {
-        maxOutputTokens: 1024, // High limit to account for thinking tokens
-        temperature: 0.7,
-      },
+    const message = await anthropic.messages.create({
+      model: AI_VOTE_MODEL,
+      max_tokens: 256,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    console.log('AI vote token usage:', {
+      prompt_tokens: message.usage.input_tokens,
+      completion_tokens: message.usage.output_tokens,
+      total_tokens: message.usage.input_tokens + message.usage.output_tokens,
+    });
 
-    // Log finish reason and token usage for debugging
-    const candidate = response.candidates?.[0];
-    if (candidate) {
-      console.log('AI vote finish reason:', candidate.finishReason);
-      if (candidate.safetyRatings) {
-        console.log('AI vote safety ratings:', JSON.stringify(candidate.safetyRatings));
-      }
-    }
-
-    const usageMetadata = response.usageMetadata;
-    if (usageMetadata) {
-      console.log('AI vote token usage:', {
-        prompt_tokens: usageMetadata.promptTokenCount,
-        completion_tokens: usageMetadata.candidatesTokenCount,
-        total_tokens: usageMetadata.totalTokenCount,
-      });
-    }
-
-    const responseText = response.text().trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
+    const textBlock = message.content.find(block => block.type === 'text');
+    const responseText = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim() || 'VOTE: UNSURE\nREASON: Not enough context.';
     console.log('AI vote raw response:', JSON.stringify(responseText));
     
     // Parse the vote and reason
@@ -236,7 +222,7 @@ Respond now with your vote and reason (both lines required):`;
         is_ai: true,
         is_anonymous: false,
         ai_reasoning: aiReasoning,
-        ai_model: 'gemini-3-flash-preview', // Track which model was used
+        ai_model: AI_VOTE_MODEL,
       });
 
     if (insertError) {
@@ -245,18 +231,16 @@ Respond now with your vote and reason (both lines required):`;
     }
 
     // Log token usage to database
-    if (usageMetadata) {
-      await logTokenUsage(
-        supabase,
-        'ai-vote',
-        'gemini-3-flash-preview',
-        usageMetadata.promptTokenCount || 0,
-        usageMetadata.candidatesTokenCount || 0,
-        usageMetadata.totalTokenCount || 0,
-        questionId,
-        { vote, aiReasoning: aiReasoning.substring(0, 100) }
-      );
-    }
+    await logTokenUsage(
+      supabase,
+      'ai-vote',
+      AI_VOTE_MODEL,
+      message.usage.input_tokens,
+      message.usage.output_tokens,
+      message.usage.input_tokens + message.usage.output_tokens,
+      questionId,
+      { vote, aiReasoning: aiReasoning.substring(0, 100) }
+    );
 
     console.log(`AI voted ${vote} on question ${questionId}`);
     return NextResponse.json({ vote });

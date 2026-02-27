@@ -72,7 +72,15 @@ async function logTokenUsage(
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
+  return NextResponse.json({ disabled: true, message: 'General questions cron job has been disabled' }, { status: 200 });
+}
+
+export async function GET(request: Request) {
+  return POST(request);
+}
+
+export async function _POST(request: Request) {
   const supabase = getSupabase();
   
   try {
@@ -283,10 +291,5 @@ Generate a NEW, different question. Respond with ONLY the question text, nothing
     await logCron(supabase, 'error', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-// Also allow GET for easy testing via browser/cron
-export async function GET(request: Request) {
-  return POST(request);
 }
 

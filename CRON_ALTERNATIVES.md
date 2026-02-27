@@ -1,4 +1,24 @@
-# Free Alternatives to Vercel Cron (Exact-Time Scheduling)
+# Cron Jobs
+
+## Current Setup
+
+All cron jobs run on **[cron-job.org](https://cron-job.org)**. Active jobs:
+
+| Job (cron-job.org name) | Endpoint | Status |
+|-------------------------|----------|--------|
+| EA Forum daily question | `/api/ai-question/ea-forum` | Active |
+| LessWrong daily question | `/api/ai-question/lesswrong` | Active |
+| Lenny's Podcast daily question | `/api/ai-question/lennys-podcast` | Active |
+| Future of Life Institute Podcast | `/api/ai-question/future-of-life` | Active |
+| Open to Debate | `/api/ai-question/open-to-debate` | Active |
+| Post AI question | `/api/ai-question` | Disabled |
+| Generate questions | `/api/ai-question/generate` | Disabled |
+
+Each job sends an `Authorization: Bearer <CRON_SECRET>` header. The `CRON_SECRET` value can be found in the Vercel environment variables.
+
+---
+
+# Alternatives to Vercel Cron (Exact-Time Scheduling)
 
 Vercel cron jobs have a **1-hour execution window**, meaning they can run anywhere within a 1-hour period around the scheduled time. If you need **exact-time scheduling**, here are free alternatives:
 

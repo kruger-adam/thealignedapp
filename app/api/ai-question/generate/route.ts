@@ -102,7 +102,15 @@ async function generateEmbedding(openai: OpenAI, text: string): Promise<number[]
   return response.data[0].embedding;
 }
 
-export async function POST(request: Request) {
+export async function GET(_request: Request) {
+  return NextResponse.json({ disabled: true, message: 'Generate questions cron job has been disabled' }, { status: 200 });
+}
+
+export async function POST(_request: Request) {
+  return NextResponse.json({ disabled: true, message: 'Generate questions cron job has been disabled' }, { status: 200 });
+}
+
+export async function _POST(request: Request) {
   const supabase = getSupabase();
   
   try {
@@ -326,8 +334,4 @@ Respond with ONLY the questions, numbered 1-${BATCH_SIZE}:`;
     await logCron(supabase, 'error', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-export async function GET(request: Request) {
-  return POST(request);
 }

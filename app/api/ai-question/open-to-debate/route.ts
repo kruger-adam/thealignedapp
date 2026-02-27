@@ -19,11 +19,11 @@ const LLM_PROVIDER: 'gemini' | 'anthropic' = 'anthropic';
 // Model configurations for each provider
 const MODELS = {
   gemini: 'gemini-3-flash-preview',
-  anthropic: 'claude-sonnet-4-6',
+  anthropic: 'claude-opus-4-5-20251101',
 };
 
-// Lenny's Podcast RSS feed (hosted on Substack)
-const LENNYS_PODCAST_RSS = 'https://api.substack.com/feed/podcast/10845.rss';
+// Open to Debate RSS feed
+const OPEN_TO_DEBATE_RSS = 'https://feeds.megaphone.fm/PNP1207584390';
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -65,7 +65,7 @@ async function logCron(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any).from('cron_logs').insert({
-      job_name: 'ai-question-lennys-podcast',
+      job_name: 'ai-question-open-to-debate',
       status,
       message,
       metadata,
@@ -109,9 +109,6 @@ interface PodcastEpisode {
   guid: string;
 }
 
-/**
- * Parse XML to extract episode data
- */
 function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
   const title = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] 
     || itemXml.match(/<title>(.*?)<\/title>/)?.[1];
@@ -124,12 +121,11 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
     return null;
   }
 
-  // Clean HTML from description
   const cleanDescription = description
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 6000); // Truncate for token limits
+    .substring(0, 6000);
 
   return {
     title,
@@ -140,13 +136,10 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
   };
 }
 
-/**
- * Fetch the latest episode from Lenny's Podcast RSS feed
- */
 async function fetchLatestEpisode(): Promise<PodcastEpisode> {
-  console.log('Fetching Lenny\'s Podcast RSS feed...');
+  console.log('Fetching Open to Debate RSS feed...');
   
-  const response = await fetch(LENNYS_PODCAST_RSS, {
+  const response = await fetch(OPEN_TO_DEBATE_RSS, {
     headers: {
       'Accept': 'application/rss+xml, application/xml, text/xml',
       'User-Agent': 'Mozilla/5.0 (compatible; AlignedApp/1.0; +https://thealignedapp.com)',
@@ -159,7 +152,6 @@ async function fetchLatestEpisode(): Promise<PodcastEpisode> {
 
   const xml = await response.text();
   
-  // Extract the first <item> (most recent episode)
   const itemMatch = xml.match(/<item>([\s\S]*?)<\/item>/);
   if (!itemMatch) {
     throw new Error('No episodes found in RSS feed');
@@ -178,7 +170,7 @@ export async function POST(request: Request) {
   const supabase = getSupabase();
   
   try {
-    await logCron(supabase, 'started', 'Lenny\'s Podcast question generation triggered');
+    await logCron(supabase, 'started', 'Open to Debate question generation triggered');
 
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
@@ -192,7 +184,6 @@ export async function POST(request: Request) {
       }
     }
     
-    // Check for required API keys based on provider
     if (LLM_PROVIDER === 'gemini' && !process.env.GEMINI_API_KEY) {
       await logCron(supabase, 'error', 'GEMINI_API_KEY not configured');
       return NextResponse.json({ error: 'Gemini not configured' }, { status: 500 });
@@ -208,7 +199,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'OpenAI not configured' }, { status: 500 });
     }
     
-    // Fetch the latest episode
     let episode: PodcastEpisode;
     
     try {
@@ -245,10 +235,9 @@ export async function POST(request: Request) {
     
     console.log(`Processing new episode: "${episode.title}"`);
     
-    const openai = getOpenAI(); // Needed for embeddings
+    const openai = getOpenAI();
     
-    // Generate a question based on the podcast episode
-    const prompt = `Generate a yes/no poll question based on this podcast episode from Lenny's Podcast (a popular product management and growth podcast).
+    const prompt = `Generate a yes/no poll question based on this episode from Open to Debate (a podcast that brings multiple perspectives together for structured, nonpartisan debates on pressing issues in politics, science, technology, and society).
 
 Episode Title: "${episode.title}"
 
@@ -256,11 +245,11 @@ Episode Description:
 ${episode.description}
 
 Requirements:
-- Start with "Do you think..." or "Do you believe..."
+- The question must be directly answerable with "Yes" or "No"
 - Under 200 characters
-- Extract an interesting, debatable angle about product management, career growth, or startups
-- Make it relevant to product managers, founders, and tech professionals
-- Don't just rephrase the title - find a provocative take or debate angle
+- Capture the core debate from the episode in a way that gives both sides a fair shot
+- Make it provocative and interesting to a general audience
+- Don't just rephrase the title - distill the actual yes/no proposition being debated
 
 Reply with ONLY the question.`;
 
@@ -268,7 +257,6 @@ Reply with ONLY the question.`;
     const modelUsed = MODELS[LLM_PROVIDER];
 
     if (LLM_PROVIDER === 'anthropic') {
-      // Use Anthropic Claude
       const anthropic = getAnthropic();
       const message = await anthropic.messages.create({
         model: modelUsed,
@@ -279,8 +267,7 @@ Reply with ONLY the question.`;
       const textBlock = message.content.find(block => block.type === 'text');
       question = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim().replace(/^["']|["']$/g, '');
 
-      // Log token usage
-      console.log('Lenny\'s Podcast question generation token usage:', {
+      console.log('Open to Debate question generation token usage:', {
         prompt_tokens: message.usage.input_tokens,
         completion_tokens: message.usage.output_tokens,
         total_tokens: message.usage.input_tokens + message.usage.output_tokens,
@@ -288,7 +275,7 @@ Reply with ONLY the question.`;
 
       await logTokenUsage(
         supabase,
-        'ai-question-lennys-podcast',
+        'ai-question-open-to-debate',
         modelUsed,
         message.usage.input_tokens,
         message.usage.output_tokens,
@@ -299,7 +286,6 @@ Reply with ONLY the question.`;
         }
       );
     } else {
-      // Use Gemini
       const genAI = getGemini();
       const model = genAI.getGenerativeModel({ 
         model: modelUsed,
@@ -313,10 +299,9 @@ Reply with ONLY the question.`;
       const response = await result.response;
       question = response.text().trim().replace(/^["']|["']$/g, '');
 
-      // Log token usage
       const usageMetadata = response.usageMetadata;
       if (usageMetadata) {
-        console.log('Lenny\'s Podcast question generation token usage:', {
+        console.log('Open to Debate question generation token usage:', {
           prompt_tokens: usageMetadata.promptTokenCount,
           completion_tokens: usageMetadata.candidatesTokenCount,
           total_tokens: usageMetadata.totalTokenCount,
@@ -324,7 +309,7 @@ Reply with ONLY the question.`;
 
         await logTokenUsage(
           supabase,
-          'ai-question-lennys-podcast',
+          'ai-question-open-to-debate',
           modelUsed,
           usageMetadata.promptTokenCount || 0,
           usageMetadata.candidatesTokenCount || 0,
@@ -344,7 +329,6 @@ Reply with ONLY the question.`;
 
     console.log(`Generated question: "${question}"`);
 
-    // Generate embedding for duplicate detection
     const embeddingResponse = await openai.embeddings.create({
       model: EMBEDDING_MODEL,
       input: question,
@@ -352,10 +336,9 @@ Reply with ONLY the question.`;
     
     const embedding = embeddingResponse.data[0].embedding;
     
-    // Log embedding token usage
     await logTokenUsage(
       supabase,
-      'ai-question-lennys-podcast-embedding',
+      'ai-question-open-to-debate-embedding',
       EMBEDDING_MODEL,
       embeddingResponse.usage.prompt_tokens,
       0,
@@ -363,7 +346,6 @@ Reply with ONLY the question.`;
       { question: question.substring(0, 100) }
     );
 
-    // Check for semantic duplicates
     const { data: simCheck, error: simError } = await supabase
       .rpc('check_semantic_similarity', { 
         query_embedding: JSON.stringify(embedding),
@@ -395,16 +377,15 @@ Reply with ONLY the question.`;
       });
     }
 
-    // Publish directly to questions table
     const { data: newQuestion, error: insertError } = await supabase
       .from('questions')
       .insert({
         content: question,
         author_id: null,
         is_ai: true,
-        category: 'Product Management',
+        category: 'Politics & Society',
         embedding: JSON.stringify(embedding),
-        source_url: episode.url, // Link to the episode transcript
+        source_url: episode.url,
         ai_model: modelUsed,
       })
       .select()
@@ -418,7 +399,6 @@ Reply with ONLY the question.`;
 
     console.log(`Published question ${newQuestion.id}: "${question.substring(0, 50)}..."`);
 
-    // Trigger AI vote
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
@@ -434,7 +414,7 @@ Reply with ONLY the question.`;
       console.error('Error triggering AI vote:', err);
     }
 
-    await logCron(supabase, 'success', `Published Lenny's Podcast question: "${question.substring(0, 60)}..."`, {
+    await logCron(supabase, 'success', `Published Open to Debate question: "${question.substring(0, 60)}..."`, {
       questionId: newQuestion.id,
       question,
       episodeTitle: episode.title,
@@ -454,7 +434,7 @@ Reply with ONLY the question.`;
     });
 
   } catch (error) {
-    console.error('Error in Lenny\'s Podcast question generation:', error);
+    console.error('Error in Open to Debate question generation:', error);
     await logCron(supabase, 'error', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -463,4 +443,3 @@ Reply with ONLY the question.`;
 export async function GET(request: Request) {
   return POST(request);
 }
-
