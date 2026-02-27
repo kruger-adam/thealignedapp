@@ -110,7 +110,7 @@ export async function POST(_request: Request) {
   return NextResponse.json({ disabled: true, message: 'Generate questions cron job has been disabled' }, { status: 200 });
 }
 
-export async function _POST(request: Request) {
+async function _POST(request: Request) {
   const supabase = getSupabase();
   
   try {

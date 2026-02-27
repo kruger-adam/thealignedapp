@@ -80,7 +80,7 @@ export async function GET(request: Request) {
   return POST(request);
 }
 
-export async function _POST(request: Request) {
+async function _POST(request: Request) {
   const supabase = getSupabase();
   
   try {
