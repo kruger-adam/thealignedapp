@@ -19,11 +19,13 @@ const LLM_PROVIDER: 'gemini' | 'anthropic' = 'anthropic';
 // Model configurations for each provider
 const MODELS = {
   gemini: 'gemini-3-flash-preview',
-  anthropic: 'claude-opus-4-5-20251101',
+  anthropic: 'claude-sonnet-4-6',
 };
 
 // Open to Debate RSS feed
 const OPEN_TO_DEBATE_RSS = 'https://feeds.megaphone.fm/PNP1207584390';
+// Megaphone items often lack <link>; use channel link for constructing episode URLs
+const OPEN_TO_DEBATE_CHANNEL_LINK = 'https://opentodebate.org';
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -109,11 +111,22 @@ interface PodcastEpisode {
   guid: string;
 }
 
-function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
+/**
+ * Create URL-friendly slug from title (for Open to Debate episode URLs)
+ */
+function slugifyTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function parseEpisodeFromXml(itemXml: string, channelLink: string): PodcastEpisode | null {
   const title = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] 
     || itemXml.match(/<title>(.*?)<\/title>/)?.[1];
-  const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1]
-    || itemXml.match(/<enclosure[^>]+url="([^"]+)"/)?.[1];  // Megaphone feeds use enclosure instead of link
+  const link = itemXml.match(/<link>(.*?)<\/link>/)?.[1];
   const guid = itemXml.match(/<guid[^>]*><!\[CDATA\[(.*?)\]\]><\/guid>/)?.[1]
     || itemXml.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1];
   const pubDate = itemXml.match(/<pubDate>(.*?)<\/pubDate>/)?.[1];
@@ -125,12 +138,12 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
     return null;
   }
 
-  // Use guid as stable identifier for dedup (enclosure URLs can have changing tracking params)
-  const stableUrl = guid || link || '';
-
-  if (!stableUrl) {
-    return null;
-  }
+  // Megaphone items often have no <link>; guid is just a UUID, not a valid URL.
+  // Prefer proper http(s) link; otherwise construct episode URL from channel + title slug
+  const isValidUrl = (u: string) => u?.startsWith('http://') || u?.startsWith('https://');
+  const displayUrl = isValidUrl(link)
+    ? link
+    : `${channelLink.replace(/\/$/, '')}/podcast/${slugifyTitle(title)}`;
 
   const cleanDescription = description
     .replace(/<[^>]*>/g, ' ')
@@ -140,10 +153,10 @@ function parseEpisodeFromXml(itemXml: string): PodcastEpisode | null {
 
   return {
     title,
-    url: stableUrl,
+    url: displayUrl,
     description: cleanDescription,
     pubDate: pubDate || '',
-    guid: guid || stableUrl,
+    guid: guid || displayUrl,
   };
 }
 
@@ -168,7 +181,7 @@ async function fetchLatestEpisode(): Promise<PodcastEpisode> {
     throw new Error('No episodes found in RSS feed');
   }
 
-  const episode = parseEpisodeFromXml(itemMatch[0]);
+  const episode = parseEpisodeFromXml(itemMatch[0], OPEN_TO_DEBATE_CHANNEL_LINK);
   if (!episode) {
     throw new Error('Failed to parse episode from RSS');
   }
@@ -221,11 +234,16 @@ export async function POST(request: Request) {
     }
 
     // Check if we already generated a question for this episode
-    const { data: existing } = await supabase
+    // Match by display URL (new format) or guid (legacy format from Megaphone)
+    const { data: existingByUrl } = await supabase
       .from('questions')
       .select('id')
       .eq('source_url', episode.url)
       .single();
+    const { data: existingByGuid } = episode.guid
+      ? await supabase.from('questions').select('id').eq('source_url', episode.guid).single()
+      : { data: null };
+    const existing = existingByUrl ?? existingByGuid;
 
     if (existing) {
       await logCron(supabase, 'success', `Skipped - already processed: "${episode.title.substring(0, 60)}..."`, {
