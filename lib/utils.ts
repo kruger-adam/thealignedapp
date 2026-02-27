@@ -72,6 +72,24 @@ export function getModelDisplayInfo(model: AIModel | null | undefined): ModelDis
         textColor: 'text-orange-700 dark:text-orange-400',
       };
     }
+    if (modelLower.includes('sonnet') && modelLower.includes('4-6')) {
+      return {
+        displayName: 'Claude Sonnet 4.6',
+        shortName: 'Sonnet 4.6',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+        textColor: 'text-amber-700 dark:text-amber-400',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+      };
+    }
+    if (modelLower.includes('sonnet') && modelLower.includes('4-5')) {
+      return {
+        displayName: 'Claude Sonnet 4.5',
+        shortName: 'Sonnet 4.5',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+        textColor: 'text-amber-700 dark:text-amber-400',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+      };
+    }
     if (modelLower.includes('sonnet')) {
       return {
         displayName: 'Claude Sonnet',
