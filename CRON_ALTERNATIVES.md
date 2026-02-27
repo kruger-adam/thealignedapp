@@ -62,7 +62,9 @@ Edit `.github/workflows/daily-ai-question.yml` and modify the cron expression:
 1. Sign up for a free account
 2. Create a new cron job
 3. Set the schedule (exact time)
-4. Set the URL to: `https://your-app.vercel.app/api/ai-question`
+4. Set the URL to one of:
+   - `https://your-app.vercel.app/api/ai-question/ea-forum` (EA Forum daily question)
+   - `https://your-app.vercel.app/api/ai-question/lesswrong` (LessWrong daily question)
 5. Add header: `Authorization: Bearer YOUR_CRON_SECRET`
 
 ## Option 4: Cloudflare Workers (Advanced)
