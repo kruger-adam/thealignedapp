@@ -140,9 +140,10 @@ function parseEpisodeFromXml(itemXml: string, channelLink: string): PodcastEpiso
 
   // Megaphone items often have no <link>; guid is just a UUID, not a valid URL.
   // Prefer proper http(s) link; otherwise construct episode URL from channel + title slug
-  const isValidUrl = (u: string) => u?.startsWith('http://') || u?.startsWith('https://');
-  const displayUrl = isValidUrl(link)
-    ? link
+  const linkStr = link ?? '';
+  const isValidUrl = (u: string) => u.startsWith('http://') || u.startsWith('https://');
+  const displayUrl = isValidUrl(linkStr)
+    ? linkStr
     : `${channelLink.replace(/\/$/, '')}/podcast/${slugifyTitle(title)}`;
 
   const cleanDescription = description
