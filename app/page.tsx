@@ -20,9 +20,10 @@ import { useFeedPreferences } from '@/hooks/use-feed-preferences';
 
 // Valid categories for URL param validation
 const VALID_CATEGORIES: Category[] = [
+  'LessWrong', 'EA Forum', "Lenny's Podcast", 'Open to Debate', 'Future of Life',
   'Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly',
-  'Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment',
-  'Politics', 'Product Management', 'Sports', 'Food & Lifestyle', 'Effective Altruism', 'Other'
+  'Politics & Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment',
+  'Product Management', 'Sports', 'Food & Lifestyle', 'Other'
 ];
 
 const PAGE_SIZE = 15;

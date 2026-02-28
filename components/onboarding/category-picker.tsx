@@ -6,21 +6,24 @@ import { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CATEGORIES: { value: Category; emoji: string; description: string }[] = [
+  { value: 'LessWrong', emoji: '🦉', description: 'Rationality & reasoning' },
+  { value: 'EA Forum', emoji: '🌐', description: 'Effective altruism' },
+  { value: "Lenny's Podcast", emoji: '🎙️', description: 'Product & startups' },
+  { value: 'Open to Debate', emoji: '🎤', description: 'Civil discourse' },
+  { value: 'Future of Life', emoji: '🔬', description: 'AI & existential risk' },
   { value: 'Hypothetical', emoji: '🤔', description: 'What if scenarios' },
   { value: 'Ethics', emoji: '⚖️', description: 'Right vs wrong' },
   { value: 'Relationships', emoji: '💕', description: 'Love & connection' },
   { value: 'Work & Career', emoji: '💼', description: 'Professional life' },
   { value: 'Fun & Silly', emoji: '🎉', description: 'Just for laughs' },
-  { value: 'Society', emoji: '🏛️', description: 'How we live together' },
+  { value: 'Politics & Society', emoji: '🗳️', description: 'Governance & how we live' },
   { value: 'Technology', emoji: '🤖', description: 'Tech & innovation' },
   { value: 'Health & Wellness', emoji: '🧘', description: 'Mind & body' },
   { value: 'Entertainment', emoji: '🎬', description: 'Movies, music & more' },
   { value: 'Environment', emoji: '🌍', description: 'Our planet' },
-  { value: 'Politics', emoji: '🗳️', description: 'Governance & policy' },
   { value: 'Product Management', emoji: '📊', description: 'Building products' },
   { value: 'Sports', emoji: '⚽', description: 'Games & competition' },
   { value: 'Food & Lifestyle', emoji: '🍕', description: 'How we live' },
-  { value: 'Effective Altruism', emoji: '🌐', description: 'Doing the most good' },
 ];
 
 interface CategoryPickerProps {

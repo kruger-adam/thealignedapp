@@ -16,21 +16,24 @@ const supabase = createClient(
 );
 
 const CATEGORIES = [
+  'LessWrong',
+  'EA Forum',
+  "Lenny's Podcast",
+  'Open to Debate',
+  'Future of Life',
   'Hypothetical',
   'Ethics',
   'Relationships',
   'Work & Career',
   'Fun & Silly',
-  'Society',
+  'Politics & Society',
   'Technology',
   'Health & Wellness',
   'Entertainment',
   'Environment',
-  'Politics',
   'Product Management',
   'Sports',
   'Food & Lifestyle',
-  'Effective Altruism',
   'Other',
 ] as const;
 

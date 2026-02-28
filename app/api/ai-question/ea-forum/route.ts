@@ -461,7 +461,7 @@ Reply with ONLY the question.`;
         content: question,
         author_id: null,
         is_ai: true,
-        category: 'Effective Altruism',
+        category: 'EA Forum',
         embedding: JSON.stringify(embedding),
         source_url: post.url, // Link to the EA Forum post
         ai_model: modelUsed, // Track which model generated this question

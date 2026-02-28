@@ -6,21 +6,26 @@ import { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const CATEGORIES: { value: Category; emoji: string }[] = [
-  { value: 'Effective Altruism', emoji: '🌐' },
+  // Source categories (curated content)
+  { value: 'LessWrong', emoji: '🦉' },
+  { value: 'EA Forum', emoji: '🌐' },
+  { value: "Lenny's Podcast", emoji: '🎙️' },
+  { value: 'Open to Debate', emoji: '🎤' },
+  { value: 'Future of Life', emoji: '🔬' },
+  // Topic categories
+  { value: 'Hypothetical', emoji: '🤔' },
+  { value: 'Ethics', emoji: '⚖️' },
+  { value: 'Relationships', emoji: '💕' },
+  { value: 'Work & Career', emoji: '💼' },
+  { value: 'Fun & Silly', emoji: '🎉' },
+  { value: 'Politics & Society', emoji: '🗳️' },
+  { value: 'Technology', emoji: '🤖' },
+  { value: 'Health & Wellness', emoji: '🧘' },
   { value: 'Entertainment', emoji: '🎬' },
   { value: 'Environment', emoji: '🌍' },
-  { value: 'Ethics', emoji: '⚖️' },
-  { value: 'Food & Lifestyle', emoji: '🍕' },
-  { value: 'Fun & Silly', emoji: '🎉' },
-  { value: 'Health & Wellness', emoji: '🧘' },
-  { value: 'Hypothetical', emoji: '🤔' },
-  { value: 'Politics', emoji: '🗳️' },
   { value: 'Product Management', emoji: '📊' },
-  { value: 'Relationships', emoji: '💕' },
-  { value: 'Society', emoji: '🏛️' },
   { value: 'Sports', emoji: '⚽' },
-  { value: 'Technology', emoji: '🤖' },
-  { value: 'Work & Career', emoji: '💼' },
+  { value: 'Food & Lifestyle', emoji: '🍕' },
   { value: 'Other', emoji: '💭' },
 ];
 

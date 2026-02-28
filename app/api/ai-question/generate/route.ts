@@ -8,18 +8,21 @@ export const maxDuration = 120; // Longer timeout for batch generation
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.75; // Cosine similarity (0-1, higher = more similar)
 
-// Categories for diverse question generation
+// Categories for diverse question generation (matches canonical list)
 const CATEGORIES = [
-  'Technology & AI',
+  'Hypothetical',
+  'Ethics',
+  'Relationships',
   'Work & Career',
-  'Relationships & Family',
-  'Money & Finance',
-  'Food & Lifestyle',
-  'Health & Fitness',
-  'Pop Culture & Entertainment',
+  'Fun & Silly',
   'Politics & Society',
-  'Philosophy & Ethics',
-  'Fun & Hypothetical',
+  'Technology',
+  'Health & Wellness',
+  'Entertainment',
+  'Environment',
+  'Product Management',
+  'Sports',
+  'Food & Lifestyle',
 ];
 
 const BATCH_SIZE = CATEGORIES.length; // One question per category

@@ -402,7 +402,7 @@ Reply with ONLY the question.`;
         content: question,
         author_id: null,
         is_ai: true,
-        category: 'Product Management',
+        category: "Lenny's Podcast",
         embedding: JSON.stringify(embedding),
         source_url: episode.url, // Link to the episode transcript
         ai_model: modelUsed,

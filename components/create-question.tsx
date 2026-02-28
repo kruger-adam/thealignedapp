@@ -84,7 +84,7 @@ const topicPrompts = {
     'Is a Pop-Tart a ravioli?',
     'Would you eat a bug for $100?',
   ],
-  '🗳️ Society': [
+  '🗳️ Politics & Society': [
     'Are most people too easily offended today?',
     'Is democracy failing?',
     'Should there be term limits for all politicians?',
@@ -93,6 +93,13 @@ const topicPrompts = {
     'Should billionaires exist?',
     'Is cancel culture out of control?',
     'Should there be limits on free speech?',
+    'Is the political system beyond repair?',
+    'Is democracy the best form of government?',
+    'Should there be age limits for politicians?',
+    'Is a two-party system fundamentally broken?',
+    'Should money be banned from politics entirely?',
+    'Is nationalism ever a good thing?',
+    'Should politicians be required to pass a competency test?',
   ],
   '🧠 Technology': [
     'Will AI make most humans unemployable?',
@@ -133,16 +140,6 @@ const topicPrompts = {
     'Is individual action pointless compared to corporate responsibility?',
     'Should flying be heavily taxed to reduce emissions?',
     'Are climate activists doing more harm than good?',
-  ],
-  '🏛️ Politics': [
-    'Is the political system beyond repair?',
-    'Is democracy the best form of government?',
-    'Should there be age limits for politicians?',
-    'Should the voting age be lowered to 16?',
-    'Is a two-party system fundamentally broken?',
-    'Should money be banned from politics entirely?',
-    'Is nationalism ever a good thing?',
-    'Should politicians be required to pass a competency test?',
   ],
 };
 

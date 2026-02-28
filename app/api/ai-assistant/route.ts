@@ -703,7 +703,7 @@ async function gatherContextData(
   const recentPlatformQuestions = recentPlatformQs?.map(q => q.content) || [];
   
   // Find underrepresented categories (categories with few recent questions)
-  const allCategories = ['Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly', 'Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment', 'Politics', 'Sports', 'Food & Lifestyle'];
+  const allCategories = ['LessWrong', 'EA Forum', "Lenny's Podcast", 'Open to Debate', 'Future of Life', 'Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly', 'Politics & Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment', 'Product Management', 'Sports', 'Food & Lifestyle'];
   const recentCategoryCounts: Record<string, number> = {};
   recentPlatformQs?.forEach(q => {
     if (q.category) {

@@ -403,7 +403,7 @@ Reply with ONLY the question.`;
         content: question,
         author_id: null,
         is_ai: true,
-        category: 'Politics & Society',
+        category: 'Open to Debate',
         embedding: JSON.stringify(embedding),
         source_url: episode.url,
         ai_model: modelUsed,

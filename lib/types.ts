@@ -14,22 +14,25 @@ export interface Profile {
   last_vote_date?: string | null;
 }
 
-export type Category = 
+export type Category =
+  | 'LessWrong'
+  | 'EA Forum'
+  | "Lenny's Podcast"
+  | 'Open to Debate'
+  | 'Future of Life'
   | 'Hypothetical'
   | 'Ethics'
   | 'Relationships'
   | 'Work & Career'
   | 'Fun & Silly'
-  | 'Society'
+  | 'Politics & Society'
   | 'Technology'
   | 'Health & Wellness'
   | 'Entertainment'
   | 'Environment'
-  | 'Politics'
   | 'Product Management'
   | 'Sports'
   | 'Food & Lifestyle'
-  | 'Effective Altruism'
   | 'Other';
 
 export interface Question {

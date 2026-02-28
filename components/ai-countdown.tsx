@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Bot, Sparkles, Loader2 } from 'lucide-react';
 
-// The cron job runs at 12:00 PM Toronto time (America/Toronto)
-const CRON_HOUR = 12; // 12:00 PM
+// The cron jobs run at 9:00 AM Eastern time (America/Toronto)
+const CRON_HOUR = 9; // 9:00 AM
 const CRON_TIMEZONE = 'America/Toronto';
 
 // How long to show "dropping now" message while cron is executing (in seconds)
