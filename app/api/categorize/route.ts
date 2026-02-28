@@ -12,12 +12,9 @@ function getSupabase() {
   );
 }
 
+// Topic categories only - source categories (LessWrong, EA Forum, etc.) are set by
+// AI question routes, never by the categorizer. User-generated questions get topic categories.
 const CATEGORIES = [
-  'LessWrong',
-  'EA Forum',
-  "Lenny's Podcast",
-  'Open to Debate',
-  'Future of Life',
   'Hypothetical',
   'Ethics',
   'Relationships',

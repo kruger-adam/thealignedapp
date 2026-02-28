@@ -108,7 +108,7 @@ export function AICountdown() {
       <div className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 px-4 py-2.5 dark:from-violet-500/20 dark:to-fuchsia-500/20">
         <Loader2 className="h-4 w-4 text-violet-500 animate-spin" />
         <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
-          AI question dropping now!
+          AI questions dropping now!
         </span>
         <Bot className="h-4 w-4 text-fuchsia-500 animate-bounce" />
       </div>
@@ -121,7 +121,7 @@ export function AICountdown() {
       <div className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 px-4 py-2.5 dark:from-violet-500/20 dark:to-fuchsia-500/20">
         <Sparkles className="h-4 w-4 text-violet-500 animate-pulse" />
         <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
-          New AI question just dropped!
+          New AI questions just dropped!
         </span>
         <Sparkles className="h-4 w-4 text-fuchsia-500 animate-pulse" />
       </div>
@@ -145,7 +145,7 @@ export function AICountdown() {
           ? 'font-medium text-amber-700 dark:text-amber-300' 
           : 'text-zinc-600 dark:text-zinc-400'
       }`}>
-        Next AI question in{' '}
+        Next AI questions in{' '}
         <span className={`font-semibold tabular-nums ${
           isUrgent 
             ? 'text-amber-800 dark:text-amber-200' 

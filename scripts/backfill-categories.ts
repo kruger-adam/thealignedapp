@@ -15,12 +15,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Topic categories only - same as categorize API (source categories set by AI routes)
 const CATEGORIES = [
-  'LessWrong',
-  'EA Forum',
-  "Lenny's Podcast",
-  'Open to Debate',
-  'Future of Life',
   'Hypothetical',
   'Ethics',
   'Relationships',
