@@ -260,7 +260,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             className="animate-logo-pulse"
             priority
           />
-          <span className="text-lg font-medium text-zinc-400">Loading...</span>
         </div>
       </div>
     );
