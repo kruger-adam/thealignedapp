@@ -20,7 +20,7 @@ import { useFeedPreferences } from '@/hooks/use-feed-preferences';
 
 // Valid categories for URL param validation
 const VALID_CATEGORIES: Category[] = [
-  'LessWrong', 'EA Forum', "Lenny's Podcast", 'Open to Debate', 'Future of Life',
+  'LessWrong', 'EA Forum', "Lenny's Podcast", 'Open to Debate', 'Future of Life', 'Doom Debates',
   'Hypothetical', 'Ethics', 'Relationships', 'Work & Career', 'Fun & Silly',
   'Politics & Society', 'Technology', 'Health & Wellness', 'Entertainment', 'Environment',
   'Product Management', 'Sports', 'Food & Lifestyle', 'Other'

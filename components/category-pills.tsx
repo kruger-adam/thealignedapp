@@ -12,6 +12,7 @@ const CATEGORIES: { value: Category; emoji: string }[] = [
   { value: "Lenny's Podcast", emoji: '🎙️' },
   { value: 'Open to Debate', emoji: '🎤' },
   { value: 'Future of Life', emoji: '🔬' },
+  { value: 'Doom Debates', emoji: '💀' },
   // Topic categories
   { value: 'Hypothetical', emoji: '🤔' },
   { value: 'Ethics', emoji: '⚖️' },
