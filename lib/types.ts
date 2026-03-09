@@ -20,6 +20,7 @@ export type Category =
   | "Lenny's Podcast"
   | 'Open to Debate'
   | 'Future of Life'
+  | 'Doom Debates'
   | 'Hypothetical'
   | 'Ethics'
   | 'Relationships'
