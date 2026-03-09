@@ -893,8 +893,15 @@ export function QuestionCard({
             </div>
           </div>
         </div>
+        {question.category && (
+          <div className="mt-2">
+            <span className="inline-block text-xs text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+              {question.category}
+            </span>
+          </div>
+        )}
       </CardHeader>
-      
+
       {/* Question Text - above image for context first */}
       <CardContent className="pb-3">
         {isEditingQuestion ? (
