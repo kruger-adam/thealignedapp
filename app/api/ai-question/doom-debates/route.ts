@@ -23,7 +23,7 @@ const MODELS = {
 };
 
 // Doom Debates Podcast RSS feed
-const DOOM_DEBATES_RSS = 'https://api.substack.com/feed/podcast/189983457.rss';
+const DOOM_DEBATES_RSS = 'https://api.substack.com/feed/podcast/1777870.rss';
 
 function getGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
