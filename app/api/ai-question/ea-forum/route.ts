@@ -308,6 +308,7 @@ ${bodyContent}
 Requirements:
 - Start with "Do you think..." or "Do you believe..."
 - Under 200 characters
+- Must be answerable with a single yes or no — do not use "or" to present two alternatives
 - Don't use acronyms
 - Extract an interesting debate angle, don't just rephrase the title
 
@@ -394,7 +395,7 @@ Reply with ONLY the question.`;
       }
     }
 
-    if (!question || question.length < 20 || question.length > 300) {
+    if (!question || question.length < 20 || question.length > 300 || / or /i.test(question)) {
       await logCron(supabase, 'error', `Invalid question generated: "${question}"`);
       return NextResponse.json({ error: 'Failed to generate valid question' }, { status: 500 });
     }

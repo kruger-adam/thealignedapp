@@ -247,6 +247,7 @@ ${episode.description}
 Requirements:
 - Start with "Do you think..." or "Do you believe..." or "Should..."
 - Under 200 characters
+- Must be answerable with a single yes or no — do not use "or" to present two alternatives
 - Extract an interesting, debatable angle about AI safety, existential risk, technology governance, or humanity's future
 - Make it accessible and relevant to a general audience curious about AI and tech's big-picture risks
 - Don't just rephrase the title - find a provocative take or genuine debate angle
@@ -322,7 +323,7 @@ Reply with ONLY the question.`;
       }
     }
 
-    if (!question || question.length < 20 || question.length > 300) {
+    if (!question || question.length < 20 || question.length > 300 || / or /i.test(question)) {
       await logCron(supabase, 'error', `Invalid question generated: "${question}"`);
       return NextResponse.json({ error: 'Failed to generate valid question' }, { status: 500 });
     }
