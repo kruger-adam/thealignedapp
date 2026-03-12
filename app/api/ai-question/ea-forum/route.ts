@@ -114,13 +114,12 @@ interface EAForumPost {
  * Fetch the top EA Forum post from yesterday (most upvotes) with body content
  */
 async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: string; totalPosts: number }> {
-  // Calculate yesterday's date range
+  // Calculate yesterday's date range in Toronto timezone
   const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setUTCDate(now.getUTCDate() - 1);
-  
-  const afterDate = yesterday.toISOString().split('T')[0];
-  const beforeDate = now.toISOString().split('T')[0];
+  const yesterday = new Date(now.getTime() - 86400000);
+
+  const afterDate = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+  const beforeDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
   
   console.log(`Fetching EA Forum posts for ${afterDate} to ${beforeDate}...`);
   
@@ -199,14 +198,12 @@ async function fetchTopEAForumPost(): Promise<{ post: EAForumPost; source: strin
     console.log('Sample posts returned:', postDates);
   }
   
-  // Filter posts to only include those from yesterday (local filtering as safety net)
+  // Filter posts to only include those from yesterday in Toronto timezone
   // The EA Forum API sometimes doesn't respect date filters properly
-  const yesterdayStart = new Date(afterDate + 'T00:00:00Z');
-  const todayStart = new Date(beforeDate + 'T00:00:00Z');
-  
   const posts = allPosts.filter((p: { postedAt: string }) => {
     const postDate = new Date(p.postedAt);
-    return postDate >= yesterdayStart && postDate < todayStart;
+    const postDateToronto = postDate.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+    return postDateToronto === afterDate;
   });
   
   console.log(`After local date filtering: ${posts.length} posts from ${afterDate}`);
@@ -395,7 +392,7 @@ Reply with ONLY the question.`;
       }
     }
 
-    if (!question || question.length < 20 || question.length > 300 || / or /i.test(question)) {
+    if (!question || question.length < 20 || question.length > 300) {
       await logCron(supabase, 'error', `Invalid question generated: "${question}"`);
       return NextResponse.json({ error: 'Failed to generate valid question' }, { status: 500 });
     }
