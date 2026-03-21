@@ -279,7 +279,6 @@ Requirements:
 
 Reply with ONLY the question.`;
 
-    let question: string;
     const modelUsed = MODELS[LLM_PROVIDER];
 
     const anthropic = getAnthropic();
@@ -290,7 +289,7 @@ Reply with ONLY the question.`;
     });
 
     const textBlock = message.content.find(block => block.type === 'text');
-    question = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim().replace(/^["']|["']$/g, '');
+    const question = (textBlock && textBlock.type === 'text' ? textBlock.text : '').trim().replace(/^["']|["']$/g, '');
 
     console.log('Elon Musk question generation token usage:', {
       prompt_tokens: message.usage.input_tokens,
