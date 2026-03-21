@@ -21,6 +21,8 @@ export type Category =
   | 'Open to Debate'
   | 'Future of Life'
   | 'Doom Debates'
+  | 'Elon Musk'
+  | 'Trump'
   | 'Hypothetical'
   | 'Ethics'
   | 'Relationships'

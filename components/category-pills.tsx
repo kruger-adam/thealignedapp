@@ -13,6 +13,8 @@ const CATEGORIES: { value: Category; emoji: string }[] = [
   { value: 'Open to Debate', emoji: '🎤' },
   { value: 'Future of Life', emoji: '🔬' },
   { value: 'Doom Debates', emoji: '💀' },
+  { value: 'Elon Musk', emoji: '🚀' },
+  { value: 'Trump', emoji: '🇺🇸' },
   // Topic categories
   { value: 'Hypothetical', emoji: '🤔' },
   { value: 'Ethics', emoji: '⚖️' },
