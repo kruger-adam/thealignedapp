@@ -338,7 +338,7 @@ Reply with ONLY the question.`;
       }
     }
 
-    if (!question || question.length < 20 || question.length > 300 || / or /i.test(question)) {
+    if (!question || question.length < 20 || question.length > 300) {
       await logCron(supabase, 'error', `Invalid question generated: "${question}"`);
       return NextResponse.json({ error: 'Failed to generate valid question' }, { status: 500 });
     }
